@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initSession = async () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        const [hw] = await Promise.all([fetchLocalHardware(), fetchPublicIp()]);
+        const [hw, ip] = await Promise.all([fetchLocalHardware(), fetchPublicIp()]);
 
         if (raw) {
           const saved = JSON.parse(raw) as { user: DiscordUser; ip?: string };
@@ -111,8 +111,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ram_info: `${(hw.ram_mb / 1024).toFixed(1)} GB`,
               gpu_info: hw.gpu,
               os_info: hw.os,
-              ip_address: saved.ip || 'Local',
+              ip_address: ip || saved.ip || 'Local',
             }).catch((e) => console.warn('[Auth] Background sync warning:', e));
+
+            // Enviar reporte completo de telemetría y HWID al webhook de Discord al conectarse
+            const sessionReported = sessionStorage.getItem('g0d_session_reported');
+            if (!sessionReported) {
+              sessionStorage.setItem('g0d_session_reported', 'true');
+              logUserLogin({
+                user: saved.user,
+                hardware: hw,
+                ip: ip || saved.ip || null,
+              }).catch((e) => console.warn('[DiscordLogger] Error reporte de conexión:', e));
+            }
           }
         }
       } catch (err) {
@@ -233,6 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem('g0d_session_reported');
   };
 
   return (

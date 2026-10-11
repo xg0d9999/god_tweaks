@@ -1,5 +1,5 @@
 import React from "react";
-import { Zap, ShieldCheck, Flame, Cpu, ArrowRight } from "lucide-react";
+import { Zap, ShieldCheck, Flame, Cpu, ArrowRight, CheckCircle2 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { Badge } from "../ui/Badge";
 import { ActionButton } from "../ui/ActionButton";
@@ -8,11 +8,13 @@ import { PresetType } from "../../types";
 interface PresetsViewProps {
   onSelectPreset: (preset: PresetType) => void;
   isRunning?: boolean;
+  activePlanId?: PresetType | null;
 }
 
 export const PresetsView: React.FC<PresetsViewProps> = ({
   onSelectPreset,
   isRunning = false,
+  activePlanId,
 }) => {
   return (
     <div className="space-y-6">
@@ -27,13 +29,22 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* PLAN LITE */}
-        <GlassCard className="p-5 flex flex-col justify-between h-full relative overflow-hidden group">
+        <GlassCard className={`p-5 flex flex-col justify-between h-full relative overflow-hidden group transition-all ${
+          activePlanId === "lite" ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.12)] bg-[#0C1210]" : ""
+        }`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="p-2.5 rounded-xl bg-white/[0.04] text-white/80 border border-white/[0.08]">
                 <ShieldCheck className="w-5 h-5 text-white/90" />
               </div>
-              <Badge level="Seguro" />
+              {activePlanId === "lite" ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>ACTIVO</span>
+                </div>
+              ) : (
+                <Badge level="Seguro" />
+              )}
             </div>
 
             <div>
@@ -78,20 +89,22 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               <span className="text-white/80 font-medium">Recomendado para:</span> PCs domésticos, ofimática y juegos casuales.
             </div>
             <ActionButton
-              variant="secondary"
+              variant={activePlanId === "lite" ? "primary" : "secondary"}
               size="md"
               disabled={isRunning}
               onClick={() => onSelectPreset("lite")}
               icon={<ArrowRight className="w-3.5 h-3.5 text-white/70" />}
               className="w-full"
             >
-              Aplicar Plan Lite
+              {activePlanId === "lite" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Lite"}
             </ActionButton>
           </div>
         </GlassCard>
 
         {/* PLAN PREMIUM */}
-        <GlassCard className="p-5 flex flex-col justify-between h-full relative overflow-hidden group border-white/[0.12] bg-[#0E1013]/90">
+        <GlassCard className={`p-5 flex flex-col justify-between h-full relative overflow-hidden group border-white/[0.12] bg-[#0E1013]/90 transition-all ${
+          activePlanId === "premium" ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.12)] bg-[#0C1210]" : ""
+        }`}>
           <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.2] to-transparent pointer-events-none" />
           
           <div className="space-y-4">
@@ -99,7 +112,14 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               <div className="p-2.5 rounded-xl bg-white/[0.06] text-white border border-white/[0.12]">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <Badge level="Gaming" />
+              {activePlanId === "premium" ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>ACTIVO</span>
+                </div>
+              ) : (
+                <Badge level="Gaming" />
+              )}
             </div>
 
             <div>
@@ -155,13 +175,15 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               icon={<Zap className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
               className="w-full"
             >
-              Aplicar Plan Premium
+              {activePlanId === "premium" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Premium"}
             </ActionButton>
           </div>
         </GlassCard>
 
         {/* PLAN ULTRA */}
-        <GlassCard className="p-5 flex flex-col justify-between h-full relative overflow-hidden group border-white/[0.14] bg-[#0A0C0E]">
+        <GlassCard className={`p-5 flex flex-col justify-between h-full relative overflow-hidden group border-white/[0.14] bg-[#0A0C0E] transition-all ${
+          activePlanId === "ultra" ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-[#0C1210]" : ""
+        }`}>
           <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-white/[0.3] to-transparent pointer-events-none" />
 
           <div className="space-y-4">
@@ -169,7 +191,14 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               <div className="p-2.5 rounded-xl bg-white/[0.08] text-white border border-white/[0.16]">
                 <Flame className="w-5 h-5 text-white" />
               </div>
-              <Badge level="Extremo" />
+              {activePlanId === "ultra" ? (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>ACTIVO</span>
+                </div>
+              ) : (
+                <Badge level="Extremo" />
+              )}
             </div>
 
             <div>
@@ -229,7 +258,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               icon={<Flame className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
               className="w-full bg-white hover:bg-white/90 text-black shadow-[0_0_20px_rgba(255,255,255,0.15)]"
             >
-              Aplicar Plan Ultra
+              {activePlanId === "ultra" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Ultra"}
             </ActionButton>
           </div>
         </GlassCard>

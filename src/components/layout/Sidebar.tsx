@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import {
   Activity,
-  Flame,
   Layers,
   Crosshair,
   Sliders,
@@ -48,14 +47,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "dashboard",
       label: "Dashboard",
       icon: <Activity className="w-4 h-4 flex-shrink-0" />,
-    },
-    {
-      id: "god_mode",
-      label: "1-Click God Mode",
-      icon: <Flame className="w-4 h-4 text-white flex-shrink-0" />,
-      badge: tweaksBlocked ? "BLOQUEADO" : "ESPORTS",
-      isSpecial: true,
-      isBlocked: tweaksBlocked,
     },
     {
       id: "presets",

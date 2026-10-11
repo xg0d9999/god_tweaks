@@ -1,6 +1,5 @@
 export type TabType =
   | "dashboard"
-  | "god_mode"
   | "presets"
   | "fivem"
   | "advanced"
@@ -12,6 +11,12 @@ export type AppMode = "optimizer" | "hispan";
 
 export type SafetyLevel = "Seguro" | "Gaming" | "Extremo";
 export type PresetType = "lite" | "premium" | "ultra";
+
+export interface ActivePlanData {
+  id: PresetType;
+  title: string;
+  appliedAt: string;
+}
 
 export interface SystemMetrics {
   cpu_usage: number;

@@ -22,6 +22,7 @@ import {
   TabType,
   AppMode,
   PresetType,
+  ActivePlanData,
   SystemMetrics,
   GamingStatus,
   DebloatStatus,
@@ -207,6 +208,14 @@ const AppContent: React.FC = () => {
   const [modalSteps, setModalSteps] = useState<ModalStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [activePipelineRunner, setActivePipelineRunner] = useState<(() => Promise<void>) | null>(null);
+  const [activePlan, setActivePlan] = useState<ActivePlanData | null>(() => {
+    try {
+      const saved = localStorage.getItem("god_tweaks_active_plan");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
@@ -716,6 +725,7 @@ const AppContent: React.FC = () => {
 
   // Execution engine with progress checklist step-by-step
   const runStepsSequentially = async (
+    presetId: PresetType,
     stepsList: { label: string; action: () => Promise<unknown> }[]
   ) => {
     setModalPhase("running");
@@ -739,6 +749,22 @@ const AppContent: React.FC = () => {
       await new Promise((r) => setTimeout(r, 450));
     }
     setModalPhase("completed");
+    const planData: ActivePlanData = {
+      id: presetId,
+      title: modalPlanTitle,
+      appliedAt: new Date().toLocaleDateString("es-ES", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+    setActivePlan(planData);
+    try {
+      localStorage.setItem("god_tweaks_active_plan", JSON.stringify(planData));
+    } catch (e) {
+      console.warn("Error saving active plan:", e);
+    }
     void logOptimizationApplied({
       username: user?.username || "Usuario Local",
       userId: user?.id,
@@ -784,7 +810,7 @@ const AppContent: React.FC = () => {
     setModalPlanTitle("Plan Lite - Esencial");
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
-    setActivePipelineRunner(() => () => runStepsSequentially(rawSteps));
+    setActivePipelineRunner(() => () => runStepsSequentially("lite", rawSteps));
     setModalPhase("confirm");
     setIsModalOpen(true);
   };
@@ -825,7 +851,7 @@ const AppContent: React.FC = () => {
     setModalPlanTitle("Plan Premium - Competitivo");
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
-    setActivePipelineRunner(() => () => runStepsSequentially(rawSteps));
+    setActivePipelineRunner(() => () => runStepsSequentially("premium", rawSteps));
     setModalPhase("confirm");
     setIsModalOpen(true);
   };
@@ -889,7 +915,7 @@ const AppContent: React.FC = () => {
     setModalPlanTitle("Plan Ultra - Rendimiento Máximo");
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
-    setActivePipelineRunner(() => () => runStepsSequentially(rawSteps));
+    setActivePipelineRunner(() => () => runStepsSequentially("ultra", rawSteps));
     setModalPhase("confirm");
     setIsModalOpen(true);
   };
@@ -903,15 +929,6 @@ const AppContent: React.FC = () => {
     if (preset === "lite") triggerLitePlan();
     else if (preset === "premium") triggerPremiumPlan();
     else if (preset === "ultra") triggerUltraPlan();
-  };
-
-  // 1-Click God Mode Suite Execution (Trigger with confirmation modal)
-  const handleTriggerGodMode = () => {
-    if (!canUseTweaks) {
-      showToast("Acceso restringido: Permiso de optimizaciones deshabilitado.", "error");
-      return;
-    }
-    triggerUltraPlan();
   };
 
   // Toggle Mode Handler
@@ -1004,11 +1021,9 @@ const AppContent: React.FC = () => {
       <div className="flex flex-1 overflow-hidden relative z-10">
         {/* Floating Collapsible Sidebar */}
         <Sidebar
-          activeTab={activeTab === "god_mode" ? "dashboard" : activeTab}
+          activeTab={activeTab}
           onTabChange={(tab) => {
-            if (tab === "god_mode") {
-              handleTriggerGodMode();
-            } else if (tab === "admin") {
+            if (tab === "admin") {
               setActiveTab("admin");
             } else {
               setAppMode("optimizer");
@@ -1035,8 +1050,8 @@ const AppContent: React.FC = () => {
                 <DashboardView
                   metrics={metrics}
                   logs={logs}
-                  onApplyGodMode={handleTriggerGodMode}
-                  isApplyingGodMode={isModalOpen && modalPhase === "running"}
+                  activePlan={activePlan}
+                  onNavigateToPresets={() => setActiveTab("presets")}
                 />
               )}
 
@@ -1050,6 +1065,7 @@ const AppContent: React.FC = () => {
                   <PresetsView
                     onSelectPreset={handleSelectPreset}
                     isRunning={isModalOpen && modalPhase === "running"}
+                    activePlanId={activePlan?.id}
                   />
                 ))}
 

@@ -175,8 +175,8 @@ Pruebas: ${proofs.trim() || "-"}`;
       return false;
     }
 
-    if ((type === "jail_ig" || type === "ban_ig") && !isFivemRunning) {
-      showToast("FiveM no está abierto. Debes tener FiveM en ejecución para usar comandos directos.", "error");
+    if ((type === "jail" || type === "ban" || type === "jail_ig" || type === "ban_ig") && !isFivemRunning) {
+      showToast("FiveM no está abierto. Debes tener FiveM en ejecución para ejecutar o copiar sanciones.", "error");
       return false;
     }
 
@@ -492,6 +492,13 @@ Pruebas: ${proofs.trim() || "-"}`;
                 size="sm"
                 onClick={() => handleTriggerAction("jail")}
                 icon={<Terminal className="w-3.5 h-3.5 text-white/70" />}
+                className={`transition-all ${
+                  isFivemRunning
+                    ? "cursor-pointer"
+                    : "opacity-40 cursor-not-allowed hover:bg-transparent"
+                }`}
+                disabled={!isFivemRunning}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando /jail"}
               >
                 /jail
               </ActionButton>
@@ -500,6 +507,13 @@ Pruebas: ${proofs.trim() || "-"}`;
                 size="sm"
                 onClick={() => handleTriggerAction("ban")}
                 icon={<Terminal className="w-3.5 h-3.5 text-white/70" />}
+                className={`transition-all ${
+                  isFivemRunning
+                    ? "cursor-pointer"
+                    : "opacity-40 cursor-not-allowed hover:bg-transparent"
+                }`}
+                disabled={!isFivemRunning}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando /sqlban"}
               >
                 /sqlban
               </ActionButton>

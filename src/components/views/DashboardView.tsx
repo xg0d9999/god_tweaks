@@ -3,27 +3,34 @@ import { motion } from "framer-motion";
 import {
   Cpu,
   HardDrive,
-  Zap,
   Terminal,
   Activity,
   CheckCircle2,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { ActionButton } from "../ui/ActionButton";
 import { SystemMetrics, LogEntry } from "../../types";
 
+export interface ActivePlanData {
+  id: "lite" | "premium" | "ultra";
+  title: string;
+  appliedAt: string;
+}
+
 interface DashboardViewProps {
   metrics: SystemMetrics | null;
   logs: LogEntry[];
-  onApplyGodMode: () => void;
-  isApplyingGodMode: boolean;
+  activePlan: ActivePlanData | null;
+  onNavigateToPresets: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   metrics,
   logs,
-  onApplyGodMode,
-  isApplyingGodMode,
+  activePlan,
+  onNavigateToPresets,
 }) => {
   const cpuVal = metrics ? Math.round(metrics.cpu_usage) : 0;
   const ramPercent = metrics ? Math.round(metrics.ram_usage_percent) : 0;
@@ -32,35 +39,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Hero 1-Click God Mode Banner (Raycast / Linear Style) */}
+      {/* Hero Active Plan Status Banner (Raycast / Linear Style) */}
       <div className="relative overflow-hidden rounded-2xl p-6 bg-[#0E1013] border border-white/[0.08] shadow-[0_4px_20px_rgba(0,0,0,0.5)]">
         {/* Crisp top specular hairline */}
         <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.14] to-transparent pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2.5 max-w-xl">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/[0.04] text-[#9CA3AF] border border-white/[0.08]">
-              <Zap className="w-3 h-3 text-white/70" />
-              <span>Perfil eSports Unificado</span>
-            </div>
-            <h1 className="text-xl font-semibold tracking-tight text-white">
-              Activar God Mode
-            </h1>
-            <p className="text-xs text-[#828792] leading-relaxed">
-              Crea un punto de restauración automático de seguridad, optimiza el temporizador TSC del CPU (bcdedit), inyecta el plan de máximo rendimiento y activa el algoritmo Nagle en la pila TCP/IP.
-            </p>
+            {activePlan ? (
+              <>
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>PLAN ACTIVO EN EL SISTEMA</span>
+                </div>
+                <h1 className="text-xl font-semibold tracking-tight text-white flex items-center gap-2">
+                  {activePlan.title}
+                </h1>
+                <p className="text-xs text-[#828792] leading-relaxed">
+                  {activePlan.id === "ultra"
+                    ? "Perfil Ultra eSports activo en el kernel (HPET desactivado, TSC dinámico optimizado, Win32PrioritySeparation 38, prioridad FiveM y debloat completo)."
+                    : activePlan.id === "premium"
+                    ? "Perfil Premium Competitivo activo (Esquema Ultimate Performance inyectado, afinidad MMCSS, Nagle desactivado y QoS de red optimizado)."
+                    : "Perfil Lite Esencial activo (GameDVR desactivado, DNS del sistema purgado y compactación de memoria RAM aplicada)."}
+                </p>
+                <div className="text-[11px] font-mono text-[#717680] pt-0.5">
+                  Aplicado el {activePlan.appliedAt}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/[0.04] text-[#9CA3AF] border border-white/[0.08]">
+                  <Layers className="w-3 h-3 text-white/70" />
+                  <span>Sin Plan Asignado</span>
+                </div>
+                <h1 className="text-xl font-semibold tracking-tight text-white">
+                  Ningún Plan de Optimización Activo
+                </h1>
+                <p className="text-xs text-[#828792] leading-relaxed">
+                  Para mejorar los FPS, reducir latencia de entrada y acelerar los tiempos de carga en FiveM y otros juegos competitivos, selecciona un plan en su apartado correspondiente.
+                </p>
+              </>
+            )}
           </div>
 
-          <ActionButton
-            variant="primary"
-            size="md"
-            onClick={onApplyGodMode}
-            loading={isApplyingGodMode}
-            icon={<Zap className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
-            className="flex-shrink-0"
-          >
-            Optimizar Todo en 1 Clic
-          </ActionButton>
+          <div className="flex-shrink-0">
+            {activePlan ? (
+              <ActionButton
+                variant="secondary"
+                size="md"
+                onClick={onNavigateToPresets}
+                icon={<Layers className="w-3.5 h-3.5 text-white/70" />}
+              >
+                Cambiar o Reaplicar Plan
+              </ActionButton>
+            ) : (
+              <ActionButton
+                variant="primary"
+                size="md"
+                onClick={onNavigateToPresets}
+                icon={<ArrowRight className="w-3.5 h-3.5 text-black" />}
+              >
+                Ver Planes de Optimización
+              </ActionButton>
+            )}
+          </div>
         </div>
       </div>
 

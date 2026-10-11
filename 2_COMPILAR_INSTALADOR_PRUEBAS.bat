@@ -6,6 +6,12 @@ echo ====================================================================
 echo    [LAB] g0d tweaks - COMPILANDO INSTALADOR .EXE DE PRUEBAS
 echo ====================================================================
 echo.
+
+if exist ".updater.key" (
+    set /p TAURI_SIGNING_PRIVATE_KEY=<.updater.key
+    set TAURI_SIGNING_PRIVATE_KEY_PASSWORD=
+)
+
 call npm run build:staging
 echo.
 if errorlevel 1 (
@@ -14,7 +20,8 @@ if errorlevel 1 (
     echo ====================================================================
 ) else (
     echo ====================================================================
-    echo    ✔ Instalador generado en: src-tauri\target\release\bundle\nsis
+    echo    ✔ Instalador generado con éxito en:
+    echo    src-tauri\target\release\bundle\nsis
     echo ====================================================================
 )
 echo.

@@ -10,6 +10,9 @@
       }
     ]
   },
+  "bundle": {
+    "createUpdaterArtifacts": false
+  },
   "plugins": {
     "updater": {
       "endpoints": [

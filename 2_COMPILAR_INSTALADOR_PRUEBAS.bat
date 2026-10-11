@@ -6,10 +6,17 @@ echo ====================================================================
 echo    📦 g0d tweaks ^| COMPILANDO INSTALADOR .EXE DE PRUEBAS
 echo ====================================================================
 echo.
-npm run build:staging
+call npm run build:staging
 echo.
-echo ====================================================================
-echo    ✔ Compilación completada con éxito.
-echo    Instalador disponible en: src-tauri\target\release\bundle\nsis
-echo ====================================================================
+if errorlevel 1 (
+    echo ====================================================================
+    echo    ❌ La compilación falló. Revisa los mensajes anteriores.
+    echo ====================================================================
+) else (
+    echo ====================================================================
+    echo    ✔ Compilación completada con éxito.
+    echo    Instalador disponible en: src-tauri\target\release\bundle\nsis
+    echo ====================================================================
+)
+echo.
 pause

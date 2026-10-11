@@ -63,8 +63,19 @@ async function main() {
 
   console.log(`${ANSI.bold}${ANSI.white}[2/3] Verificando Integridad y Compilación del Kernel Rust...${ANSI.reset}`);
   runProbe('test_rust_kernel', 'Compilación & Chequeo Kernel Rust', 'Rust Subsystem', () => {
-    execSync('cargo check --tests --manifest-path src-tauri/Cargo.toml', { stdio: 'pipe' });
-    return { status: 'PASS', message: 'Kernel libre de errores de tipado o memoria.' };
+    try {
+      execSync('cargo check --tests --manifest-path src-tauri/Cargo.toml', { stdio: 'pipe' });
+      return { status: 'PASS', message: 'Kernel libre de errores de tipado o memoria.' };
+    } catch (err) {
+      const msg = (err.stderr ? err.stderr.toString() : '') + (err.stdout ? err.stdout.toString() : '') + (err.message || '');
+      if (msg.includes('os error 32') || msg.includes('utilizado por otro proceso')) {
+        return {
+          status: 'WARN',
+          message: 'g0d tweaks está abierto en segundo plano (archivo temporal bloqueado). Cierra la app si deseas recompilar desde cero.',
+        };
+      }
+      throw err;
+    }
   });
 
   console.log(`${ANSI.bold}${ANSI.white}[3/3] Ejecutando Sondas de Diagnóstico en Vivo de Windows...${ANSI.reset}`);

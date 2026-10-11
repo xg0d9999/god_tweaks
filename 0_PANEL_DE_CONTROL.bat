@@ -39,50 +39,54 @@ goto MENU
 :DEV_STAGING
 cls
 echo [1/1] Iniciando g0d tweaks en Entorno de Pruebas Aislado (Dev Staging)...
-npm run dev:staging
+call npm run dev:staging
+echo.
 pause
 goto MENU
 
 :BUILD_STAGING
 cls
 echo [1/1] Compilando instalador .exe del Banco de Pruebas (Staging)...
-npm run build:staging
+call npm run build:staging
 echo.
-echo Compilación finalizada. Los instaladores se encuentran en:
-echo src-tauri\target\release\bundle\nsis
+echo Compilación finalizada.
 pause
 goto MENU
 
 :RELEASE_BETA
 cls
 echo [1/1] Publicando versión Beta / Pre-Release a GitHub...
-npm run release:beta
+call npm run release:beta
+echo.
 pause
 goto MENU
 
 :TEST_BENCH
 cls
 echo [1/1] Ejecutando Banco de Pruebas y Diagnóstico Integral...
-npm run test:bench
+call npm run test:bench
+echo.
 pause
 goto MENU
 
 :PROMOTE
 cls
 echo [1/1] Promocionando versión a Producción Oficial...
-npm run release:promote
+call npm run release:promote
+echo.
 pause
 goto MENU
 
 :RELEASE_PROD
 cls
 echo [1/1] Publicando versión Oficial a Producción...
-npm run release
+call npm run release
+echo.
 pause
 goto MENU
 
 :DEV_ADMIN
 cls
 echo [1/1] Iniciando en Modo Administrador...
-npm run dev:admin
+call npm run dev:admin
 goto MENU

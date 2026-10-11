@@ -63,10 +63,10 @@ pub fn set_window_always_on_top(app_handle: tauri::AppHandle, enabled: bool) -> 
 
 #[cfg(windows)]
 mod win_native {
-    use windows::Win32::Foundation::{BOOL, HWND, LPARAM, HANDLE, CloseHandle};
+    use windows::Win32::Foundation::{BOOL, HWND, LPARAM, HANDLE, RECT, CloseHandle};
     use windows::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetClassNameW, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
-        SetForegroundWindow, ShowWindow, BringWindowToTop, GetForegroundWindow,
+        SetForegroundWindow, ShowWindow, BringWindowToTop, GetForegroundWindow, GetWindowRect,
         IsIconic, SW_RESTORE, SW_SHOW,
     };
     use windows::Win32::System::Threading::GetCurrentThreadId;
@@ -275,7 +275,8 @@ mod win_native {
     pub fn find_discord_window() -> Option<HWND> {
         unsafe {
             struct DiscordFinder {
-                hwnd: Option<HWND>,
+                best_hwnd: Option<HWND>,
+                max_area: i32,
             }
             unsafe extern "system" fn enum_discord(hwnd: HWND, lparam: LPARAM) -> BOOL {
                 let finder = &mut *(lparam.0 as *mut DiscordFinder);
@@ -284,38 +285,48 @@ mod win_native {
                 }
                 let mut pid = 0u32;
                 GetWindowThreadProcessId(hwnd, Some(&mut pid));
-                if pid != 0 {
-                    if let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
-                        let mut pe = PROCESSENTRY32W {
-                            dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
-                            ..Default::default()
-                        };
-                        if Process32FirstW(snap, &mut pe).is_ok() {
-                            loop {
-                                if pe.th32ProcessID == pid {
-                                    let len = pe.szExeFile.iter().position(|&c| c == 0).unwrap_or(pe.szExeFile.len());
-                                    let proc_name = String::from_utf16_lossy(&pe.szExeFile[..len]).to_lowercase();
-                                    if proc_name == "discord.exe" || proc_name == "discordcanary.exe" {
-                                        finder.hwnd = Some(hwnd);
-                                        let _ = CloseHandle(snap);
-                                        return BOOL(0);
+                if pid == 0 {
+                    return BOOL(1);
+                }
+
+                if let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
+                    let mut pe = PROCESSENTRY32W {
+                        dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+                        ..Default::default()
+                    };
+                    if Process32FirstW(snap, &mut pe).is_ok() {
+                        loop {
+                            if pe.th32ProcessID == pid {
+                                let len = pe.szExeFile.iter().position(|&c| c == 0).unwrap_or(pe.szExeFile.len());
+                                let proc_name = String::from_utf16_lossy(&pe.szExeFile[..len]).to_lowercase();
+                                if proc_name.contains("discord") {
+                                    let mut rect = RECT::default();
+                                    if GetWindowRect(hwnd, &mut rect).is_ok() {
+                                        let width = rect.right - rect.left;
+                                        let height = rect.bottom - rect.top;
+                                        let area = width * height;
+                                        // Pick the primary visible window (largest area, width > 300)
+                                        if width > 300 && height > 200 && area > finder.max_area {
+                                            finder.max_area = area;
+                                            finder.best_hwnd = Some(hwnd);
+                                        }
                                     }
-                                    break;
                                 }
-                                if Process32NextW(snap, &mut pe).is_err() {
-                                    break;
-                                }
+                                break;
+                            }
+                            if Process32NextW(snap, &mut pe).is_err() {
+                                break;
                             }
                         }
-                        let _ = CloseHandle(snap);
                     }
+                    let _ = CloseHandle(snap);
                 }
                 BOOL(1)
             }
 
-            let mut finder = DiscordFinder { hwnd: None };
+            let mut finder = DiscordFinder { best_hwnd: None, max_area: 0 };
             let _ = EnumWindows(Some(enum_discord), LPARAM(&mut finder as *mut _ as isize));
-            finder.hwnd
+            finder.best_hwnd
         }
     }
 }
@@ -371,26 +382,48 @@ pub fn send_command_to_fivem(command: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn send_report_to_discord(_guild_id: String, _channel_id: String, report_text: String) -> Result<String, String> {
+pub fn send_report_to_discord(guild_id: String, channel_id: String, report_text: String) -> Result<String, String> {
     #[cfg(windows)]
     {
         use win_native::*;
+        use std::os::windows::process::CommandExt;
 
-        // Siempre copiar el reporte completo al portapapeles
+        // 1. Colocar el reporte completo en el portapapeles
         set_clipboard(&report_text);
 
-        // Si Discord está abierto en segundo plano, enfocarlo y pegar sin abrir navegadores
-        if let Some(discord_hwnd) = find_discord_window() {
-            force_foreground(discord_hwnd);
-            std::thread::sleep(std::time::Duration::from_millis(250));
+        // 2. Si se proporcionaron guild y canal, activar la navegación de Discord por URI nativo
+        let g = guild_id.trim();
+        let c = channel_id.trim();
+        if !g.is_empty() && !c.is_empty() {
+            let discord_uri = format!("discord:///channels/{g}/{c}");
+            let _ = std::process::Command::new("cmd")
+                .args(["/C", "start", "", &discord_uri])
+                .creation_flags(0x08000000)
+                .spawn();
+        }
+
+        // 3. Pausa para permitir que Discord cargue el canal en pantalla
+        std::thread::sleep(std::time::Duration::from_millis(850));
+
+        // 4. Buscar ventana de Discord (intentar 2 veces con breve espera)
+        let discord_hwnd = find_discord_window().or_else(|| {
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            find_discord_window()
+        });
+
+        if let Some(hwnd) = discord_hwnd {
+            force_foreground(hwnd);
+            std::thread::sleep(std::time::Duration::from_millis(300));
             unsafe {
+                // Pegar plantilla con Ctrl+V
                 send_ctrl_v();
-                std::thread::sleep(std::time::Duration::from_millis(100));
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                // Pulsar Enter para enviar el mensaje al canal de Discord
                 send_key_tap(0x0D, 0x1C);
             }
-            Ok("Plantilla copiada y enviada directamente a Discord.".to_string())
+            Ok("Plantilla de sanción enviada correctamente al canal de Discord.".to_string())
         } else {
-            Ok("Plantilla de sanción copiada al portapapeles. Pégala en Discord con Ctrl+V.".to_string())
+            Ok("Plantilla copiada al portapapeles y canal de Discord abierto. Pégala con Ctrl+V si no se envió automáticamente.".to_string())
         }
     }
     #[cfg(not(windows))]

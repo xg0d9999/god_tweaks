@@ -209,21 +209,23 @@ Pruebas: ${proofs.trim() || "-"}`;
     setConfirmStep("first");
   };
 
-  const executeFinalAction = async (copyDiscordReport: boolean) => {
+  const executeFinalAction = async (sendToDiscord: boolean) => {
     const type = pendingActionType;
     setConfirmStep(null);
     setPendingActionType(null);
 
+    // 1. PRIMERO: Ejecutar en FiveM por consola F8
     if (type === "jail_ig") {
       await onSendFivemCommand(jailCommand);
-      if (copyDiscordReport) {
-        onCopyClipboard(formattedReportTemplate, "Plantilla de Discord copiada.");
-      }
     } else if (type === "ban_ig") {
       await onSendFivemCommand(banCommand);
-      if (copyDiscordReport) {
-        onCopyClipboard(formattedReportTemplate, "Plantilla de Discord copiada.");
-      }
+    }
+
+    // 2. SEGUNDO: Enviar reporte al canal de Discord
+    if (sendToDiscord) {
+      setTimeout(async () => {
+        await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
+      }, 700);
     }
   };
 
@@ -686,18 +688,19 @@ Pruebas: ${proofs.trim() || "-"}`;
                     <ActionButton
                       variant="secondary"
                       size="sm"
-                      onClick={() => executeFinalAction(true)}
-                      title="Ejecuta en FiveM y copia la plantilla de Discord al portapapeles"
+                      onClick={() => executeFinalAction(false)}
+                      title="Ejecuta únicamente en FiveM sin enviar a Discord"
                     >
-                      Ejecutar + Copiar Discord
+                      Solo FiveM (F8)
                     </ActionButton>
                     <ActionButton
                       variant="primary"
                       size="sm"
-                      onClick={() => executeFinalAction(false)}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold"
+                      onClick={() => executeFinalAction(true)}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                      title="Ejecuta en FiveM por F8 y publica el reporte en Discord"
                     >
-                      ⚡ Ejecutar en FiveM (F8)
+                      ⚡ FiveM + Enviar a Discord
                     </ActionButton>
                   </div>
                 </div>

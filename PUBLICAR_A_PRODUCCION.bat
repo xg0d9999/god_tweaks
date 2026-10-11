@@ -16,14 +16,9 @@ echo.
 REM 1. Cerrar instancias previas para evitar bloqueos de archivo
 taskkill /F /IM god_tweaks.exe >nul 2>&1
 
-REM 2. Cargar clave de firma para el auto-actualizador si existe
-if exist ".updater.key" (
-    set /p TAURI_SIGNING_PRIVATE_KEY=<.updater.key
-    set TAURI_SIGNING_PRIVATE_KEY_PASSWORD=
-    echo [*] Clave de firma Minisign cargada correctamente.
-) else (
-    echo [!] AVISO: No se detecto .updater.key local.
-)
+REM 2. Limpiar variables de firma local para compilar sin solicitud de contrasenas
+set TAURI_SIGNING_PRIVATE_KEY=
+set TAURI_SIGNING_PRIVATE_KEY_PASSWORD=
 
 echo.
 echo [PASO 1/3] Ejecutando pruebas de verificacion del codigo...
@@ -41,7 +36,7 @@ echo [PASO 2/3] Compilando ejecutable e instalador de produccion con Tauri...
 echo           Por favor espera mientras Rust compila el binario en Release...
 echo.
 
-call npx tauri build
+call npx tauri build -c src-tauri\tauri.local.conf.json
 if errorlevel 1 (
     echo.
     echo [ERROR] Fallo la compilacion de produccion. Revisa el error superior.

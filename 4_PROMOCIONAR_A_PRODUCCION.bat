@@ -1,11 +1,12 @@
 @echo off
 chcp 65001 >nul
-title g0d tweaks - Promocionar a Producción Oficial
+title g0d tweaks - Promocionar a Produccion Oficial
 cd /d "%~dp0"
 echo ====================================================================
-echo    🚀 g0d tweaks ^| PROMOCIONANDO BETA A PRODUCCIÓN OFICIAL
-echo    ¡ATENCIÓN! Esta versión se auto-actualizará a todos los usuarios.
+echo    [PROD] g0d tweaks - PROMOCIONANDO BETA A PRODUCCION OFICIAL
+echo    Esta version se distribuira a todos los usuarios activos.
 echo ====================================================================
 echo.
-npm run release:promote
+call npm run release:promote
+echo.
 pause

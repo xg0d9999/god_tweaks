@@ -1,11 +1,12 @@
 @echo off
 chcp 65001 >nul
-title g0d tweaks - Publicar Actualización Oficial
+title g0d tweaks - Publicar Actualizacion Oficial
 cd /d "%~dp0"
 echo ====================================================================
-echo    ⚡ g0d tweaks ^| PUBLICANDO ACTUALIZACIÓN OFICIAL A PRODUCCIÓN
-echo    Esta versión se distribuirá a todos los usuarios activos.
+echo    [PROD] g0d tweaks - PUBLICANDO ACTUALIZACION OFICIAL A PRODUCCION
+echo    Esta version se distribuira a todos los usuarios activos.
 echo ====================================================================
 echo.
-npm run release
+call npm run release
+echo.
 pause

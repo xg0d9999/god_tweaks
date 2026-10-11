@@ -14,8 +14,10 @@ import {
   Shield,
   PanelLeftClose,
   PanelLeftOpen,
+  LogOut,
 } from "lucide-react";
 import { TabType } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
 interface SidebarProps {
   activeTab: TabType;
@@ -40,6 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
+  const { user, logout } = useAuth();
   const navItems: NavItem[] = [
     {
       id: "dashboard",
@@ -200,32 +203,92 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Bottom status widget */}
-      <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
-        {!isCollapsed ? (
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1.5">
-              <div className="flex items-center gap-1.5 text-[#717680]">
-                <Cpu className="w-3.5 h-3.5" />
-                <span className="text-[11px]">Optimizaciones</span>
+      {/* Bottom Area: Status & Discord User Profile */}
+      <div className="space-y-2 mt-auto">
+        {/* Bottom status widget */}
+        <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
+          {!isCollapsed ? (
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1.5">
+                <div className="flex items-center gap-1.5 text-[#717680]">
+                  <Cpu className="w-3.5 h-3.5" />
+                  <span className="text-[11px]">Optimizaciones</span>
+                </div>
+                <span className="font-mono text-white/90 text-[11px] font-medium">
+                  {appliedCount} activas
+                </span>
               </div>
-              <span className="font-mono text-white/90 text-[11px] font-medium">
-                {appliedCount} activas
-              </span>
+              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
+                <motion.div
+                  className="h-full bg-white rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (appliedCount / 8) * 100)}%` }}
+                  transition={{ duration: 0.6 }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-              <motion.div
-                className="h-full bg-white rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (appliedCount / 8) * 100)}%` }}
-                transition={{ duration: 0.6 }}
-              />
+          ) : (
+            <div className="flex flex-col items-center gap-1 py-1" title={`${appliedCount} optimizaciones activas`}>
+              <Cpu className="w-3.5 h-3.5 text-[#717680]" />
+              <span className="font-mono text-[9px] text-white/80">{appliedCount}</span>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1 py-1" title={`${appliedCount} optimizaciones activas`}>
-            <Cpu className="w-3.5 h-3.5 text-[#717680]" />
-            <span className="font-mono text-[9px] text-white/80">{appliedCount}</span>
+          )}
+        </div>
+
+        {/* Discord User Badge (Bottom-Left) */}
+        {user && (
+          <div className="p-2 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/25 backdrop-blur-md">
+            {!isCollapsed ? (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <img
+                      src={user.avatar_url}
+                      alt={user.username}
+                      className="w-7 h-7 rounded-full object-cover border border-[#5865F2]/50 bg-[#5865F2]/30"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+                      }}
+                    />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-[#0E1013]" />
+                  </div>
+                  <div className="min-w-0 flex flex-col">
+                    <span className="text-xs font-medium text-white truncate leading-tight">
+                      {user.username}
+                    </span>
+                    <span className="text-[9px] font-mono text-cyan-300/80 truncate">
+                      HWID Sincronizado
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={logout}
+                  title="Cerrar sesión de Discord"
+                  className="p-1 rounded-lg text-[#828792] hover:text-rose-400 hover:bg-rose-500/10 transition-colors flex-shrink-0 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <button
+                  onClick={logout}
+                  title={`Conectado como ${user.username} (Clic para salir)`}
+                  className="relative cursor-pointer group"
+                >
+                  <img
+                    src={user.avatar_url}
+                    alt={user.username}
+                    className="w-7 h-7 rounded-full object-cover border border-[#5865F2]/50 group-hover:border-rose-400 transition-colors"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+                    }}
+                  />
+                  <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-[#0E1013]" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

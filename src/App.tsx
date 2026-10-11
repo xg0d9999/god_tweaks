@@ -16,6 +16,8 @@ import { BackupView } from "./components/views/BackupView";
 import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal";
 import { UpdateModal } from "./components/ui/UpdateModal";
 import { checkForAppUpdate, UpdateInfo } from "./services/updater";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { LoginView } from "./components/auth/LoginView";
 import {
   TabType,
   AppMode,
@@ -149,7 +151,8 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
   }
 }
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [appMode, setAppMode] = useState<AppMode>("optimizer");
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -917,6 +920,40 @@ export const App: React.FC = () => {
     fivemStatus.priority_active,
   ].filter(Boolean).length;
 
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#07080A] text-white select-none">
+        <TitleBar
+          appMode={appMode}
+          onToggleAppMode={handleToggleAppMode}
+          onCheckUpdates={() => handleCheckForUpdates(true)}
+          isCheckingUpdate={isCheckingUpdate}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <img src="/favicon.png" alt="g0d suite" className="w-12 h-12 rounded-2xl animate-pulse" />
+          <div className="flex items-center gap-2 text-xs font-mono text-[#828792]">
+            <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-cyan-400 rounded-full animate-spin" />
+            <span>Sincronizando g0d suite...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#07080A]">
+        <TitleBar
+          appMode={appMode}
+          onToggleAppMode={handleToggleAppMode}
+          onCheckUpdates={() => handleCheckForUpdates(true)}
+          isCheckingUpdate={isCheckingUpdate}
+        />
+        <LoginView />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen w-screen bg-[#08090A] text-[#EDEDED] overflow-hidden select-none">
       {/* Custom Window TitleBar with Mode Switcher & Update Check */}
@@ -1146,3 +1183,12 @@ export const App: React.FC = () => {
     </div>
   );
 };
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+

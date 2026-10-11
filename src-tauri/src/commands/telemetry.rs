@@ -69,3 +69,74 @@ pub fn restart_as_admin() -> Result<(), String> {
     let _ = crate::utils::win32::run_hidden_powershell(&cmd);
     std::process::exit(0);
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct HardwareProfile {
+    pub hwid: String,
+    pub cpu: String,
+    pub cpu_cores: usize,
+    pub ram_mb: u64,
+    pub gpu: String,
+    pub os: String,
+}
+
+#[tauri::command]
+pub fn get_hardware_profile(state: State<'_, TelemetryState>) -> Result<HardwareProfile, String> {
+    let mut sys = state.sys.lock().map_err(|e| e.to_string())?;
+    sys.refresh_memory();
+
+    let ram_mb = sys.total_memory() / 1024 / 1024;
+    let cpu = sys
+        .cpus()
+        .first()
+        .map(|c| c.name().trim().to_string())
+        .unwrap_or_else(|| "Unknown CPU".to_string());
+    let cpu_cores = sys.cpus().len();
+    let os = format!(
+        "{} {}",
+        sysinfo::System::name().unwrap_or_else(|| "Windows".to_string()),
+        sysinfo::System::os_version().unwrap_or_default()
+    );
+
+    let hwid = {
+        #[cfg(windows)]
+        {
+            use winreg::enums::*;
+            use winreg::RegKey;
+            let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+            hklm.open_subkey("SOFTWARE\\Microsoft\\Cryptography")
+                .and_then(|k| k.get_value::<String, _>("MachineGuid"))
+                .unwrap_or_else(|_| "HWID-UNAVAILABLE".to_string())
+        }
+        #[cfg(not(windows))]
+        {
+            "HWID-NON-WINDOWS".to_string()
+        }
+    };
+
+    let gpu = {
+        #[cfg(windows)]
+        {
+            use winreg::enums::*;
+            use winreg::RegKey;
+            let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+            hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000")
+                .and_then(|k| k.get_value::<String, _>("DriverDesc"))
+                .unwrap_or_else(|_| "NVIDIA / AMD Graphic Adapter".to_string())
+        }
+        #[cfg(not(windows))]
+        {
+            "Standard GPU".to_string()
+        }
+    };
+
+    Ok(HardwareProfile {
+        hwid,
+        cpu,
+        cpu_cores,
+        ram_mb,
+        gpu,
+        os,
+    })
+}
+

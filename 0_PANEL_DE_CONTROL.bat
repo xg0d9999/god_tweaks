@@ -19,12 +19,15 @@ echo   --- [PRODUCCION OFICIAL (ACTUALIZA A TODOS LOS USUARIOS)] ---
 echo   [5] Promocionar la version Beta probada a PRODUCCION OFICIAL
 echo   [6] Publicar Actualizacion Oficial Directa a Produccion
 echo.
+echo   --- [INTEGRACION Y COMUNIDAD] ---
+echo   [7] Iniciar Bot de Discord para Anuncios (/actualizacion)
+echo.
 echo   --- [DESARROLLO AVANZADO] ---
-echo   [7] Abrir en Modo Administrador (Dev Admin)
-echo   [8] Salir
+echo   [8] Abrir en Modo Administrador (Dev Admin)
+echo   [9] Salir
 echo.
 echo ====================================================================
-set /p OPT="Selecciona una opcion [1-8]: "
+set /p OPT="Selecciona una opcion [1-9]: "
 
 if "%OPT%"=="1" goto DEV_STAGING
 if "%OPT%"=="2" goto BUILD_STAGING
@@ -32,8 +35,9 @@ if "%OPT%"=="3" goto RELEASE_BETA
 if "%OPT%"=="4" goto TEST_BENCH
 if "%OPT%"=="5" goto PROMOTE
 if "%OPT%"=="6" goto RELEASE_PROD
-if "%OPT%"=="7" goto DEV_ADMIN
-if "%OPT%"=="8" exit
+if "%OPT%"=="7" goto DISCORD_BOT
+if "%OPT%"=="8" goto DEV_ADMIN
+if "%OPT%"=="9" exit
 goto MENU
 
 :DEV_STAGING
@@ -83,6 +87,9 @@ echo [1/1] Publicando version Oficial a Produccion...
 call npm run release
 echo.
 pause
+:DISCORD_BOT
+cls
+call "7_BOT_DISCORD_ANUNCIOS.bat"
 goto MENU
 
 :DEV_ADMIN

@@ -29,6 +29,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Telemetry
             get_system_metrics,
+            get_hardware_profile,
             restart_as_admin,
             // Gaming
             get_gaming_status,

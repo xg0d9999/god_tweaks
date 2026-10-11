@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "g0d suite",
-        "width": 940,
-        "height": 940,
-        "minWidth": 800,
-        "minHeight": 700,
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 650,
         "resizable": true,
         "fullscreen": false,
         "decorations": false,

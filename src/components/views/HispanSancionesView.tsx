@@ -190,33 +190,40 @@ Pruebas: ${proofs.trim() || "-"}`;
 
   const handleTriggerAction = (type: "plantilla" | "jail" | "ban" | "jail_ig" | "ban_ig") => {
     if (!validateAction(type)) return;
+
+    if (type === "jail") {
+      onCopyClipboard(jailCommand, "Comando jail copiado al portapapeles.");
+      return;
+    }
+    if (type === "ban") {
+      onCopyClipboard(banCommand, "Comando sqlban copiado al portapapeles.");
+      return;
+    }
+    if (type === "plantilla") {
+      onCopyClipboard(formattedReportTemplate, "Plantilla de reporte copiada al portapapeles.");
+      return;
+    }
+
+    // Para jail_ig y ban_ig, abrimos el modal de confirmación
     setPendingActionType(type);
     setConfirmStep("first");
   };
 
-  const executeFinalAction = async (sendToDiscord: boolean) => {
+  const executeFinalAction = async (copyDiscordReport: boolean) => {
     const type = pendingActionType;
     setConfirmStep(null);
     setPendingActionType(null);
 
-    // 1. PRIMERO: Ejecutar en FiveM por consola F8 o copiar al portapapeles
     if (type === "jail_ig") {
       await onSendFivemCommand(jailCommand);
+      if (copyDiscordReport) {
+        onCopyClipboard(formattedReportTemplate, "Plantilla de Discord copiada.");
+      }
     } else if (type === "ban_ig") {
       await onSendFivemCommand(banCommand);
-    } else if (type === "jail") {
-      onCopyClipboard(jailCommand, "Comando jail copiado.");
-    } else if (type === "ban") {
-      onCopyClipboard(banCommand, "Comando sqlban copiado.");
-    } else if (type === "plantilla") {
-      onCopyClipboard(formattedReportTemplate, "Plantilla copiada.");
-    }
-
-    // 2. DESPUÉS: Si se seleccionó registrar en Discord, enviar reporte tras pequeña pausa
-    if (sendToDiscord) {
-      setTimeout(async () => {
-        await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
-      }, 750);
+      if (copyDiscordReport) {
+        onCopyClipboard(formattedReportTemplate, "Plantilla de Discord copiada.");
+      }
     }
   };
 
@@ -485,15 +492,28 @@ Pruebas: ${proofs.trim() || "-"}`;
 
           {/* Actions */}
           <div className="space-y-2">
-            <ActionButton
-              variant="primary"
-              size="md"
-              onClick={() => handleTriggerAction("plantilla")}
-              icon={<Copy className="w-3.5 h-3.5 text-black" />}
-              className="w-full"
-            >
-              Copiar Plantilla de Reporte
-            </ActionButton>
+            <div className="grid grid-cols-2 gap-2">
+              <ActionButton
+                variant="primary"
+                size="md"
+                onClick={() => handleTriggerAction("plantilla")}
+                icon={<Copy className="w-3.5 h-3.5 text-black" />}
+              >
+                Copiar Plantilla
+              </ActionButton>
+              <ActionButton
+                variant="secondary"
+                size="md"
+                onClick={async () => {
+                  if (!validateAction("plantilla")) return;
+                  await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
+                }}
+                icon={<Send className="w-3.5 h-3.5 text-sky-400" />}
+                title="Pega la plantilla en Discord"
+              >
+                Enviar a Discord
+              </ActionButton>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <ActionButton
@@ -614,21 +634,32 @@ Pruebas: ${proofs.trim() || "-"}`;
             >
               <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.2] to-transparent pointer-events-none" />
 
-              {/* Step 1: Confirm Sanction */}
-              {confirmStep === "first" && (
+              {confirmStep && (
                 <div className="space-y-3.5">
                   <div className="flex items-center gap-2.5">
-                    <Shield className="w-5 h-5 text-white" />
+                    <Terminal className="w-5 h-5 text-emerald-400" />
                     <div>
-                      <h3 className="text-sm font-semibold text-white">Confirmar Sanción</h3>
-                      <p className="text-[11px] text-[#828792]">Revisa los datos antes de aplicar.</p>
+                      <h3 className="text-sm font-semibold text-white">
+                        Ejecutar {pendingActionType === "jail_ig" ? "Jail" : "Baneo"} en FiveM (F8)
+                      </h3>
+                      <p className="text-[11px] text-[#828792]">
+                        Se enfocará FiveM, se abrirá la consola F8 y se ejecutará el comando.
+                      </p>
                     </div>
+                  </div>
+
+                  {/* Comando IG Preview */}
+                  <div className="px-3 py-2 rounded-xl bg-black/60 border border-emerald-500/30 flex items-center gap-2 font-mono text-xs">
+                    <span className="text-emerald-400 font-bold">$</span>
+                    <span className="text-emerald-300 font-medium tracking-wide">
+                      {pendingActionType === "jail_ig" ? jailCommand : banCommand}
+                    </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs space-y-1.5 font-mono">
                     <div className="flex justify-between text-[#828792]">
-                      <span>ID:</span>
-                      <strong className="text-white">{playerId || "-"}</strong>
+                      <span>ID Objetivo:</span>
+                      <strong className="text-white font-bold">{playerId || "-"}</strong>
                     </div>
                     <div className="flex justify-between text-[#828792]">
                       <span>Steam:</span>
@@ -653,45 +684,20 @@ Pruebas: ${proofs.trim() || "-"}`;
                       Cancelar
                     </ActionButton>
                     <ActionButton
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setConfirmStep("second")}
-                    >
-                      Continuar ➔
-                    </ActionButton>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Prompt to write to Discord */}
-              {confirmStep === "second" && (
-                <div className="space-y-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <Send className="w-5 h-5 text-sky-400" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-white">¿Enviar registro a Discord?</h3>
-                      <p className="text-[11px] text-[#828792]">Escribe la plantilla en el canal de registro configurado.</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-mono text-white/90 whitespace-pre-wrap max-h-44 overflow-y-auto">
-                    {formattedReportTemplate}
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
-                    <ActionButton
                       variant="secondary"
                       size="sm"
-                      onClick={() => executeFinalAction(false)}
+                      onClick={() => executeFinalAction(true)}
+                      title="Ejecuta en FiveM y copia la plantilla de Discord al portapapeles"
                     >
-                      No enviar (Solo aplicar)
+                      Ejecutar + Copiar Discord
                     </ActionButton>
                     <ActionButton
                       variant="primary"
                       size="sm"
-                      onClick={() => executeFinalAction(true)}
+                      onClick={() => executeFinalAction(false)}
+                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold"
                     >
-                      Sí, enviar a Discord
+                      ⚡ Ejecutar en FiveM (F8)
                     </ActionButton>
                   </div>
                 </div>

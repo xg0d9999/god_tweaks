@@ -3,6 +3,12 @@ chcp 65001 >nul
 title g0d suite - Centro de Control y Automatizacion
 cd /d "%~dp0"
 
+net session >nul 2>&1
+if %errorLevel% neq 0 (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs"
+    exit /b
+)
+
 :MENU
 cls
 echo ====================================================================

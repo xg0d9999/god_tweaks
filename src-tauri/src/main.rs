@@ -3,7 +3,7 @@
 #![allow(linker_messages)]
 
 fn main() {
-    #[cfg(windows)]
+    #[cfg(all(windows, not(debug_assertions)))]
     {
         use god_tweaks_lib::utils::win32::{is_elevated, run_hidden_powershell};
 

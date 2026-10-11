@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldAlert, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import { TitleBar } from "./components/layout/TitleBar";
@@ -629,16 +629,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Autoelevación transparente: si se detecta que no es admin, solicitar privilegios inmediatamente
-  const hasAttemptedElevation = useRef(false);
-  useEffect(() => {
-    if (metrics && !metrics.is_admin && !hasAttemptedElevation.current) {
-      hasAttemptedElevation.current = true;
-      if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-        void handleRestartAsAdmin();
-      }
-    }
-  }, [metrics]);
 
   // HispanLife Moderation Handlers
   const handleCopyClipboard = async (text: string, label: string) => {

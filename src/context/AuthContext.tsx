@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { upsertAppUser, AppUserRecord } from '../services/supabase';
+import { logUserLogin } from '../services/discordLogger';
 
 export interface DiscordUser {
   id: string;
@@ -155,6 +156,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       await upsertAppUser(record);
+
+      // Enviar log en vivo al canal de Discord (1543324127283253270)
+      logUserLogin({
+        user: newUser,
+        hardware: hw,
+        ip: ip,
+      }).catch((e) => console.warn('[DiscordLogger] Aviso:', e));
 
       setUser(newUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ user: newUser, ip }));

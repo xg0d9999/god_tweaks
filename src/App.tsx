@@ -17,6 +17,7 @@ import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal"
 import { UpdateModal } from "./components/ui/UpdateModal";
 import { checkForAppUpdate, UpdateInfo } from "./services/updater";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { logOptimizationApplied } from "./services/discordLogger";
 import { LoginView } from "./components/auth/LoginView";
 import {
   TabType,
@@ -70,8 +71,8 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
         } else if (cmd === "get_hispan_config") {
           resolve({
             staff_att: "Admin_Isma",
-            discord_guild: "667478197927018530",
-            discord_channel: "668062839990386701",
+            discord_guild: "1543324125685358713",
+            discord_channel: "1543324127283253270",
             always_on_top: true,
           } as T);
         } else if (cmd === "list_restore_points") {
@@ -152,7 +153,7 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
 }
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   const [appMode, setAppMode] = useState<AppMode>("optimizer");
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -189,8 +190,8 @@ const AppContent: React.FC = () => {
 
   // HispanLife Moderation state
   const [staffAtt, setStaffAtt] = useState("Staff");
-  const [discordGuild, setDiscordGuild] = useState("667478197927018530");
-  const [discordChannel, setDiscordChannel] = useState("668062839990386701");
+  const [discordGuild, setDiscordGuild] = useState("1543324125685358713");
+  const [discordChannel, setDiscordChannel] = useState("1543324127283253270");
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -735,6 +736,12 @@ const AppContent: React.FC = () => {
       await new Promise((r) => setTimeout(r, 450));
     }
     setModalPhase("completed");
+    void logOptimizationApplied({
+      username: user?.username || "Usuario Local",
+      userId: user?.id,
+      planTitle: modalPlanTitle,
+      appliedCount: stepsList.length,
+    });
     fetchStatuses();
     fetchMetrics();
     fetchBackups();

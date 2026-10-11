@@ -16,8 +16,8 @@ impl Default for HispanConfig {
     fn default() -> Self {
         Self {
             staff_att: "".to_string(),
-            discord_guild: "667478197927018530".to_string(),
-            discord_channel: "668062839990386701".to_string(),
+            discord_guild: "1543324125685358713".to_string(),
+            discord_channel: "1543324127283253270".to_string(),
             always_on_top: true,
         }
     }

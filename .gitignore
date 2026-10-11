@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Production / Bundles
+dist
+build
+src-tauri/target
+
+# Updater Private Keys (CRITICAL: Never commit private keys to git)
+.updater.key
+*.key
+*.pem
+
+# Environment variables & local configs
+.env
+.env.local
+.env.*.local
+*.reg
+
+# IDE & Editor files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+Thumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+.DS_Store

@@ -6,7 +6,7 @@ echo ====================================================================
 echo        g0d suite - COMPILADOR Y PUBLICADOR DE PRODUCCION
 echo ====================================================================
 echo.
-echo Version de Produccion: 1.0.5
+echo Version de Produccion: 1.0.7
 echo Este script compila el instalador oficial .exe y permite publicar
 echo la Release oficial en GitHub para el actualizador automatico.
 echo.
@@ -60,10 +60,10 @@ echo ====================================================================
 echo.
 
 REM 3. Publicacion a GitHub Releases
-set /p DO_PUB="Deseas publicar esta version (v1.0.5) en GitHub Releases ahora? (S/N): "
+set /p DO_PUB="Deseas publicar esta version (v1.0.7) en GitHub Releases ahora? (S/N): "
 if /i "%DO_PUB%"=="S" (
     echo.
-    echo [PASO 3/3] Publicando version v1.0.5 a GitHub Releases...
+    echo [PASO 3/3] Publicando version v1.0.7 a GitHub Releases...
     call npm run release:current
     echo.
     echo [*] Release enviada a GitHub. GitHub Actions generara el paquete oficial.

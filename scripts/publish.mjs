@@ -317,10 +317,10 @@ async function main() {
 
     const tagName = `v${targetVersion}`;
     try {
-      execSync(`git tag -a ${tagName} -m "Release ${tagName}"`, { stdio: 'inherit' });
-      console.log(`  ✔ Tag ${ANSI.bold}${tagName}${ANSI.reset} creado.`);
+      execSync(`git tag -fa ${tagName} -m "Release ${tagName}"`, { stdio: 'inherit' });
+      console.log(`  ✔ Tag ${ANSI.bold}${tagName}${ANSI.reset} creado o actualizado.`);
     } catch {
-      console.log(`  El tag ${tagName} ya existía o se actualizará.`);
+      console.log(`  Aviso al gestionar tag ${tagName}.`);
     }
 
     console.log(`  Subiendo cambios y tags a GitHub...`);

@@ -11,17 +11,22 @@ export type DownloadProgressCallback = (downloaded: number, total: number | null
 
 // Safe wrapper to check for updates in both Tauri desktop runtime and browser preview
 export async function checkForAppUpdate(): Promise<UpdateInfo> {
-  const currentVersion = "1.0.0";
+  let currentVersion = "1.0.0";
 
   if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
+      const { getVersion } = await import("@tauri-apps/api/app");
+      try {
+        currentVersion = await getVersion();
+      } catch {}
+
       const update = await check();
 
       if (update && update.available) {
         return {
           available: true,
-          currentVersion,
+          currentVersion: update.currentVersion || currentVersion,
           version: update.version,
           date: update.date,
           body: update.body,
@@ -30,7 +35,7 @@ export async function checkForAppUpdate(): Promise<UpdateInfo> {
       } else {
         return {
           available: false,
-          currentVersion,
+          currentVersion: update?.currentVersion || currentVersion,
         };
       }
     } catch (err) {

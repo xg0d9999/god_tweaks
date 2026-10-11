@@ -5,13 +5,9 @@ import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { DashboardView } from "./components/views/DashboardView";
 import { PresetsView } from "./components/views/PresetsView";
-import { BenchmarkView } from "./components/views/BenchmarkView";
 import { FiveMView } from "./components/views/FiveMView";
+import { AdvancedModeView } from "./components/views/AdvancedModeView";
 import { HispanSancionesView } from "./components/views/HispanSancionesView";
-import { GamingView } from "./components/views/GamingView";
-import { DebloatView } from "./components/views/DebloatView";
-import { NetworkView } from "./components/views/NetworkView";
-import { MemoryView } from "./components/views/MemoryView";
 import { BackupView } from "./components/views/BackupView";
 import { AdminPanelView } from "./components/views/AdminPanelView";
 import { PermissionBlockedView } from "./components/views/PermissionBlockedView";
@@ -1012,9 +1008,6 @@ const AppContent: React.FC = () => {
           onTabChange={(tab) => {
             if (tab === "god_mode") {
               handleTriggerGodMode();
-            } else if (tab === "hispan") {
-              setAppMode("hispan");
-              setActiveTab("hispan");
             } else if (tab === "admin") {
               setActiveTab("admin");
             } else {
@@ -1060,22 +1053,70 @@ const AppContent: React.FC = () => {
                   />
                 ))}
 
-              {activeTab === "benchmark" &&
+              {activeTab === "fivem" &&
                 (!canUseTweaks ? (
                   <PermissionBlockedView
-                    moduleName="Telemetría & Benchmark"
+                    moduleName="FiveM & GTA V Tweaks"
                     onBackToDashboard={() => setActiveTab("dashboard")}
                   />
                 ) : (
-                  <BenchmarkView
-                    pcMetrics={pcBenchmark}
-                    fivemMetrics={fivemBenchmark}
-                    onRefreshPcBenchmark={fetchPcBenchmark}
-                    onScanFivemLog={fetchFivemBenchmark}
-                    isLoadingPc={loadingKeys["pc_bench"]}
-                    isLoadingFivem={loadingKeys["fivem_bench"]}
+                  <FiveMView
+                    status={fivemStatus}
+                    onCleanCache={handleCleanFiveMCache}
+                    onTogglePriority={handleToggleFiveMPriority}
+                    loadingKeys={loadingKeys}
+                    lastCleanResult={lastFiveMCleanMsg}
                   />
                 ))}
+
+              {activeTab === "advanced" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Modo Avanzado"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <AdvancedModeView
+                    gamingStatus={gamingStatus}
+                    onToggleHpet={handleToggleHpet}
+                    onToggleUltimatePower={handleToggleUltimatePower}
+                    onToggleGameDvr={handleToggleGameDvr}
+                    onToggleMmcss={handleToggleMmcss}
+                    debloatStatus={debloatStatus}
+                    onToggleTelemetry={handleToggleTelemetry}
+                    onToggleCortana={handleToggleCortana}
+                    onToggleCopilot={handleToggleCopilot}
+                    onUninstallBloatware={handleUninstallBloatware}
+                    networkStatus={networkStatus}
+                    onToggleNagle={handleToggleNagle}
+                    onFlushDns={handleFlushDns}
+                    onToggleNetworkThrottling={handleToggleNetworkThrottling}
+                    onCleanRam={handleCleanRam}
+                    onPurgeCaches={handlePurgeCaches}
+                    lastRamCleanResult={lastRamMsg}
+                    lastCacheCleanResult={lastCacheMsg}
+                    pcBenchmark={pcBenchmark}
+                    fivemBenchmark={fivemBenchmark}
+                    onRefreshPcBenchmark={fetchPcBenchmark}
+                    onScanFivemLog={fetchFivemBenchmark}
+                    loadingKeys={loadingKeys}
+                  />
+                ))}
+
+              {activeTab === "backup" && (
+                <BackupView
+                  onCreateRestorePoint={handleCreateRestorePoint}
+                  onExportRegistry={handleExportRegistry}
+                  backups={backups}
+                  restorePoints={restorePoints}
+                  onDeleteBackup={handleDeleteBackup}
+                  onDeleteAllBackups={handleDeleteAllBackups}
+                  onDeleteRestorePoint={handleDeleteRestorePoint}
+                  onRefreshBackups={fetchBackups}
+                  loadingKeys={loadingKeys}
+                  lastBackupMsg={lastBackupMsg}
+                />
+              )}
 
               {activeTab === "hispan" &&
                 (!canUseSanciones ? (
@@ -1101,103 +1142,6 @@ const AppContent: React.FC = () => {
                     showToast={showToast}
                   />
                 ))}
-
-              {activeTab === "fivem" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="FiveM & GTA V Tweaks"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <FiveMView
-                    status={fivemStatus}
-                    onCleanCache={handleCleanFiveMCache}
-                    onTogglePriority={handleToggleFiveMPriority}
-                    loadingKeys={loadingKeys}
-                    lastCleanResult={lastFiveMCleanMsg}
-                  />
-                ))}
-
-              {activeTab === "gaming" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="Input Lag & Gaming"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <GamingView
-                    status={gamingStatus}
-                    onToggleHpet={handleToggleHpet}
-                    onToggleUltimatePower={handleToggleUltimatePower}
-                    onToggleGameDvr={handleToggleGameDvr}
-                    onToggleMmcss={handleToggleMmcss}
-                    loadingKeys={loadingKeys}
-                  />
-                ))}
-
-              {activeTab === "debloat" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="Debloat & Privacidad"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <DebloatView
-                    status={debloatStatus}
-                    onToggleTelemetry={handleToggleTelemetry}
-                    onToggleCortana={handleToggleCortana}
-                    onToggleCopilot={handleToggleCopilot}
-                    onUninstallBloatware={handleUninstallBloatware}
-                    loadingKeys={loadingKeys}
-                  />
-                ))}
-
-              {activeTab === "network" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="Red & Ping"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <NetworkView
-                    status={networkStatus}
-                    onToggleNagle={handleToggleNagle}
-                    onFlushDns={handleFlushDns}
-                    onToggleNetworkThrottling={handleToggleNetworkThrottling}
-                    loadingKeys={loadingKeys}
-                  />
-                ))}
-
-              {activeTab === "memory" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="Limpieza Profunda & Memoria"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <MemoryView
-                    onCleanRam={handleCleanRam}
-                    onPurgeCaches={handlePurgeCaches}
-                    loadingKeys={loadingKeys}
-                    lastRamCleanResult={lastRamMsg}
-                    lastCacheCleanResult={lastCacheMsg}
-                  />
-                ))}
-
-              {activeTab === "backup" && (
-                <BackupView
-                  onCreateRestorePoint={handleCreateRestorePoint}
-                  onExportRegistry={handleExportRegistry}
-                  backups={backups}
-                  restorePoints={restorePoints}
-                  onDeleteBackup={handleDeleteBackup}
-                  onDeleteAllBackups={handleDeleteAllBackups}
-                  onDeleteRestorePoint={handleDeleteRestorePoint}
-                  onRefreshBackups={fetchBackups}
-                  loadingKeys={loadingKeys}
-                  lastBackupMsg={lastBackupMsg}
-                />
-              )}
 
               {activeTab === "admin" &&
                 (isAdmin ? (

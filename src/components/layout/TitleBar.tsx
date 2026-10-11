@@ -106,7 +106,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                 isCheckingUpdate ? "animate-spin text-white" : ""
               }`}
             />
-            <span className="font-mono text-[10px] tracking-tight">v1.0.0</span>
+            <span className="font-mono text-[10px] tracking-tight">v1.0.4</span>
           </button>
         )}
 

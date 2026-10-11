@@ -1,13 +1,9 @@
 export type TabType =
   | "dashboard"
-  | "presets"
-  | "benchmark"
-  | "fivem"
   | "god_mode"
-  | "gaming"
-  | "debloat"
-  | "network"
-  | "memory"
+  | "presets"
+  | "fivem"
+  | "advanced"
   | "backup"
   | "hispan"
   | "admin";

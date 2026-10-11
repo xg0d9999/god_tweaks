@@ -3,15 +3,10 @@ import {
   Activity,
   Flame,
   Layers,
-  TrendingUp,
   Crosshair,
-  Gamepad2,
-  Ghost,
-  Radio,
-  Sparkles,
+  Sliders,
   RotateCcw,
   Cpu,
-  Shield,
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
@@ -47,7 +42,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, userRecord, logout } = useAuth();
   const tweaksBlocked = userRecord?.can_use_tweaks === false;
-  const sancionesBlocked = userRecord?.can_use_sanciones === false;
 
   const navItems: NavItem[] = [
     {
@@ -70,48 +64,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       isBlocked: tweaksBlocked,
     },
     {
-      id: "benchmark",
-      label: "Telemetría & Benchmark",
-      icon: <TrendingUp className="w-4 h-4 flex-shrink-0" />,
-      badge: "NUEVO",
-      isBlocked: tweaksBlocked,
-    },
-    {
       id: "fivem",
       label: "FiveM & GTA V",
       icon: <Crosshair className="w-4 h-4 flex-shrink-0" />,
       isBlocked: tweaksBlocked,
     },
     {
-      id: "hispan",
-      label: "HispanLife Sanciones",
-      icon: <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />,
-      badge: sancionesBlocked ? "BLOQUEADO" : "STAFF",
-      isSpecial: true,
-      isBlocked: sancionesBlocked,
-    },
-    {
-      id: "gaming",
-      label: "Input Lag & Gaming",
-      icon: <Gamepad2 className="w-4 h-4 flex-shrink-0" />,
-      isBlocked: tweaksBlocked,
-    },
-    {
-      id: "debloat",
-      label: "Debloat & Privacidad",
-      icon: <Ghost className="w-4 h-4 flex-shrink-0" />,
-      isBlocked: tweaksBlocked,
-    },
-    {
-      id: "network",
-      label: "Red & Ping",
-      icon: <Radio className="w-4 h-4 flex-shrink-0" />,
-      isBlocked: tweaksBlocked,
-    },
-    {
-      id: "memory",
-      label: "Limpieza Profunda",
-      icon: <Sparkles className="w-4 h-4 flex-shrink-0" />,
+      id: "advanced",
+      label: "Modo Avanzado",
+      icon: <Sliders className="w-4 h-4 flex-shrink-0" />,
+      badge: tweaksBlocked ? "BLOQUEADO" : "PRO",
       isBlocked: tweaksBlocked,
     },
     {

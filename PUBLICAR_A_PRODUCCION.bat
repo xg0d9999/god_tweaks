@@ -1,81 +1,22 @@
 @echo off
-title g0d suite - Compilar y Publicar a Produccion
+title g0d suite - Gestor de Versiones y Publicador Oficial
 cd /d "%~dp0"
 
-echo ====================================================================
-echo        g0d suite - COMPILADOR Y PUBLICADOR DE PRODUCCION
-echo ====================================================================
-echo.
-echo Version de Produccion: 1.0.7
-echo Este script compila el instalador oficial .exe y permite publicar
-echo la Release oficial en GitHub para el actualizador automatico.
-echo.
-echo ====================================================================
-echo.
-
-REM 1. Cerrar instancias previas para evitar bloqueos de archivo
+REM 1. Cerrar instancias previas para evitar bloqueos de archivos en disco
 taskkill /F /IM god_tweaks.exe >nul 2>&1
 
-REM 2. Limpiar variables de firma local para compilar sin solicitud de contrasenas
-set TAURI_SIGNING_PRIVATE_KEY=
-set TAURI_SIGNING_PRIVATE_KEY_PASSWORD=
+REM 2. Ejecutar el asistente interactivo de gestion de versiones y publicacion a GitHub
+call node scripts/publish.mjs %*
 
-echo.
-echo [PASO 1/3] Ejecutando pruebas de verificacion del codigo...
-call npm test
 if errorlevel 1 (
     echo.
-    echo [ERROR] Las pruebas de verificacion fallaron. Compilacion cancelada.
+    echo [ERROR] La operacion de publicacion no se pudo completar.
     echo.
     pause
     exit /b 1
 )
 
 echo.
-echo [PASO 2/3] Compilando ejecutable e instalador de produccion con Tauri...
-echo           Por favor espera mientras Rust compila el binario en Release...
-echo.
-
-call npx tauri build -c src-tauri\tauri.local.conf.json
-if errorlevel 1 (
-    echo.
-    echo [ERROR] Fallo la compilacion de produccion. Revisa el error superior.
-    echo.
-    pause
-    exit /b 1
-)
-
-echo.
-echo ====================================================================
-echo    COMPILACION COMPLETADA CON EXITO
-echo ====================================================================
-echo.
-echo    Binario Portable (.exe):
-echo    src-tauri\target\release\god_tweaks.exe
-echo.
-echo    Instalador Oficial Setup (.exe):
-echo    src-tauri\target\release\bundle\nsis\
-echo.
-echo ====================================================================
-echo.
-
-REM 3. Publicacion a GitHub Releases
-set /p DO_PUB="Deseas publicar esta version (v1.0.7) en GitHub Releases ahora? (S/N): "
-if /i "%DO_PUB%"=="S" (
-    echo.
-    echo [PASO 3/3] Publicando version v1.0.7 a GitHub Releases...
-    call npm run release:current
-    echo.
-    echo [*] Release enviada a GitHub. GitHub Actions generara el paquete oficial.
-) else (
-    echo.
-    echo [*] Publicacion en GitHub omitida. Puedes usar los instaladores locales.
-)
-
-echo.
-echo Abriendo carpeta con los instaladores generados...
-start "" explorer "src-tauri\target\release\bundle\nsis"
-
-echo.
-echo Proceso finalizado.
-pause
+echo Presione una tecla para salir . . .
+pause >nul
+exit /b 0

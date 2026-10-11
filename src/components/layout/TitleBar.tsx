@@ -21,6 +21,21 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenHotkeySettings,
 }) => {
   const { user, logout } = useAuth();
+  const [appVersion, setAppVersion] = React.useState("1.0.7");
+
+  React.useEffect(() => {
+    const loadVersion = async () => {
+      try {
+        if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+          const { getVersion } = await import("@tauri-apps/api/app");
+          const v = await getVersion();
+          if (v) setAppVersion(v);
+        }
+      } catch {}
+    };
+    void loadVersion();
+  }, []);
+
   const handleClose = async () => {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
@@ -110,7 +125,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                 isCheckingUpdate ? "animate-spin text-white" : ""
               }`}
             />
-            <span className="font-mono text-[10px] tracking-tight">v1.0.7</span>
+            <span className="font-mono text-[10px] tracking-tight">v{appVersion}</span>
           </button>
         )}
 

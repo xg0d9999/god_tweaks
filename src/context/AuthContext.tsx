@@ -24,6 +24,7 @@ interface AuthContextType {
   ipAddress: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  startDiscordOAuth: () => Promise<void>;
   loginWithDiscord: (userData: { id: string; username: string; avatar_url?: string }) => Promise<void>;
   logout: () => void;
   refreshHardware: () => Promise<HardwareProfile | null>;
@@ -162,6 +163,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const startDiscordOAuth = async () => {
+    const DISCORD_CLIENT_ID = '1558779232421810268';
+    let token = '';
+
+    if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {
+      // Entorno nativo Tauri desktop: Inicia loopback listener y abre navegador
+      const { invoke } = await import('@tauri-apps/api/core');
+      token = await invoke<string>('start_discord_oauth', { clientId: DISCORD_CLIENT_ID });
+    } else {
+      // Fallback navegador web (para desarrollo preview)
+      const redirectUri = encodeURIComponent(`${window.location.origin}/discord-callback.html`);
+      const authUrl = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&response_type=token&scope=identify&redirect_uri=${redirectUri}`;
+      window.open(authUrl, 'DiscordAuth', 'width=520,height=720');
+
+      token = await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          clearInterval(interval);
+          reject(new Error('Tiempo de espera agotado al conectar con Discord.'));
+        }, 120000);
+
+        const interval = setInterval(() => {
+          const stored = localStorage.getItem('g0d_discord_access_token');
+          if (stored) {
+            clearTimeout(timeout);
+            clearInterval(interval);
+            localStorage.removeItem('g0d_discord_access_token');
+            resolve(stored);
+          }
+        }, 500);
+      });
+    }
+
+    if (!token) {
+      throw new Error('No se recibió autorización de Discord.');
+    }
+
+    // Consultar API oficial de Discord /users/@me
+    const userRes = await fetch('https://discord.com/api/v10/users/@me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!userRes.ok) {
+      throw new Error(`Error al consultar perfil de Discord: ${userRes.statusText}`);
+    }
+
+    const discordData = await userRes.json();
+    const avatar = discordData.avatar
+      ? `https://cdn.discordapp.com/avatars/${discordData.id}/${discordData.avatar}.png?size=128`
+      : `https://cdn.discordapp.com/embed/avatars/${Number(discordData.id.slice(-2) || 0) % 5}.png`;
+
+    await loginWithDiscord({
+      id: discordData.id,
+      username: discordData.global_name || discordData.username,
+      avatar_url: avatar,
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
@@ -175,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ipAddress,
         isAuthenticated: !!user,
         isLoading,
+        startDiscordOAuth,
         loginWithDiscord,
         logout,
         refreshHardware: fetchLocalHardware,

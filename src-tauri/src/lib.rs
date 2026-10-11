@@ -13,6 +13,7 @@ use commands::memory::*;
 use commands::network::*;
 use commands::telemetry::*;
 use commands::test_bench::*;
+use commands::oauth::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -31,6 +32,7 @@ pub fn run() {
             get_system_metrics,
             get_hardware_profile,
             restart_as_admin,
+            start_discord_oauth,
             // Gaming
             get_gaming_status,
             set_hpet,

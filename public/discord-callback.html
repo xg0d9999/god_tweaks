@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>g0d suite - Autenticación con Discord</title>
+</head>
+<body style="background:#090a0f;color:#fff;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+  <div style="background:#11131a;border:1px solid #232733;border-radius:24px;padding:36px 44px;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,0.7);max-width:380px;">
+    <h2 style="margin:0 0 8px;font-size:22px;color:#5865F2;">✔ Discord Vinculado</h2>
+    <p style="color:#8c93a0;margin:0 0 16px;font-size:13px;">Tu cuenta ha sido vinculada a <strong>g0d suite</strong> con éxito.</p>
+    <p style="color:#585e6d;margin:0;font-size:11px;">Ya puedes cerrar esta pestaña y volver a la app.</p>
+  </div>
+  <script>
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    if (token) {
+      localStorage.setItem('g0d_discord_access_token', token);
+      setTimeout(() => window.close(), 600);
+    }
+  </script>
+</body>
+</html>

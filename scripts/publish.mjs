@@ -52,8 +52,24 @@ function readEnvToken() {
   return null;
 }
 
-function bumpSemver(version, type) {
-  const parts = version.split('.').map(Number);
+function bumpSemver(version, type, isBeta = false, isPromote = false) {
+  if (isPromote) {
+    return version.replace(/-beta\.\d+$/, '');
+  }
+
+  const base = version.replace(/-beta\.\d+$/, '');
+  const parts = base.split('.').map(Number);
+
+  if (isBeta) {
+    if (version.includes('-beta.')) {
+      const currentBetaNum = parseInt(version.split('-beta.')[1], 10) || 1;
+      return `${base}-beta.${currentBetaNum + 1}`;
+    } else {
+      parts[2] += 1;
+      return `${parts.join('.')}-beta.1`;
+    }
+  }
+
   if (type === 'major') {
     parts[0] += 1;
     parts[1] = 0;
@@ -62,7 +78,6 @@ function bumpSemver(version, type) {
     parts[1] += 1;
     parts[2] = 0;
   } else {
-    // default patch
     parts[2] += 1;
   }
   return parts.join('.');
@@ -136,6 +151,8 @@ async function main() {
   // Argumentos
   const args = process.argv.slice(2);
   const isFirstRelease = args.includes('--initial');
+  const isBeta = args.includes('--beta') || args.includes('--staging');
+  const isPromote = args.includes('--promote');
   const skipTest = args.includes('--skip-test');
   let bumpType = 'patch';
   if (args.includes('--minor')) bumpType = 'minor';
@@ -160,9 +177,18 @@ async function main() {
   let currentVersion = pkg.version || '1.0.0';
   let targetVersion = currentVersion;
 
-  if (!isFirstRelease) {
-    targetVersion = bumpSemver(currentVersion, bumpType);
-    console.log(`  Incrementando versión: ${ANSI.dim}v${currentVersion}${ANSI.reset} ➔ ${ANSI.bold}${ANSI.green}v${targetVersion}${ANSI.reset}`);
+  if (isBeta) {
+    targetVersion = bumpSemver(currentVersion, bumpType, true, false);
+    console.log(`  Creando versión de banco de pruebas (BETA): ${ANSI.dim}v${currentVersion}${ANSI.reset} ➔ ${ANSI.bold}${ANSI.yellow}v${targetVersion}${ANSI.reset}`);
+    console.log(`  ${ANSI.dim}Nota: Esta versión solo se publicará en el canal preliminar (Pre-Release). No afectará la build principal.${ANSI.reset}`);
+    updateConfigFilesVersion(targetVersion);
+  } else if (isPromote) {
+    targetVersion = bumpSemver(currentVersion, bumpType, false, true);
+    console.log(`  Promocionando versión a Producción Estable: ${ANSI.dim}v${currentVersion}${ANSI.reset} ➔ ${ANSI.bold}${ANSI.green}v${targetVersion}${ANSI.reset}`);
+    updateConfigFilesVersion(targetVersion);
+  } else if (!isFirstRelease) {
+    targetVersion = bumpSemver(currentVersion, bumpType, false, false);
+    console.log(`  Incrementando versión oficial: ${ANSI.dim}v${currentVersion}${ANSI.reset} ➔ ${ANSI.bold}${ANSI.green}v${targetVersion}${ANSI.reset}`);
     updateConfigFilesVersion(targetVersion);
   } else {
     console.log(`  Lanzamiento inicial con versión: ${ANSI.bold}${ANSI.green}v${targetVersion}${ANSI.reset}`);

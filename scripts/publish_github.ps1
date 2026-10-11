@@ -3,6 +3,8 @@ param(
     [string]$Token = "",
     [switch]$Minor,
     [switch]$Major,
+    [switch]$Beta,
+    [switch]$Promote,
     [switch]$SkipTest,
     [switch]$Initial
 )
@@ -14,6 +16,8 @@ $argsList = @()
 if ($Token) { $argsList += "--token", $Token }
 if ($Minor) { $argsList += "--minor" }
 if ($Major) { $argsList += "--major" }
+if ($Beta) { $argsList += "--beta" }
+if ($Promote) { $argsList += "--promote" }
 if ($SkipTest) { $argsList += "--skip-test" }
 if ($Initial) { $argsList += "--initial" }
 

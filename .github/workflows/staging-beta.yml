@@ -1,0 +1,52 @@
+name: Build & Release Staging / Beta (Banco de Pruebas)
+
+on:
+  push:
+    tags:
+      - 'v*-beta*'
+      - 'v*-preview*'
+      - 'v*-lab*'
+  workflow_dispatch:
+
+jobs:
+  release-beta:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo & Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Frontend Dependencies
+        run: npm install
+
+      - name: Build, Sign and Publish Staging Pre-Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'g0d tweaks [LAB / BETA] ${{ github.ref_name }}'
+          releaseBody: 'Versión preliminar aislada para banco de pruebas. No afecta a los usuarios de la versión estable de producción.'
+          releaseDraft: false
+          prerelease: true
+          args: --config src-tauri/tauri.staging.conf.json

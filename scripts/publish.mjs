@@ -153,6 +153,7 @@ async function main() {
   const isFirstRelease = args.includes('--initial');
   const isBeta = args.includes('--beta') || args.includes('--staging');
   const isPromote = args.includes('--promote');
+  const isCurrent = args.includes('--current') || args.includes('--no-bump');
   const skipTest = args.includes('--skip-test');
   let bumpType = 'patch';
   if (args.includes('--minor')) bumpType = 'minor';
@@ -177,7 +178,11 @@ async function main() {
   let currentVersion = pkg.version || '1.0.0';
   let targetVersion = currentVersion;
 
-  if (isBeta) {
+  if (isCurrent) {
+    targetVersion = currentVersion;
+    console.log(`  Publicando versión actual de Producción: ${ANSI.bold}${ANSI.green}v${targetVersion}${ANSI.reset}`);
+    updateConfigFilesVersion(targetVersion);
+  } else if (isBeta) {
     targetVersion = bumpSemver(currentVersion, bumpType, true, false);
     console.log(`  Creando versión de banco de pruebas (BETA): ${ANSI.dim}v${currentVersion}${ANSI.reset} ➔ ${ANSI.bold}${ANSI.yellow}v${targetVersion}${ANSI.reset}`);
     console.log(`  ${ANSI.dim}Nota: Esta versión solo se publicará en el canal preliminar (Pre-Release). No afectará la build principal.${ANSI.reset}`);

@@ -13,6 +13,7 @@
     "dev:staging": "tauri dev --config src-tauri/tauri.staging.conf.json",
     "build:staging": "tauri build --config src-tauri/tauri.staging.conf.json",
     "release": "node scripts/publish.mjs",
+    "release:current": "node scripts/publish.mjs --current",
     "release:beta": "node scripts/publish.mjs --beta",
     "release:promote": "node scripts/publish.mjs --promote",
     "tauri": "tauri"

@@ -89,10 +89,9 @@ goto MENU
 
 :RELEASE_PROD
 cls
-echo [1/1] Publicando version Oficial a Produccion...
-call npm run release
-echo.
-pause
+call "PUBLICAR_A_PRODUCCION.bat"
+goto MENU
+
 :DISCORD_BOT
 cls
 call "7_BOT_DISCORD_ANUNCIOS.bat"

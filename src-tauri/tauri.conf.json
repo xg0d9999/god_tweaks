@@ -24,9 +24,12 @@
         "shadow": true,
         "center": true,
         "windowEffects": {
-          "effects": ["acrylic", "mica"],
+          "effects": [
+            "acrylic",
+            "mica"
+          ],
           "state": "active",
-          "radius": 14.0
+          "radius": 14
         }
       }
     ],

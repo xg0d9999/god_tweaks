@@ -11,7 +11,7 @@ echo [1/3] Compilando la landing page en modo produccion...
 echo.
 
 cd /d "%~dp0landing"
-call npm run build
+call npm.cmd run build
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -29,12 +29,12 @@ echo (iniciar sesion con tu cuenta de GitHub/Vercel con 1 clic)
 echo ======================================================================
 echo.
 
-call npx vercel deploy --prod
+call npx.cmd vercel --prod
 
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ======================================================================
-    echo  ¡DESPLIEGUE COMPLETADO CON EXITO EN VERCEL!
+    echo  ?DESPLIEGUE COMPLETADO CON EXITO EN VERCEL!
     echo ======================================================================
     echo.
     echo Tu landing page ya esta en vivo en Vercel con SSL y CDN global.

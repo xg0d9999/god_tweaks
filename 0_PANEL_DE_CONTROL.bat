@@ -28,12 +28,16 @@ echo.
 echo   --- [INTEGRACION Y COMUNIDAD] ---
 echo   [7] Iniciar Bot de Discord para Anuncios (/actualizacion)
 echo.
+echo   --- [LANDING PAGE & WEB (VERCEL)] ---
+echo   [8] Desplegar Landing Page Oficial en Vercel
+echo   [9] Previsualizar Landing Page en Vivo (Localhost)
+echo.
 echo   --- [DESARROLLO AVANZADO] ---
-echo   [8] Abrir en Modo Administrador (Dev Admin)
-echo   [9] Salir
+echo   [10] Abrir en Modo Administrador (Dev Admin)
+echo   [11] Salir
 echo.
 echo ====================================================================
-set /p OPT="Selecciona una opcion [1-9]: "
+set /p OPT="Selecciona una opcion [1-11]: "
 
 if "%OPT%"=="1" goto DEV_STAGING
 if "%OPT%"=="2" goto BUILD_STAGING
@@ -42,8 +46,10 @@ if "%OPT%"=="4" goto TEST_BENCH
 if "%OPT%"=="5" goto PROMOTE
 if "%OPT%"=="6" goto RELEASE_PROD
 if "%OPT%"=="7" goto DISCORD_BOT
-if "%OPT%"=="8" goto DEV_ADMIN
-if "%OPT%"=="9" exit
+if "%OPT%"=="8" goto VERCEL_DEPLOY
+if "%OPT%"=="9" goto LANDING_PREVIEW
+if "%OPT%"=="10" goto DEV_ADMIN
+if "%OPT%"=="11" exit
 goto MENU
 
 :DEV_STAGING
@@ -95,6 +101,18 @@ goto MENU
 :DISCORD_BOT
 cls
 call "7_BOT_DISCORD_ANUNCIOS.bat"
+goto MENU
+
+:VERCEL_DEPLOY
+cls
+call "SUBIR_A_VERCEL.bat"
+goto MENU
+
+:LANDING_PREVIEW
+cls
+echo [1/1] Iniciando servidor local de la landing page...
+cd /d "%~dp0landing"
+call npm run dev
 goto MENU
 
 :DEV_ADMIN

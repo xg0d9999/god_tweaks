@@ -235,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Discord User Badge (Bottom-Left) */}
         {user ? (
-          <div className="p-2.5 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/25 backdrop-blur-md">
+          <div className="p-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.08] backdrop-blur-md transition-all">
             {!isCollapsed ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -243,7 +243,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <img
                       src={user.avatar_url}
                       alt={user.username}
-                      className="w-8 h-8 rounded-full object-cover border border-[#5865F2]/60 bg-[#5865F2]/30 shadow-sm"
+                      className="w-8 h-8 rounded-full object-cover border border-white/15 bg-white/[0.06] shadow-sm"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
                       }}
@@ -254,7 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span className="text-xs font-semibold text-white truncate leading-tight">
                       {user.username}
                     </span>
-                    <span className="text-[10px] font-mono text-cyan-300/80 truncate">
+                    <span className="text-[10px] font-mono text-[#8B949E] truncate">
                       HWID Sincronizado
                     </span>
                   </div>
@@ -264,9 +264,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={logout}
                   title="Cerrar sesión de Discord"
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 active:scale-[0.98] border border-rose-500/25 text-rose-300 hover:text-rose-200 text-[11px] font-medium transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-white/[0.04] hover:bg-rose-500/15 active:scale-[0.98] border border-white/[0.08] hover:border-rose-500/25 text-[#9CA3AF] hover:text-rose-200 text-[11px] font-medium transition-all cursor-pointer"
                 >
-                  <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                  <LogOut className="w-3.5 h-3.5 text-[#8B949E] group-hover:text-rose-300" />
                   <span>Cerrar sesión</span>
                 </button>
               </div>
@@ -276,7 +276,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <img
                     src={user.avatar_url}
                     alt={user.username}
-                    className="w-7 h-7 rounded-full object-cover border border-[#5865F2]/50 shadow-sm"
+                    className="w-7 h-7 rounded-full object-cover border border-white/15 shadow-sm"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
                     }}
@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={logout}
                   title={`Cerrar sesión (${user.username})`}
-                  className="p-1 rounded-lg text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                  className="p-1 rounded-lg text-[#8B949E] hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>

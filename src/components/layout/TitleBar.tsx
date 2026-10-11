@@ -142,7 +142,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               <img
                 src={user.avatar_url}
                 alt={user.username}
-                className="w-5 h-5 rounded-full border border-[#5865F2]/60 object-cover"
+                className="w-5 h-5 rounded-full border border-white/20 object-cover"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
                 }}

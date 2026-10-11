@@ -19,7 +19,7 @@ const ANSI = {
 
 function printBanner() {
   console.log(`\n${ANSI.bold}${ANSI.cyan}================================================================${ANSI.reset}`);
-  console.log(`${ANSI.bold}${ANSI.white}          ⚡ g0d tweaks | BANCO DE PRUEBAS AUTOMATIZADO ⚡       ${ANSI.reset}`);
+  console.log(`${ANSI.bold}${ANSI.white}          ⚡ g0d suite | BANCO DE PRUEBAS AUTOMATIZADO ⚡       ${ANSI.reset}`);
   console.log(`${ANSI.dim}        Suite de Diagnóstico, Verificación y Pruebas Unitarias  ${ANSI.reset}`);
   console.log(`${ANSI.bold}${ANSI.cyan}================================================================${ANSI.reset}\n`);
 }
@@ -71,7 +71,7 @@ async function main() {
       if (msg.includes('os error 32') || msg.includes('utilizado por otro proceso')) {
         return {
           status: 'WARN',
-          message: 'g0d tweaks está abierto en segundo plano (archivo temporal bloqueado). Cierra la app si deseas recompilar desde cero.',
+          message: 'g0d suite está abierto en segundo plano (archivo temporal bloqueado). Cierra la app si deseas recompilar desde cero.',
         };
       }
       throw err;

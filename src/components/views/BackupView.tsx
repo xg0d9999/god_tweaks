@@ -272,7 +272,7 @@ export const BackupView: React.FC<BackupViewProps> = ({
         <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
         <div className="text-xs text-[#717680] space-y-1">
           <p className="font-medium text-amber-300/90">
-            Recomendación de arquitectura g0d tweaks
+            Recomendación de arquitectura g0d suite
           </p>
           <p>
             El modo "1-Click God Mode" y los planes de optimización ejecutan de forma automática la creación del punto de restauración y el respaldo del registro antes de aplicar cualquier optimización de kernel o red.

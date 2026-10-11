@@ -20,7 +20,7 @@ const ANSI = {
 
 function printBanner() {
   console.log(`\n${ANSI.bold}${ANSI.magenta}================================================================${ANSI.reset}`);
-  console.log(`${ANSI.bold}${ANSI.white}       🚀 g0d tweaks | PUBLICADOR AUTOMÁTICO A GITHUB 🚀        ${ANSI.reset}`);
+  console.log(`${ANSI.bold}${ANSI.white}       🚀 g0d suite | PUBLICADOR AUTOMÁTICO A GITHUB 🚀        ${ANSI.reset}`);
   console.log(`${ANSI.dim}        Zero-Touch: Test Bench + Version Bump + Secrets + Release${ANSI.reset}`);
   console.log(`${ANSI.bold}${ANSI.magenta}================================================================${ANSI.reset}\n`);
 }
@@ -261,7 +261,7 @@ async function main() {
         },
         body: JSON.stringify({
           name: repoName,
-          description: 'g0d tweaks - Suite de Optimización Extrema para Windows 11/10 y FiveM',
+          description: 'g0d suite - Suite de Optimización Extrema para Windows 11/10 y FiveM',
           private: false,
         }),
       });
@@ -305,7 +305,7 @@ async function main() {
     execSync('git add .', { stdio: 'inherit' });
 
     try {
-      execSync(`git commit -m "release: v${targetVersion} - actualizacion oficial de g0d tweaks"`, { stdio: 'inherit' });
+      execSync(`git commit -m "release: v${targetVersion} - actualizacion oficial de g0d suite"`, { stdio: 'inherit' });
     } catch {
       console.log('  No hay cambios pendientes para commit.');
     }

@@ -1,4 +1,4 @@
-name: Release g0d tweaks
+name: Release g0d suite
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'g0d tweaks ${{ github.ref_name }}'
-          releaseBody: 'Actualización automática oficial de g0d tweaks firmada con Minisign.'
+          releaseName: 'g0d suite ${{ github.ref_name }}'
+          releaseBody: 'Actualización automática oficial de g0d suite firmada con Minisign.'
           releaseDraft: false
           prerelease: false

@@ -79,9 +79,12 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </button>
         </div>
 
-        <span className="text-xs font-semibold text-white/90 tracking-tight">
-          g0d tweaks
-        </span>
+        <div className="flex items-center gap-1.5 ml-1">
+          <img src="/favicon.png" alt="logo" className="w-3.5 h-3.5 rounded-sm object-contain" />
+          <span className="text-xs font-semibold text-white/90 tracking-tight">
+            g0d suite
+          </span>
+        </div>
       </div>
 
       {/* Center Drag Region */}

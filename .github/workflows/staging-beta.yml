@@ -45,7 +45,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'g0d tweaks [LAB / BETA] ${{ github.ref_name }}'
+          releaseName: 'g0d suite [LAB / BETA] ${{ github.ref_name }}'
           releaseBody: 'Versión preliminar aislada para banco de pruebas. No afecta a los usuarios de la versión estable de producción.'
           releaseDraft: false
           prerelease: true

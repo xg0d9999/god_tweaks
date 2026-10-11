@@ -1,4 +1,4 @@
-# g0d tweaks - Publicador Automatizado a GitHub (PowerShell Native)
+# g0d suite - Publicador Automatizado a GitHub (PowerShell Native)
 param(
     [string]$Token = "",
     [switch]$Minor,

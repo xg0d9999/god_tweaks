@@ -1,12 +1,12 @@
 @echo off
 chcp 65001 >nul
-title g0d tweaks - Centro de Control y Automatizacion
+title g0d suite - Centro de Control y Automatizacion
 cd /d "%~dp0"
 
 :MENU
 cls
 echo ====================================================================
-echo             ⚡ g0d tweaks - CENTRO DE CONTROL Y RELEASE ⚡
+echo             ⚡ g0d suite - CENTRO DE CONTROL Y RELEASE ⚡
 echo ====================================================================
 echo.
 echo   --- [BANCO DE PRUEBAS Y DESARROLLO (NO AFECTA A PRODUCCION)] ---
@@ -38,7 +38,7 @@ goto MENU
 
 :DEV_STAGING
 cls
-echo [1/1] Iniciando g0d tweaks en Entorno de Pruebas Aislado (Dev Staging)...
+echo [1/1] Iniciando g0d suite en Entorno de Pruebas Aislado (Dev Staging)...
 call npm run dev:staging
 echo.
 pause

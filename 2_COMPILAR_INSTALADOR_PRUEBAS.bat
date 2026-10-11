@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
-title g0d tweaks - Compilar Instalador Staging
+title g0d suite - Compilar Instalador Staging
 cd /d "%~dp0"
 echo ====================================================================
-echo    [LAB] g0d tweaks - COMPILANDO INSTALADOR .EXE DE PRUEBAS
+echo    [LAB] g0d suite - COMPILANDO INSTALADOR .EXE DE PRUEBAS
 echo ====================================================================
 echo.
 

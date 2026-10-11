@@ -222,7 +222,7 @@ export const App: React.FC = () => {
         setUpdateInfo(info);
         setIsUpdateModalOpen(true);
       } else if (manual) {
-        showToast("Estás ejecutando la versión más reciente de g0d tweaks (v1.0.0)", "info");
+        showToast("Estás ejecutando la versión más reciente de g0d suite", "info");
       }
     } catch (err) {
       console.warn("Update check error:", err);
@@ -326,7 +326,7 @@ export const App: React.FC = () => {
     fetchStatuses();
     fetchPcBenchmark();
     fetchFivemBenchmark();
-    addLog("g0d tweaks v1.0 inicializado. Kernel & Hispan subsystems listos.", "info");
+    addLog("g0d suite inicializado. Kernel & Hispan subsystems listos.", "info");
 
     // Check for updates automatically in the background on startup
     const updateTimeout = setTimeout(() => {

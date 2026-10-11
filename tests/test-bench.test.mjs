@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-test('g0d tweaks Test Bench - Configuration & Security Validation', async (t) => {
+test('g0d suite Test Bench - Configuration & Security Validation', async (t) => {
   await t.test('Verificar que .gitignore protege la clave privada Minisign', () => {
     const gitignorePath = path.resolve('.gitignore');
     assert.ok(fs.existsSync(gitignorePath), '.gitignore debe existir');
@@ -34,7 +34,7 @@ test('g0d tweaks Test Bench - Configuration & Security Validation', async (t) =>
   });
 });
 
-test('g0d tweaks Test Bench - Telemetría & Fórmulas Matemáticas', async (t) => {
+test('g0d suite Test Bench - Telemetría & Fórmulas Matemáticas', async (t) => {
   await t.test('Cálculo de mejora porcentual de FPS en FiveM', () => {
     const fpsBefore = 63;
     const fpsAfter = 94;
@@ -57,7 +57,7 @@ test('g0d tweaks Test Bench - Telemetría & Fórmulas Matemáticas', async (t) =
   });
 });
 
-test('g0d tweaks Test Bench - HispanLife Sanciones Payload Formatter', async (t) => {
+test('g0d suite Test Bench - HispanLife Sanciones Payload Formatter', async (t) => {
   await t.test('Generación de embed para Discord Webhook', () => {
     const staffAtt = 'Admin_Isma';
     const targetId = '2481';
@@ -65,7 +65,7 @@ test('g0d tweaks Test Bench - HispanLife Sanciones Payload Formatter', async (t)
     const penaltyHours = 12;
 
     const payload = {
-      username: 'g0d tweaks | HispanLife Bot',
+      username: 'g0d suite | HispanLife Bot',
       embeds: [
         {
           title: `🛡️ Sanción Aplicada a ID: ${targetId}`,

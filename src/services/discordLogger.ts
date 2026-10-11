@@ -10,9 +10,29 @@ export const DISCORD_GUILD_ID =
   (import.meta.env?.VITE_DISCORD_GUILD_ID as string) || '1543324125685358713';
 export const DISCORD_LOGS_CHANNEL_ID =
   (import.meta.env?.VITE_DISCORD_LOGS_CHANNEL_ID as string) || '1543324127283253270';
+export const DISCORD_ERRORS_CHANNEL_ID =
+  (import.meta.env?.VITE_DISCORD_ERRORS_CHANNEL_ID as string) || '1543333635799781508';
 export const DISCORD_WEBHOOK_URL =
   (import.meta.env?.VITE_DISCORD_WEBHOOK_URL as string) ||
   (typeof atob === 'function' ? atob(RAW_WEBHOOK_FALLBACK) : '');
+
+let currentGlobalSession: {
+  user?: { id: string; username: string; avatar_url?: string } | null;
+  hardware?: { hwid?: string; os?: string; cpu?: string; gpu?: string; ram_mb?: number } | null;
+  ip?: string | null;
+} = {};
+
+export function setGlobalLoggerSession(session: {
+  user?: { id: string; username: string; avatar_url?: string } | null;
+  hardware?: { hwid?: string; os?: string; cpu?: string; gpu?: string; ram_mb?: number } | null;
+  ip?: string | null;
+}) {
+  currentGlobalSession = { ...currentGlobalSession, ...session };
+}
+
+export function getGlobalLoggerSession() {
+  return currentGlobalSession;
+}
 
 export interface DiscordEmbedField {
   name: string;
@@ -182,5 +202,137 @@ export async function logHispanSanction(data: {
       { name: 'Duración', value: `${data.hours} Horas`, inline: true },
       { name: 'Motivo', value: data.reason, inline: false },
     ],
+  });
+}
+
+let lastErrorTimestamp = 0;
+let lastErrorMessage = '';
+
+/**
+ * Envía un reporte estructurado de error a Discord cuando la app da problemas.
+ * Destinado al Webhook oficial y al canal 1543333635799781508.
+ */
+export async function logAppError(data: {
+  error: Error | string | unknown;
+  context?: string;
+  user?: { id: string; username: string; avatar_url?: string } | null;
+  hardware?: { hwid?: string; os?: string; cpu?: string; gpu?: string; ram_mb?: number } | null;
+  ip?: string | null;
+}): Promise<boolean> {
+  const user = data.user || currentGlobalSession.user;
+  const hardware = data.hardware || currentGlobalSession.hardware;
+  const ip = data.ip || currentGlobalSession.ip;
+
+  const errObj = data.error instanceof Error ? data.error : new Error(String(data.error));
+  const errMessage = errObj.message || String(data.error);
+  const errStack = errObj.stack || '';
+
+  // Throttling / Deduplicación (máximo 1 reporte cada 5s para el mismo mensaje)
+  const now = Date.now();
+  if (errMessage === lastErrorMessage && now - lastErrorTimestamp < 5000) {
+    return false;
+  }
+  lastErrorTimestamp = now;
+  lastErrorMessage = errMessage;
+
+  const fields: DiscordEmbedField[] = [
+    {
+      name: '👤 Usuario Afectado',
+      value: user ? `**${user.username}** (<@${user.id}>)` : '`Sesión no iniciada / Anónimo`',
+      inline: true,
+    },
+    {
+      name: '🆔 Discord ID',
+      value: user ? `\`${user.id}\`` : '`N/A`',
+      inline: true,
+    },
+    {
+      name: '🌐 Dirección IP',
+      value: `\`${ip || 'Desconocida'}\``,
+      inline: true,
+    },
+    {
+      name: '📢 Canal Destino',
+      value: `<#${DISCORD_ERRORS_CHANNEL_ID}> (\`${DISCORD_ERRORS_CHANNEL_ID}\`)`,
+      inline: true,
+    },
+    {
+      name: '📍 Contexto / Vista',
+      value: `\`${data.context || 'Ejecución general de la aplicación'}\``,
+      inline: true,
+    },
+    {
+      name: '💻 HWID',
+      value: `\`${hardware?.hwid || 'No disponible'}\``,
+      inline: true,
+    },
+    {
+      name: '⚠️ Descripción del Error',
+      value: `\`\`\`${errMessage.slice(0, 500)}\`\`\``,
+      inline: false,
+    },
+  ];
+
+  if (errStack && errStack !== errMessage) {
+    fields.push({
+      name: '📜 Pila de Trazabilidad (Stack Trace)',
+      value: `\`\`\`${errStack.slice(0, 800)}\`\`\``,
+      inline: false,
+    });
+  }
+
+  const embed: DiscordEmbed = {
+    title: '⚠️ [ERROR REPORT] Incidencia Detectada en la Aplicación',
+    description: `Se ha reportado un problema en **g0d suite** afectando a **${user?.username || 'Usuario'}**. Enlace al canal <#${DISCORD_ERRORS_CHANNEL_ID}>.`,
+    color: 0xef4444, // Red
+    fields,
+    thumbnail: user?.avatar_url ? { url: user.avatar_url } : undefined,
+    footer: { text: `g0d suite • Notificación de Error • Canal ${DISCORD_ERRORS_CHANNEL_ID}` },
+    timestamp: new Date().toISOString(),
+  };
+
+  // 1. Envío prioritario al Webhook
+  const webhookResult = await sendDiscordWebhook(embed);
+
+  // 2. Envío al canal de errores vía Bot token como respaldo directo
+  try {
+    if (DISCORD_BOT_TOKEN) {
+      await fetch(
+        `https://discord.com/api/v10/channels/${DISCORD_ERRORS_CHANNEL_ID}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ embeds: [embed] }),
+        }
+      );
+    }
+  } catch (err) {
+    console.warn('[DiscordLogger] Fallo al enviar al canal de errores mediante Bot:', err);
+  }
+
+  return webhookResult;
+}
+
+// Escuchas globales automáticas en entorno navegador / Tauri WebView
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (event) => {
+    // Ignorar errores triviales de resize observer o extensiones externas
+    if (event.message?.includes('ResizeObserver') || event.filename?.includes('chrome-extension')) {
+      return;
+    }
+    logAppError({
+      error: event.error || event.message,
+      context: `window.onerror: ${event.filename || 'app'}:${event.lineno || 0}`,
+    }).catch(() => {});
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    logAppError({
+      error: event.reason,
+      context: 'window.unhandledrejection (Promesa rechazada no controlada)',
+    }).catch(() => {});
   });
 }

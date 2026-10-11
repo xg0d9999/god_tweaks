@@ -15,6 +15,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  ShieldCheck,
+  Lock,
 } from "lucide-react";
 import { TabType } from "../../types";
 import { useAuth } from "../../context/AuthContext";
@@ -33,6 +35,7 @@ interface NavItem {
   icon: React.ReactNode;
   badge?: string;
   isSpecial?: boolean;
+  isBlocked?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -42,7 +45,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
-  const { user, logout } = useAuth();
+  const { user, userRecord, logout } = useAuth();
+  const tweaksBlocked = userRecord?.can_use_tweaks === false;
+  const sancionesBlocked = userRecord?.can_use_sanciones === false;
+
   const navItems: NavItem[] = [
     {
       id: "dashboard",
@@ -53,57 +59,77 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "god_mode",
       label: "1-Click God Mode",
       icon: <Flame className="w-4 h-4 text-white flex-shrink-0" />,
-      badge: "ESPORTS",
+      badge: tweaksBlocked ? "BLOQUEADO" : "ESPORTS",
       isSpecial: true,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "presets",
       label: "Planes de Optimización",
       icon: <Layers className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "benchmark",
       label: "Telemetría & Benchmark",
       icon: <TrendingUp className="w-4 h-4 flex-shrink-0" />,
       badge: "NUEVO",
+      isBlocked: tweaksBlocked,
     },
     {
       id: "fivem",
       label: "FiveM & GTA V",
       icon: <Crosshair className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "hispan",
       label: "HispanLife Sanciones",
       icon: <Shield className="w-4 h-4 text-emerald-400 flex-shrink-0" />,
-      badge: "STAFF",
+      badge: sancionesBlocked ? "BLOQUEADO" : "STAFF",
       isSpecial: true,
+      isBlocked: sancionesBlocked,
     },
     {
       id: "gaming",
       label: "Input Lag & Gaming",
       icon: <Gamepad2 className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "debloat",
       label: "Debloat & Privacidad",
       icon: <Ghost className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "network",
       label: "Red & Ping",
       icon: <Radio className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "memory",
       label: "Limpieza Profunda",
       icon: <Sparkles className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: tweaksBlocked,
     },
     {
       id: "backup",
       label: "Restauración & Backup",
       icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />,
     },
+    ...(userRecord?.is_admin
+      ? [
+          {
+            id: "admin" as TabType,
+            label: "Panel Admin",
+            icon: <ShieldCheck className="w-4 h-4 text-amber-400 flex-shrink-0" />,
+            badge: "ROOT",
+            isSpecial: true,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -191,7 +217,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </div>
 
-              {!isCollapsed && item.badge && (
+              {!isCollapsed && item.isBlocked && (
+                <span className="relative z-10 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 flex-shrink-0 flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>Bloqueado</span>
+                </span>
+              )}
+
+              {!isCollapsed && !item.isBlocked && item.badge && (
                 <span className="relative z-10 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-white/[0.08] text-white/90 border border-white/10 flex-shrink-0">
                   {item.badge}
                 </span>

@@ -19,6 +19,9 @@ export interface AppUserRecord {
   gpu_info?: string | null;
   last_login_at?: string;
   created_at?: string;
+  can_use_tweaks?: boolean;
+  can_use_sanciones?: boolean;
+  is_admin?: boolean;
 }
 
 export interface AppUpdateRecord {
@@ -59,6 +62,58 @@ export async function upsertAppUser(user: AppUserRecord): Promise<AppUserRecord>
     throw error;
   }
   return data as AppUserRecord;
+}
+
+/**
+ * Obtiene el registro completo de un usuario por su discord_id (incluye permisos y rol).
+ */
+export async function fetchCurrentUserRecord(discordId: string): Promise<AppUserRecord | null> {
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('*')
+    .eq('discord_id', discordId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[Supabase] Error al consultar usuario actual:', error);
+    return null;
+  }
+  return data as AppUserRecord | null;
+}
+
+/**
+ * Obtiene todos los usuarios registrados para el panel de administración.
+ */
+export async function fetchAllUsers(): Promise<AppUserRecord[]> {
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('*')
+    .order('last_login_at', { ascending: false });
+
+  if (error) {
+    console.error('[Supabase] Error al consultar lista de usuarios:', error);
+    throw error;
+  }
+  return (data || []) as AppUserRecord[];
+}
+
+/**
+ * Actualiza permisos de acceso o rol de un usuario en Supabase (Solo Admin).
+ */
+export async function updateUserPermissions(
+  discordId: string,
+  perms: { can_use_tweaks?: boolean; can_use_sanciones?: boolean; is_admin?: boolean }
+): Promise<boolean> {
+  const { error } = await supabase
+    .from('app_users')
+    .update(perms)
+    .eq('discord_id', discordId);
+
+  if (error) {
+    console.error('[Supabase] Error al actualizar permisos de usuario:', error);
+    throw error;
+  }
+  return true;
 }
 
 /**

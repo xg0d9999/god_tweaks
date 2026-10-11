@@ -9,7 +9,8 @@ export type TabType =
   | "network"
   | "memory"
   | "backup"
-  | "hispan";
+  | "hispan"
+  | "admin";
 
 export type AppMode = "optimizer" | "hispan";
 

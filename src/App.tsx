@@ -13,6 +13,9 @@ import { DebloatView } from "./components/views/DebloatView";
 import { NetworkView } from "./components/views/NetworkView";
 import { MemoryView } from "./components/views/MemoryView";
 import { BackupView } from "./components/views/BackupView";
+import { AdminPanelView } from "./components/views/AdminPanelView";
+import { PermissionBlockedView } from "./components/views/PermissionBlockedView";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal";
 import { UpdateModal } from "./components/ui/UpdateModal";
 import { checkForAppUpdate, UpdateInfo } from "./services/updater";
@@ -153,7 +156,10 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
 }
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user, userRecord } = useAuth();
+  const canUseTweaks = userRecord?.can_use_tweaks !== false;
+  const canUseSanciones = userRecord?.can_use_sanciones !== false;
+  const isAdmin = userRecord?.is_admin === true;
   const [appMode, setAppMode] = useState<AppMode>("optimizer");
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -894,6 +900,10 @@ const AppContent: React.FC = () => {
 
   // Preset Selection Dispatcher
   const handleSelectPreset = (preset: PresetType) => {
+    if (!canUseTweaks) {
+      showToast("Acceso restringido: Permiso de optimizaciones deshabilitado.", "error");
+      return;
+    }
     if (preset === "lite") triggerLitePlan();
     else if (preset === "premium") triggerPremiumPlan();
     else if (preset === "ultra") triggerUltraPlan();
@@ -901,6 +911,10 @@ const AppContent: React.FC = () => {
 
   // 1-Click God Mode Suite Execution (Trigger with confirmation modal)
   const handleTriggerGodMode = () => {
+    if (!canUseTweaks) {
+      showToast("Acceso restringido: Permiso de optimizaciones deshabilitado.", "error");
+      return;
+    }
     triggerUltraPlan();
   };
 
@@ -1001,6 +1015,8 @@ const AppContent: React.FC = () => {
             } else if (tab === "hispan") {
               setAppMode("hispan");
               setActiveTab("hispan");
+            } else if (tab === "admin") {
+              setActiveTab("admin");
             } else {
               setAppMode("optimizer");
               setActiveTab(tab);
@@ -1031,91 +1047,142 @@ const AppContent: React.FC = () => {
                 />
               )}
 
-              {activeTab === "presets" && (
-                <PresetsView
-                  onSelectPreset={handleSelectPreset}
-                  isRunning={isModalOpen && modalPhase === "running"}
-                />
-              )}
+              {activeTab === "presets" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Planes de Optimización"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <PresetsView
+                    onSelectPreset={handleSelectPreset}
+                    isRunning={isModalOpen && modalPhase === "running"}
+                  />
+                ))}
 
-              {activeTab === "benchmark" && (
-                <BenchmarkView
-                  pcMetrics={pcBenchmark}
-                  fivemMetrics={fivemBenchmark}
-                  onRefreshPcBenchmark={fetchPcBenchmark}
-                  onScanFivemLog={fetchFivemBenchmark}
-                  isLoadingPc={loadingKeys["pc_bench"]}
-                  isLoadingFivem={loadingKeys["fivem_bench"]}
-                />
-              )}
+              {activeTab === "benchmark" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Telemetría & Benchmark"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <BenchmarkView
+                    pcMetrics={pcBenchmark}
+                    fivemMetrics={fivemBenchmark}
+                    onRefreshPcBenchmark={fetchPcBenchmark}
+                    onScanFivemLog={fetchFivemBenchmark}
+                    isLoadingPc={loadingKeys["pc_bench"]}
+                    isLoadingFivem={loadingKeys["fivem_bench"]}
+                  />
+                ))}
 
-              {activeTab === "hispan" && (
-                <HispanSancionesView
-                  onCopyClipboard={handleCopyClipboard}
-                  onSendFivemCommand={handleSendFivemCommand}
-                  onSendDiscordReport={handleSendDiscordReport}
-                  onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
-                  alwaysOnTop={alwaysOnTop}
-                  staffAtt={staffAtt}
-                  onUpdateStaffAtt={handleUpdateStaffAtt}
-                  discordGuild={discordGuild}
-                  discordChannel={discordChannel}
-                  onUpdateDiscordConfig={handleUpdateDiscordConfig}
-                  showToast={showToast}
-                />
-              )}
+              {activeTab === "hispan" &&
+                (!canUseSanciones ? (
+                  <PermissionBlockedView
+                    moduleName="HispanLife Sanciones"
+                    onBackToDashboard={() => {
+                      setAppMode("optimizer");
+                      setActiveTab("dashboard");
+                    }}
+                  />
+                ) : (
+                  <HispanSancionesView
+                    onCopyClipboard={handleCopyClipboard}
+                    onSendFivemCommand={handleSendFivemCommand}
+                    onSendDiscordReport={handleSendDiscordReport}
+                    onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
+                    alwaysOnTop={alwaysOnTop}
+                    staffAtt={staffAtt}
+                    onUpdateStaffAtt={handleUpdateStaffAtt}
+                    discordGuild={discordGuild}
+                    discordChannel={discordChannel}
+                    onUpdateDiscordConfig={handleUpdateDiscordConfig}
+                    showToast={showToast}
+                  />
+                ))}
 
-              {activeTab === "fivem" && (
-                <FiveMView
-                  status={fivemStatus}
-                  onCleanCache={handleCleanFiveMCache}
-                  onTogglePriority={handleToggleFiveMPriority}
-                  loadingKeys={loadingKeys}
-                  lastCleanResult={lastFiveMCleanMsg}
-                />
-              )}
+              {activeTab === "fivem" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="FiveM & GTA V Tweaks"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <FiveMView
+                    status={fivemStatus}
+                    onCleanCache={handleCleanFiveMCache}
+                    onTogglePriority={handleToggleFiveMPriority}
+                    loadingKeys={loadingKeys}
+                    lastCleanResult={lastFiveMCleanMsg}
+                  />
+                ))}
 
-              {activeTab === "gaming" && (
-                <GamingView
-                  status={gamingStatus}
-                  onToggleHpet={handleToggleHpet}
-                  onToggleUltimatePower={handleToggleUltimatePower}
-                  onToggleGameDvr={handleToggleGameDvr}
-                  onToggleMmcss={handleToggleMmcss}
-                  loadingKeys={loadingKeys}
-                />
-              )}
+              {activeTab === "gaming" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Input Lag & Gaming"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <GamingView
+                    status={gamingStatus}
+                    onToggleHpet={handleToggleHpet}
+                    onToggleUltimatePower={handleToggleUltimatePower}
+                    onToggleGameDvr={handleToggleGameDvr}
+                    onToggleMmcss={handleToggleMmcss}
+                    loadingKeys={loadingKeys}
+                  />
+                ))}
 
-              {activeTab === "debloat" && (
-                <DebloatView
-                  status={debloatStatus}
-                  onToggleTelemetry={handleToggleTelemetry}
-                  onToggleCortana={handleToggleCortana}
-                  onToggleCopilot={handleToggleCopilot}
-                  onUninstallBloatware={handleUninstallBloatware}
-                  loadingKeys={loadingKeys}
-                />
-              )}
+              {activeTab === "debloat" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Debloat & Privacidad"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <DebloatView
+                    status={debloatStatus}
+                    onToggleTelemetry={handleToggleTelemetry}
+                    onToggleCortana={handleToggleCortana}
+                    onToggleCopilot={handleToggleCopilot}
+                    onUninstallBloatware={handleUninstallBloatware}
+                    loadingKeys={loadingKeys}
+                  />
+                ))}
 
-              {activeTab === "network" && (
-                <NetworkView
-                  status={networkStatus}
-                  onToggleNagle={handleToggleNagle}
-                  onFlushDns={handleFlushDns}
-                  onToggleNetworkThrottling={handleToggleNetworkThrottling}
-                  loadingKeys={loadingKeys}
-                />
-              )}
+              {activeTab === "network" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Red & Ping"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <NetworkView
+                    status={networkStatus}
+                    onToggleNagle={handleToggleNagle}
+                    onFlushDns={handleFlushDns}
+                    onToggleNetworkThrottling={handleToggleNetworkThrottling}
+                    loadingKeys={loadingKeys}
+                  />
+                ))}
 
-              {activeTab === "memory" && (
-                <MemoryView
-                  onCleanRam={handleCleanRam}
-                  onPurgeCaches={handlePurgeCaches}
-                  loadingKeys={loadingKeys}
-                  lastRamCleanResult={lastRamMsg}
-                  lastCacheCleanResult={lastCacheMsg}
-                />
-              )}
+              {activeTab === "memory" &&
+                (!canUseTweaks ? (
+                  <PermissionBlockedView
+                    moduleName="Limpieza Profunda & Memoria"
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ) : (
+                  <MemoryView
+                    onCleanRam={handleCleanRam}
+                    onPurgeCaches={handlePurgeCaches}
+                    loadingKeys={loadingKeys}
+                    lastRamCleanResult={lastRamMsg}
+                    lastCacheCleanResult={lastCacheMsg}
+                  />
+                ))}
 
               {activeTab === "backup" && (
                 <BackupView
@@ -1131,6 +1198,17 @@ const AppContent: React.FC = () => {
                   lastBackupMsg={lastBackupMsg}
                 />
               )}
+
+              {activeTab === "admin" &&
+                (isAdmin ? (
+                  <AdminPanelView />
+                ) : (
+                  <PermissionBlockedView
+                    moduleName="Panel de Administración"
+                    reason="Se requieren privilegios de Administrador para acceder a esta sección."
+                    onBackToDashboard={() => setActiveTab("dashboard")}
+                  />
+                ))}
             </motion.div>
           </AnimatePresence>
         </main>
@@ -1194,9 +1272,11 @@ const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 

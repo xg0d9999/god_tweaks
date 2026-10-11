@@ -174,3 +174,39 @@ pub fn analyze_fivem_benchmark() -> Result<FiveMBenchmarkMetrics, String> {
         citizen_log_found,
     })
 }
+
+#[tauri::command]
+pub fn is_fivem_running() -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        use windows::Win32::System::Diagnostics::ToolHelp::{
+            CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W, TH32CS_SNAPPROCESS,
+        };
+        use windows::Win32::Foundation::CloseHandle;
+
+        unsafe {
+            let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0).map_err(|e| e.to_string())?;
+            let mut entry = PROCESSENTRY32W {
+                dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+                ..Default::default()
+            };
+
+            if Process32FirstW(snapshot, &mut entry).is_ok() {
+                loop {
+                    let name = String::from_utf16_lossy(&entry.szExeFile)
+                        .trim_matches(char::from(0))
+                        .to_lowercase();
+                    if name.contains("fivem") || name.contains("gtaprocess") {
+                        let _ = CloseHandle(snapshot);
+                        return Ok(true);
+                    }
+                    if Process32NextW(snapshot, &mut entry).is_err() {
+                        break;
+                    }
+                }
+            }
+            let _ = CloseHandle(snapshot);
+        }
+    }
+    Ok(false)
+}

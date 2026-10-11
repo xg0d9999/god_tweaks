@@ -57,6 +57,7 @@ pub fn run() {
             purge_shader_and_temp_caches,
             // FiveM & GTA V
             get_fivem_status,
+            is_fivem_running,
             clean_fivem_caches,
             set_fivem_priority,
             analyze_fivem_benchmark,

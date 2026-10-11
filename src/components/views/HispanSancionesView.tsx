@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -6,7 +6,6 @@ import {
   Terminal,
   Send,
   Trash2,
-  Settings,
   Shield,
   AlertCircle,
   Info,
@@ -31,7 +30,7 @@ interface HispanSancionesViewProps {
   onUpdateStaffAtt: (att: string) => void;
   discordGuild: string;
   discordChannel: string;
-  onUpdateDiscordConfig: (guild: string, channel: string) => void;
+  onUpdateDiscordConfig?: (guild: string, channel: string) => void;
   showToast: (message: string, type: "success" | "error" | "info") => void;
 }
 
@@ -45,22 +44,38 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
   onUpdateStaffAtt,
   discordGuild,
   discordChannel,
-  onUpdateDiscordConfig,
   showToast,
 }) => {
   const [search, setSearch] = useState("");
   const [selections, setSelections] = useState<Record<number, "sin_reconocer" | "reconocida">>({});
+
+  // FiveM Live Running Detection
+  const [isFivemRunning, setIsFivemRunning] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkFiveM = async () => {
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        const running = await invoke<boolean>("is_fivem_running");
+        if (isMounted) setIsFivemRunning(Boolean(running));
+      } catch {
+        if (isMounted) setIsFivemRunning(false);
+      }
+    };
+    void checkFiveM();
+    const interval = setInterval(checkFiveM, 2000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Form Fields
   const [steamName, setSteamName] = useState("");
   const [playerId, setPlayerId] = useState("");
   const [proofs, setProofs] = useState("");
   const [extraNote, setExtraNote] = useState("");
-
-  // Modals state
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [tempGuild, setTempGuild] = useState(discordGuild);
-  const [tempChannel, setTempChannel] = useState(discordChannel);
 
   // Double Confirmation Modal state
   const [confirmStep, setConfirmStep] = useState<null | "first" | "second">(null);
@@ -155,13 +170,13 @@ Pruebas: ${proofs.trim() || "-"}`;
       return false;
     }
 
-    if ((type === "ban" || type === "ban_ig") && !staffAtt.trim()) {
-      showToast("Falta el Staff (ATT).", "error");
+    if ((type === "ban" || type === "ban_ig") && !result.perma && result.ban_days <= 0) {
+      showToast("La sanción calculada no es Baneo.", "error");
       return false;
     }
 
-    if ((type === "ban" || type === "ban_ig") && !result.perma && result.ban_days <= 0) {
-      showToast("La sanción calculada no es Baneo.", "error");
+    if ((type === "jail_ig" || type === "ban_ig") && !isFivemRunning) {
+      showToast("FiveM no está abierto. Debes tener FiveM en ejecución para usar comandos directos.", "error");
       return false;
     }
 
@@ -239,17 +254,29 @@ Pruebas: ${proofs.trim() || "-"}`;
           </span>
         </div>
 
-        <button
-          onClick={() => {
-            setTempGuild(discordGuild);
-            setTempChannel(discordChannel);
-            setIsSettingsOpen(true);
-          }}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs text-[#9CA3AF] hover:text-white border border-white/[0.08] transition-all cursor-pointer"
-        >
-          <Settings className="w-3.5 h-3.5" />
-          <span>Ajustes</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <span
+            className={`px-2.5 py-1 rounded-xl text-xs font-medium border flex items-center gap-1.5 transition-colors ${
+              isFivemRunning
+                ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
+                : "bg-white/[0.03] text-[#828792] border-white/[0.08]"
+            }`}
+            title={
+              isFivemRunning
+                ? "FiveM detectado en memoria. Comandos directos habilitados."
+                : "FiveM no detectado. Abre FiveM para habilitar Jail y Ban directos."
+            }
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isFivemRunning
+                  ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
+                  : "bg-zinc-600"
+              }`}
+            />
+            <span>{isFivemRunning ? "FiveM Conectado" : "FiveM Cerrado"}</span>
+          </span>
+        </div>
       </div>
 
       {/* Main 2-Column Grid */}
@@ -484,7 +511,13 @@ Pruebas: ${proofs.trim() || "-"}`;
                 size="sm"
                 onClick={() => handleTriggerAction("jail_ig")}
                 icon={<Send className="w-3.5 h-3.5 text-emerald-400" />}
-                className="hover:border-emerald-500/30 text-emerald-300"
+                className={`transition-all ${
+                  isFivemRunning
+                    ? "hover:border-emerald-500/30 text-emerald-300 cursor-pointer"
+                    : "opacity-40 cursor-not-allowed hover:bg-transparent"
+                }`}
+                disabled={!isFivemRunning}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Jail en FiveM"}
               >
                 Jail IG (T+Enter)
               </ActionButton>
@@ -493,11 +526,24 @@ Pruebas: ${proofs.trim() || "-"}`;
                 size="sm"
                 onClick={() => handleTriggerAction("ban_ig")}
                 icon={<Send className="w-3.5 h-3.5 text-rose-400" />}
-                className="hover:border-rose-500/30 text-rose-300"
+                className={`transition-all ${
+                  isFivemRunning
+                    ? "hover:border-rose-500/30 text-rose-300 cursor-pointer"
+                    : "opacity-40 cursor-not-allowed hover:bg-transparent"
+                }`}
+                disabled={!isFivemRunning}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Ban en FiveM"}
               >
                 Baneo IG (T+Enter)
               </ActionButton>
             </div>
+
+            {!isFivemRunning && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300/90">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span>FiveM no está abierto. Los comandos directos (T+Enter) están desactivados.</span>
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-1">
               <button
@@ -614,71 +660,6 @@ Pruebas: ${proofs.trim() || "-"}`;
                   </div>
                 </div>
               )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Settings Modal (Discord IDs) */}
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl select-none">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-[#0D0F12] border border-white/[0.1] shadow-2xl p-5 space-y-3.5"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-                <div className="flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-white/80" />
-                  <h3 className="text-xs font-semibold text-white">Ajustes Discord</h3>
-                </div>
-                <button
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="text-[#828792] hover:text-white cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                <div>
-                  <label className="block text-[11px] text-[#828792] mb-1">Guild ID</label>
-                  <input
-                    type="text"
-                    value={tempGuild}
-                    onChange={(e) => setTempGuild(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/[0.08] focus:border-white/20 text-xs text-white font-mono outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-[#828792] mb-1">Channel ID</label>
-                  <input
-                    type="text"
-                    value={tempChannel}
-                    onChange={(e) => setTempChannel(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-black/40 border border-white/[0.08] focus:border-white/20 text-xs text-white font-mono outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
-                <ActionButton variant="ghost" size="sm" onClick={() => setIsSettingsOpen(false)}>
-                  Cancelar
-                </ActionButton>
-                <ActionButton
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    onUpdateDiscordConfig(tempGuild, tempChannel);
-                    setIsSettingsOpen(false);
-                    showToast("Guardado.", "success");
-                  }}
-                >
-                  Guardar
-                </ActionButton>
-              </div>
             </motion.div>
           </div>
         )}

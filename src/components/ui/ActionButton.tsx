@@ -11,6 +11,7 @@ interface ActionButtonProps {
   icon?: React.ReactNode;
   className?: string;
   size?: "sm" | "md" | "lg";
+  title?: string;
 }
 
 export const ActionButton: React.FC<ActionButtonProps> = ({
@@ -22,6 +23,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   icon,
   className = "",
   size = "md",
+  title,
 }) => {
   const sizeClasses = {
     sm: "px-3 py-1.5 text-xs rounded-lg gap-1.5 font-medium",
@@ -52,6 +54,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
       }
       onClick={onClick}
       disabled={disabled || loading}
+      title={title}
       className={`inline-flex items-center justify-center transition-all duration-150 focus:outline-none select-none ${
         sizeClasses[size]
       } ${variantClasses[variant]} ${

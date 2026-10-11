@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { upsertAppUser, AppUserRecord } from '../services/supabase';
-import { logUserLogin } from '../services/discordLogger';
+import { upsertAppUser, fetchCurrentUserRecord, AppUserRecord, supabase } from '../services/supabase';
+import { logUserLogin, setGlobalLoggerSession } from '../services/discordLogger';
 
 export interface DiscordUser {
   id: string;
@@ -21,6 +21,7 @@ export interface HardwareProfile {
 
 interface AuthContextType {
   user: DiscordUser | null;
+  userRecord: AppUserRecord | null;
   hardware: HardwareProfile | null;
   ipAddress: string | null;
   isAuthenticated: boolean;
@@ -29,6 +30,7 @@ interface AuthContextType {
   loginWithDiscord: (userData: { id: string; username: string; avatar_url?: string }) => Promise<void>;
   logout: () => void;
   refreshHardware: () => Promise<HardwareProfile | null>;
+  refreshUserRecord: () => Promise<AppUserRecord | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,6 +39,7 @@ const STORAGE_KEY = 'g0d_suite_auth_session';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<DiscordUser | null>(null);
+  const [userRecord, setUserRecord] = useState<AppUserRecord | null>(null);
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -89,6 +92,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return defaultIp;
   };
 
+  // Mantener actualizado el contexto de sesión global para el logger de errores
+  useEffect(() => {
+    setGlobalLoggerSession({ user, hardware, ip: ipAddress });
+  }, [user, hardware, ipAddress]);
+
+  // Suscripción Realtime a Supabase para recibir actualizaciones de permisos en vivo
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`user_perms_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'app_users',
+          filter: `discord_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            setUserRecord(payload.new as AppUserRecord);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  const refreshUserRecord = async (): Promise<AppUserRecord | null> => {
+    if (!user?.id) return null;
+    try {
+      const rec = await fetchCurrentUserRecord(user.id);
+      if (rec) setUserRecord(rec);
+      return rec;
+    } catch {
+      return null;
+    }
+  };
+
   // Restaurar sesión de localStorage al arrancar
   useEffect(() => {
     const initSession = async () => {
@@ -100,23 +146,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const saved = JSON.parse(raw) as { user: DiscordUser; ip?: string };
           setUser(saved.user);
 
-          // Sincronizar en segundo plano con Supabase para mantener el last_login_at fresco
-          if (hw && saved.user) {
-            upsertAppUser({
-              discord_id: saved.user.id,
-              discord_username: saved.user.username,
-              discord_avatar: saved.user.avatar_url,
-              hwid: hw.hwid,
-              cpu_info: `${hw.cpu} (${hw.cpu_cores} cores)`,
-              ram_info: `${(hw.ram_mb / 1024).toFixed(1)} GB`,
-              gpu_info: hw.gpu,
-              os_info: hw.os,
-              ip_address: ip || saved.ip || 'Local',
-            }).catch((e) => console.warn('[Auth] Background sync warning:', e));
+          // Sincronizar en segundo plano con Supabase para mantener el last_login_at fresco y obtener permisos
+          if (saved.user) {
+            try {
+              const record = await upsertAppUser({
+                discord_id: saved.user.id,
+                discord_username: saved.user.username,
+                discord_avatar: saved.user.avatar_url,
+                hwid: hw?.hwid || null,
+                cpu_info: hw ? `${hw.cpu} (${hw.cpu_cores} cores)` : null,
+                ram_info: hw ? `${(hw.ram_mb / 1024).toFixed(1)} GB` : null,
+                gpu_info: hw?.gpu || null,
+                os_info: hw?.os || null,
+                ip_address: ip || saved.ip || 'Local',
+              });
+              setUserRecord(record);
+            } catch (e) {
+              console.warn('[Auth] Background sync warning:', e);
+            }
 
             // Enviar reporte completo de telemetría y HWID al webhook de Discord al conectarse
             const sessionReported = sessionStorage.getItem('g0d_session_reported');
-            if (!sessionReported) {
+            if (!sessionReported && hw) {
               sessionStorage.setItem('g0d_session_reported', 'true');
               logUserLogin({
                 user: saved.user,
@@ -153,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar_url: avatar,
       };
 
-      // Registrar en Supabase
+      // Registrar en Supabase y recibir permisos actualizados
       const record: AppUserRecord = {
         discord_id: newUser.id,
         discord_username: newUser.username,
@@ -166,7 +217,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ip_address: ip,
       };
 
-      await upsertAppUser(record);
+      const savedRecord = await upsertAppUser(record);
+      setUserRecord(savedRecord);
 
       // Enviar log en vivo al canal de Discord (1543324127283253270)
       logUserLogin({
@@ -243,14 +295,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    setUserRecord(null);
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem('g0d_session_reported');
+    setGlobalLoggerSession({ user: null });
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        userRecord,
         hardware,
         ipAddress,
         isAuthenticated: !!user,
@@ -259,6 +314,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithDiscord,
         logout,
         refreshHardware: fetchLocalHardware,
+        refreshUserRecord,
       }}
     >
       {children}

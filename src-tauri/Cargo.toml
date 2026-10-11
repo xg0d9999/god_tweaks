@@ -1,6 +1,6 @@
 [package]
 name = "god_tweaks"
-version = "1.0.6"
+version = "1.0.4"
 description = "g0d suite - Extreme Gaming & Latency Optimization Suite for Windows"
 authors = ["g0d suite team"]
 edition = "2021"

@@ -1,6 +1,7 @@
 import React from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, LogOut } from "lucide-react";
 import { AppMode } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
 interface TitleBarProps {
   appMode?: AppMode;
@@ -15,6 +16,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onCheckUpdates,
   isCheckingUpdate = false,
 }) => {
+  const { user, logout } = useAuth();
   const handleClose = async () => {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
@@ -129,6 +131,33 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               }`}
             >
               🛡️ HispanLife Sanciones
+            </button>
+          </div>
+        )}
+
+        {/* Discord User Pill & Logout Button */}
+        {user && (
+          <div className="flex items-center gap-2 pl-2 border-l border-white/[0.08]">
+            <div className="flex items-center gap-1.5" title={`Sesión activa: ${user.username}`}>
+              <img
+                src={user.avatar_url}
+                alt={user.username}
+                className="w-5 h-5 rounded-full border border-[#5865F2]/60 object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+                }}
+              />
+              <span className="text-[11px] text-white/90 font-medium hidden md:inline truncate max-w-[110px]">
+                {user.username}
+              </span>
+            </div>
+            <button
+              onClick={logout}
+              title="Cerrar sesión de Discord"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] text-rose-400 hover:text-white bg-rose-500/10 hover:bg-rose-500/25 border border-rose-500/20 transition-all cursor-pointer"
+            >
+              <LogOut className="w-3 h-3 text-rose-400" />
+              <span>Salir</span>
             </button>
           </div>
         )}

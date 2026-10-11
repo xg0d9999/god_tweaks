@@ -1,5 +1,5 @@
 import React from "react";
-import { RefreshCw, LogOut } from "lucide-react";
+import { RefreshCw, LogOut, Keyboard } from "lucide-react";
 import { AppMode } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 
@@ -8,6 +8,8 @@ interface TitleBarProps {
   onToggleAppMode?: (mode: AppMode) => void;
   onCheckUpdates?: () => void;
   isCheckingUpdate?: boolean;
+  currentHotkey?: string;
+  onOpenHotkeySettings?: () => void;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -15,6 +17,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onToggleAppMode,
   onCheckUpdates,
   isCheckingUpdate = false,
+  currentHotkey,
+  onOpenHotkeySettings,
 }) => {
   const { user, logout } = useAuth();
   const handleClose = async () => {
@@ -107,6 +111,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               }`}
             />
             <span className="font-mono text-[10px] tracking-tight">v1.0.7</span>
+          </button>
+        )}
+
+        {onOpenHotkeySettings && (
+          <button
+            onClick={onOpenHotkeySettings}
+            title="Atajo global para abrir o minimizar la aplicación. Haz clic para cambiarlo."
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] active:scale-95 border border-white/[0.08] text-[11px] text-amber-300 hover:text-white transition-all cursor-pointer"
+          >
+            <Keyboard className="w-3 h-3 text-amber-400" />
+            <span className="font-mono text-[10px] font-bold">{currentHotkey || "Win+J"}</span>
           </button>
         )}
 

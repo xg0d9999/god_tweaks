@@ -14,6 +14,7 @@ import { PermissionBlockedView } from "./components/views/PermissionBlockedView"
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal";
 import { UpdateModal } from "./components/ui/UpdateModal";
+import { HotkeySettingsModal } from "./components/common/HotkeySettingsModal";
 import { checkForAppUpdate, UpdateInfo } from "./services/updater";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { logOptimizationApplied } from "./services/discordLogger";
@@ -200,6 +201,24 @@ const AppContent: React.FC = () => {
 
   // Floating Toast State
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  // Global Hotkey state (Win+J default)
+  const [isHotkeyModalOpen, setIsHotkeyModalOpen] = useState(false);
+  const [currentHotkey, setCurrentHotkey] = useState<string>(() => {
+    return localStorage.getItem("god_tweaks_toggle_hotkey") || "Win+J";
+  });
+
+  useEffect(() => {
+    const initHotkey = async () => {
+      try {
+        const saved = localStorage.getItem("god_tweaks_toggle_hotkey") || "Win+J";
+        await safeInvoke("set_toggle_hotkey", { hotkey: saved });
+      } catch (err) {
+        console.warn("Could not register hotkey on startup:", err);
+      }
+    };
+    initHotkey();
+  }, []);
 
   // Full-screen Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -983,8 +1002,17 @@ const AppContent: React.FC = () => {
           onToggleAppMode={handleToggleAppMode}
           onCheckUpdates={() => handleCheckForUpdates(true)}
           isCheckingUpdate={isCheckingUpdate}
+          currentHotkey={currentHotkey}
+          onOpenHotkeySettings={() => setIsHotkeyModalOpen(true)}
         />
         <LoginView />
+        <HotkeySettingsModal
+          isOpen={isHotkeyModalOpen}
+          onClose={() => setIsHotkeyModalOpen(false)}
+          currentHotkey={currentHotkey}
+          onHotkeyChange={setCurrentHotkey}
+          showToast={showToast}
+        />
       </div>
     );
   }
@@ -997,6 +1025,8 @@ const AppContent: React.FC = () => {
         onToggleAppMode={handleToggleAppMode}
         onCheckUpdates={() => handleCheckForUpdates(true)}
         isCheckingUpdate={isCheckingUpdate}
+        currentHotkey={currentHotkey}
+        onOpenHotkeySettings={() => setIsHotkeyModalOpen(true)}
       />
 
       {/* Admin Elevation Warning Banner if not running elevated */}
@@ -1156,6 +1186,8 @@ const AppContent: React.FC = () => {
                     discordChannel={discordChannel}
                     onUpdateDiscordConfig={handleUpdateDiscordConfig}
                     showToast={showToast}
+                    currentHotkey={currentHotkey}
+                    onOpenHotkeySettings={() => setIsHotkeyModalOpen(true)}
                   />
                 ))}
 
@@ -1225,6 +1257,15 @@ const AppContent: React.FC = () => {
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
         updateInfo={updateInfo}
+      />
+
+      {/* Global Hotkey Configuration Modal */}
+      <HotkeySettingsModal
+        isOpen={isHotkeyModalOpen}
+        onClose={() => setIsHotkeyModalOpen(false)}
+        currentHotkey={currentHotkey}
+        onHotkeyChange={setCurrentHotkey}
+        showToast={showToast}
       />
     </div>
   );

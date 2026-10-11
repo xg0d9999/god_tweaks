@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Info,
   X,
+  Keyboard,
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { ActionButton } from "../ui/ActionButton";
@@ -32,6 +33,8 @@ interface HispanSancionesViewProps {
   discordChannel: string;
   onUpdateDiscordConfig?: (guild: string, channel: string) => void;
   showToast: (message: string, type: "success" | "error" | "info") => void;
+  currentHotkey?: string;
+  onOpenHotkeySettings?: () => void;
 }
 
 export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
@@ -45,6 +48,8 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
   discordGuild,
   discordChannel,
   showToast,
+  currentHotkey,
+  onOpenHotkeySettings,
 }) => {
   const [search, setSearch] = useState("");
   const [selections, setSelections] = useState<Record<number, "sin_reconocer" | "reconocida">>({});
@@ -134,14 +139,14 @@ Pruebas: ${proofs.trim() || "-"}`;
 
   const jailCommand = useMemo(() => {
     const cleanId = playerId.trim() || "ID";
-    return `/jail ${cleanId} ${result.jail_minutes} ${result.motivoWithTag}`;
+    return `jail ${cleanId} ${result.jail_minutes} ${result.motivoWithTag}`;
   }, [playerId, result]);
 
   const banCommand = useMemo(() => {
     const cleanId = playerId.trim() || "ID";
     const days = result.perma ? -1 : result.ban_days;
     const cleanAtt = staffAtt.trim() || "Staff";
-    return `/sqlban ${cleanId} ${days} ${result.motivoWithoutTag} att:${cleanAtt}`;
+    return `sqlban ${cleanId} ${days} ${result.motivoWithoutTag} att:${cleanAtt}`;
   }, [playerId, result, staffAtt]);
 
   const validateAction = (type: "plantilla" | "jail" | "ban" | "jail_ig" | "ban_ig"): boolean => {
@@ -194,20 +199,24 @@ Pruebas: ${proofs.trim() || "-"}`;
     setConfirmStep(null);
     setPendingActionType(null);
 
-    if (sendToDiscord) {
-      await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
-    }
-
-    if (type === "plantilla") {
-      onCopyClipboard(formattedReportTemplate, "Plantilla copiada.");
-    } else if (type === "jail") {
-      onCopyClipboard(jailCommand, "Comando /jail copiado.");
-    } else if (type === "ban") {
-      onCopyClipboard(banCommand, "Comando /sqlban copiado.");
-    } else if (type === "jail_ig") {
+    // 1. PRIMERO: Ejecutar en FiveM por consola F8 o copiar al portapapeles
+    if (type === "jail_ig") {
       await onSendFivemCommand(jailCommand);
     } else if (type === "ban_ig") {
       await onSendFivemCommand(banCommand);
+    } else if (type === "jail") {
+      onCopyClipboard(jailCommand, "Comando jail copiado.");
+    } else if (type === "ban") {
+      onCopyClipboard(banCommand, "Comando sqlban copiado.");
+    } else if (type === "plantilla") {
+      onCopyClipboard(formattedReportTemplate, "Plantilla copiada.");
+    }
+
+    // 2. DESPUÉS: Si se seleccionó registrar en Discord, enviar reporte tras pequeña pausa
+    if (sendToDiscord) {
+      setTimeout(async () => {
+        await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
+      }, 750);
     }
   };
 
@@ -498,9 +507,9 @@ Pruebas: ${proofs.trim() || "-"}`;
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando /jail"}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando jail (F8)"}
               >
-                /jail
+                jail
               </ActionButton>
               <ActionButton
                 variant="secondary"
@@ -513,9 +522,9 @@ Pruebas: ${proofs.trim() || "-"}`;
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando /sqlban"}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando sqlban (F8)"}
               >
-                /sqlban
+                sqlban
               </ActionButton>
             </div>
 
@@ -531,9 +540,9 @@ Pruebas: ${proofs.trim() || "-"}`;
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Jail en FiveM"}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Jail en FiveM por consola F8"}
               >
-                Jail IG (T+Enter)
+                Jail IG (F8)
               </ActionButton>
               <ActionButton
                 variant="secondary"
@@ -546,16 +555,16 @@ Pruebas: ${proofs.trim() || "-"}`;
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Ban en FiveM"}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Ban en FiveM por consola F8"}
               >
-                Baneo IG (T+Enter)
+                Baneo IG (F8)
               </ActionButton>
             </div>
 
             {!isFivemRunning && (
               <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300/90">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <span>FiveM no está abierto. Los comandos directos (T+Enter) están desactivados.</span>
+                <span>FiveM no está abierto. Los comandos directos (F8) están desactivados.</span>
               </div>
             )}
 
@@ -568,12 +577,25 @@ Pruebas: ${proofs.trim() || "-"}`;
                 <span>Limpiar todo</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs text-[#9CA3AF]">
-                <span>Siempre visible</span>
-                <ToggleSwitch
-                  checked={alwaysOnTop}
-                  onChange={onToggleAlwaysOnTop}
-                />
+              <div className="flex items-center gap-3 text-xs text-[#9CA3AF]">
+                {onOpenHotkeySettings && (
+                  <button
+                    onClick={onOpenHotkeySettings}
+                    title="Configurar atajo de teclado para abrir y minimizar la app"
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-amber-300 hover:text-white border border-white/[0.08] cursor-pointer transition-colors"
+                  >
+                    <Keyboard className="w-3 h-3 text-amber-400" />
+                    <span>Atajo: {currentHotkey || "Win+J"}</span>
+                  </button>
+                )}
+
+                <div className="flex items-center gap-1.5">
+                  <span>Siempre visible</span>
+                  <ToggleSwitch
+                    checked={alwaysOnTop}
+                    onChange={onToggleAlwaysOnTop}
+                  />
+                </div>
               </div>
             </div>
           </div>

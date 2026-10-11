@@ -8,3 +8,4 @@ pub mod network;
 pub mod telemetry;
 pub mod test_bench;
 pub mod oauth;
+pub mod hotkey;

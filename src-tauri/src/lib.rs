@@ -14,6 +14,7 @@ use commands::network::*;
 use commands::telemetry::*;
 use commands::test_bench::*;
 use commands::oauth::*;
+use commands::hotkey::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -24,6 +25,10 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .setup(|app| {
+            init_hotkey_service(app.handle().clone());
+            Ok(())
+        })
         .manage(TelemetryState {
             sys: Mutex::new(sys),
         })
@@ -77,6 +82,10 @@ pub fn run() {
             send_report_to_discord,
             // Test Bench
             run_test_bench,
+            // Global Shortcut Toggle
+            get_toggle_hotkey,
+            set_toggle_hotkey,
+            toggle_main_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running g0d tweaks application");

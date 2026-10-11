@@ -64,8 +64,9 @@ pub fn set_window_always_on_top(app_handle: tauri::AppHandle, enabled: bool) -> 
 
 #[tauri::command]
 pub fn send_command_to_fivem(command: String) -> Result<String, String> {
-    // Escapar comillas para PowerShell
-    let escaped_command = command.replace('\'', "''");
+    // Eliminar la barra '/' inicial para la consola F8 y escapar comillas
+    let clean_command = command.trim().trim_start_matches('/').to_string();
+    let escaped_command = clean_command.replace('\'', "''");
 
     let ps_script = format!(
         r#"
@@ -88,30 +89,34 @@ public class Win32Helper {{
 
 [Win32Helper]::ShowWindow($p.MainWindowHandle, 9)
 [Win32Helper]::SetForegroundWindow($p.MainWindowHandle)
-Start-Sleep -Milliseconds 250
+Start-Sleep -Milliseconds 300
 
-# Abrir chat con 't'
-[System.Windows.Forms.SendKeys]::SendWait('t')
-Start-Sleep -Milliseconds 120
+# Abrir consola F8 de FiveM
+[System.Windows.Forms.SendKeys]::SendWait('{{F8}}')
+Start-Sleep -Milliseconds 180
 
-# Copiar comando al portapapeles y pegar para soportar caracteres unicode / acentos
+# Copiar comando sin '/' al portapapeles y pegar en F8
 Set-Clipboard -Value '{escaped_command}'
 [System.Windows.Forms.SendKeys]::SendWait('^v')
-Start-Sleep -Milliseconds 80
+Start-Sleep -Milliseconds 120
 
-# Enviar Enter
+# Enviar Enter para ejecutar el comando
 [System.Windows.Forms.SendKeys]::SendWait('{{ENTER}}')
+Start-Sleep -Milliseconds 150
+
+# Cerrar consola F8 para volver al juego
+[System.Windows.Forms.SendKeys]::SendWait('{{F8}}')
 exit 0
 "#
     );
 
     match run_hidden_powershell(&ps_script) {
-        Ok(_) => Ok(format!("Comando enviado al chat de FiveM: {command}")),
+        Ok(_) => Ok(format!("Comando ejecutado en la consola F8 de FiveM: {clean_command}")),
         Err(e) => {
             if e.contains("exit 2") || e.contains("2") {
                 Err("No se encontró ninguna ventana activa de FiveM. Asegúrate de tener el juego abierto.".to_string())
             } else {
-                Err(format!("Error enviando comando al juego: {e}"))
+                Err(format!("Error enviando comando a FiveM: {e}"))
             }
         }
     }

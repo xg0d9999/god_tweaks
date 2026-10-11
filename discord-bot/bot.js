@@ -1,7 +1,11 @@
 import { Client, GatewayIntentBits, EmbedBuilder, Partials } from 'discord.js';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
 
 const token = process.env.DISCORD_BOT_TOKEN;
@@ -27,7 +31,7 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message],
 });
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   console.log(`\n\x1b[1m\x1b[36m================================================================\x1b[0m`);
   console.log(`\x1b[1m\x1b[32m  ✔ Bot de Discord Conectado como: ${client.user.tag}\x1b[0m`);
   console.log(`\x1b[36m  ID: ${client.user.id}\x1b[0m`);

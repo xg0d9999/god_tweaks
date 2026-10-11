@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const startDiscordOAuth = async () => {
-    const DISCORD_CLIENT_ID = '1558779232421810268';
+    const DISCORD_CLIENT_ID = '1543329499985346652';
     let token = '';
 
     if (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window) {

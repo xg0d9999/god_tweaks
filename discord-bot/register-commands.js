@@ -1,6 +1,11 @@
 import { REST, Routes, SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import dotenv from 'dotenv';
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
 
 const token = process.env.DISCORD_BOT_TOKEN;
@@ -63,6 +68,7 @@ async function register() {
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
       console.log('\x1b[32m✔ Comando /actualizacion registrado de forma global en Discord.\x1b[0m');
     }
+    process.exit(0);
   } catch (err) {
     console.error('\x1b[31m[ERROR] Fallo al registrar comandos:\x1b[0m', err);
     process.exit(1);

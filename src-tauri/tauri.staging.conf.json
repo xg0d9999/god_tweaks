@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "g0d tweaks [LAB / STAGING]",
+  "productName": "g0d tweaks Staging",
   "identifier": "com.godtweaks.staging",
   "app": {
     "windows": [
       {
-        "title": "g0d tweaks [LAB / STAGING]",
+        "title": "g0d tweaks - Lab Staging",
         "devtools": true
       }
     ]

@@ -8,8 +8,14 @@ echo ====================================================================
 echo.
 call npm run build:staging
 echo.
-echo ====================================================================
-echo    Instalador generado en: src-tauri\target\release\bundle\nsis
-echo ====================================================================
+if errorlevel 1 (
+    echo ====================================================================
+    echo    ❌ La compilación falló. Revisa el mensaje superior.
+    echo ====================================================================
+) else (
+    echo ====================================================================
+    echo    ✔ Instalador generado en: src-tauri\target\release\bundle\nsis
+    echo ====================================================================
+)
 echo.
 pause

@@ -6,6 +6,7 @@ import { Sidebar } from "./components/layout/Sidebar";
 import { DashboardView } from "./components/views/DashboardView";
 import { PresetsView } from "./components/views/PresetsView";
 import { FiveMView } from "./components/views/FiveMView";
+import { CitizensManagerView } from "./components/views/CitizensManagerView";
 import { AdvancedModeView } from "./components/views/AdvancedModeView";
 import { HispanSancionesView } from "./components/views/HispanSancionesView";
 import { BackupView } from "./components/views/BackupView";
@@ -1114,6 +1115,8 @@ const AppContent: React.FC = () => {
                     lastCleanResult={lastFiveMCleanMsg}
                   />
                 ))}
+
+              {activeTab === "citizens" && <CitizensManagerView />}
 
               {activeTab === "advanced" &&
                 (!canUseTweaks ? (

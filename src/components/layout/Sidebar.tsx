@@ -11,6 +11,7 @@ import {
   LogOut,
   ShieldCheck,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { TabType } from "../../types";
 import { useAuth } from "../../context/AuthContext";
@@ -59,6 +60,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: "FiveM & GTA V",
       icon: <Crosshair className="w-4 h-4 flex-shrink-0" />,
       isBlocked: tweaksBlocked,
+    },
+    {
+      id: "citizens",
+      label: "Gestor de Citizens",
+      icon: <Sparkles className="w-4 h-4 flex-shrink-0 text-cyan-400" />,
+      badge: "PRÓXIMO",
     },
     {
       id: "advanced",
@@ -236,12 +243,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     />
                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0E1013]" />
                   </div>
-                  <div className="min-w-0 flex-1 flex flex-col">
+                  <div className="min-w-0 flex-1 flex flex-col justify-center">
                     <span className="text-xs font-semibold text-white truncate leading-tight">
                       {user.username}
                     </span>
-                    <span className="text-[10px] font-mono text-[#8B949E] truncate">
-                      HWID Sincronizado
+                    <span className="text-[10px] text-emerald-400 font-medium truncate">
+                      En línea
                     </span>
                   </div>
                 </div>

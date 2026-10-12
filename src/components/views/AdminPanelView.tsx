@@ -18,6 +18,7 @@ import { fetchAllUsers, updateUserPermissions, AppUserRecord, supabase } from '.
 export const AdminPanelView: React.FC = () => {
   const { userRecord, refreshUserRecord } = useAuth();
   const [users, setUsers] = useState<AppUserRecord[]>([]);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -43,8 +44,8 @@ export const AdminPanelView: React.FC = () => {
   useEffect(() => {
     loadUsers();
 
-    // Suscripción Realtime en el panel admin para ver altas, cambios y logins en directo
-    const channel = supabase
+    // 1. Suscripción Realtime en el panel admin para ver altas, cambios y logins en directo
+    const dbChannel = supabase
       .channel('admin_panel_users_live')
       .on(
         'postgres_changes',
@@ -73,10 +74,31 @@ export const AdminPanelView: React.FC = () => {
       )
       .subscribe();
 
+    // 2. Suscripción a canal de presencia para detectar quién está conectado en tiempo real
+    const presenceChannel = supabase.channel('g0d_suite_presence');
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const activeIds = new Set<string>();
+        for (const key of Object.keys(state)) {
+          const presences = state[key] as Array<{ discord_id?: string }>;
+          if (Array.isArray(presences)) {
+            for (const p of presences) {
+              if (p?.discord_id) activeIds.add(p.discord_id);
+            }
+          }
+        }
+        if (userRecord?.discord_id) activeIds.add(userRecord.discord_id);
+        setOnlineUserIds(activeIds);
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(dbChannel);
+      supabase.removeChannel(presenceChannel);
     };
-  }, []);
+  }, [userRecord?.discord_id]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -150,11 +172,19 @@ export const AdminPanelView: React.FC = () => {
   // Contadores
   const stats = useMemo(() => {
     const total = users.length;
+    const online = users.filter((u) => {
+      if (userRecord && userRecord.discord_id === u.discord_id) return true;
+      if (onlineUserIds.has(u.discord_id)) return true;
+      if (u.last_login_at) {
+        return Date.now() - new Date(u.last_login_at).getTime() < 3 * 60 * 1000;
+      }
+      return false;
+    }).length;
     const tweaksActive = users.filter((u) => u.can_use_tweaks !== false).length;
     const sancionesActive = users.filter((u) => u.can_use_sanciones !== false).length;
     const admins = users.filter((u) => u.is_admin === true).length;
-    return { total, tweaksActive, sancionesActive, admins };
-  }, [users]);
+    return { total, online, tweaksActive, sancionesActive, admins };
+  }, [users, onlineUserIds, userRecord?.discord_id]);
 
   // Seguridad: si el usuario no es admin
   if (!userRecord?.is_admin) {
@@ -221,13 +251,23 @@ export const AdminPanelView: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
           <div className="flex items-center justify-between text-[#8B949E] text-xs mb-1">
             <span>Usuarios Totales</span>
             <Users className="w-4 h-4 text-white/70" />
           </div>
           <div className="text-xl font-bold font-mono text-white">{stats.total}</div>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-white/[0.02] border border-emerald-500/20 bg-emerald-500/[0.03] backdrop-blur-sm">
+          <div className="flex items-center justify-between text-[#8B949E] text-xs mb-1">
+            <span className="text-emerald-300 font-medium">En Línea</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+          <div className="text-xl font-bold font-mono text-emerald-300">
+            {stats.online} <span className="text-xs text-[#717680] font-sans">/ {stats.total}</span>
+          </div>
         </div>
 
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
@@ -297,6 +337,12 @@ export const AdminPanelView: React.FC = () => {
             const isSelf = userRecord.discord_id === u.discord_id;
             const isUpdating = updatingId === u.discord_id;
             const isHwidExpanded = expandedHwidUser === u.discord_id;
+            const isOnline =
+              isSelf ||
+              onlineUserIds.has(u.discord_id) ||
+              (u.last_login_at
+                ? Date.now() - new Date(u.last_login_at).getTime() < 3 * 60 * 1000
+                : false);
 
             return (
               <motion.div
@@ -307,20 +353,38 @@ export const AdminPanelView: React.FC = () => {
                 {/* Top row: User Identity & Badges */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={u.discord_avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}
-                      alt={u.discord_username}
-                      className="w-10 h-10 rounded-full object-cover border border-white/10 bg-black/40 flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          'https://cdn.discordapp.com/embed/avatars/0.png';
-                      }}
-                    />
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={u.discord_avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}
+                        alt={u.discord_username}
+                        className="w-10 h-10 rounded-full object-cover border border-white/10 bg-black/40 shadow-sm"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'https://cdn.discordapp.com/embed/avatars/0.png';
+                        }}
+                      />
+                      {isOnline && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0a0c0f] shadow-sm animate-pulse"
+                          title="Usuario conectado en tiempo real"
+                        />
+                      )}
+                    </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-white truncate">
                           {u.discord_username}
                         </span>
+                        {isOnline ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>CONECTADO</span>
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-mono text-[#717680] bg-white/[0.02] border border-white/[0.05]">
+                            OFFLINE
+                          </span>
+                        )}
                         {u.is_admin ? (
                           <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
                             ADMIN

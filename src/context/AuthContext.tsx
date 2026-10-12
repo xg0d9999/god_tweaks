@@ -174,13 +174,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('focus', handleFocusSync);
     document.addEventListener('visibilitychange', handleFocusSync);
 
+    // 4. Canal de presencia Realtime para que el Panel Admin detecte usuarios en línea
+    const presenceChannel = supabase.channel('g0d_suite_presence', {
+      config: { presence: { key: user.id } },
+    });
+
+    presenceChannel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        try {
+          await presenceChannel.track({
+            discord_id: user.id,
+            username: user.username,
+            online_at: new Date().toISOString(),
+          });
+        } catch {}
+      }
+    });
+
+    const presenceHeartbeat = setInterval(() => {
+      presenceChannel
+        .track({
+          discord_id: user.id,
+          username: user.username,
+          online_at: new Date().toISOString(),
+        })
+        .catch(() => {});
+    }, 30000);
+
     return () => {
       supabase.removeChannel(channel);
       clearInterval(pollInterval);
+      clearInterval(presenceHeartbeat);
+      presenceChannel.untrack().catch(() => {});
+      supabase.removeChannel(presenceChannel);
       window.removeEventListener('focus', handleFocusSync);
       document.removeEventListener('visibilitychange', handleFocusSync);
     };
-  }, [user?.id]);
+  }, [user?.id, user?.username]);
 
   // Restaurar sesión de localStorage al arrancar
   useEffect(() => {

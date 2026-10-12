@@ -2,6 +2,7 @@ export type TabType =
   | "dashboard"
   | "presets"
   | "fivem"
+  | "citizens"
   | "advanced"
   | "backup"
   | "hispan"

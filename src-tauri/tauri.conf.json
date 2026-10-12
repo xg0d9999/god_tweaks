@@ -55,7 +55,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI2QjJDMkNFRkQyOEJFN0IKUldSN3Zpajl6c0t5SnFYb256aVRHR2R4cVN4S0I2RWdMbDBZcUxBQ1pqZzNzei9DUkV6dWhNeGUK",
       "endpoints": [
-        "https://github.com/xg0d9999/god_suite_releases/releases/latest/download/latest.json"
+        "https://github.com/xg0d9999/god_tweaks/releases/latest/download/latest.json"
       ]
     }
   }

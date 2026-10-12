@@ -321,8 +321,7 @@ async function monitorWorkflowAndRelease(token, owner, codeRepo, releasesRepo, t
           console.log(`${ANSI.bold}${ANSI.green}      🎉 ¡RELEASE v${targetVersion} DISPONIBLE EN PRODUCCIÓN! 🚀       ${ANSI.reset}`);
           console.log(`${ANSI.bold}${ANSI.green}================================================================${ANSI.reset}\n`);
           console.log(`  • La app ya detectará automáticamente la versión v${targetVersion}.`);
-          console.log(`  • Tu código fuente sigue 100% privado en ${codeRepo} (protegido contra copias).`);
-          console.log(`  • Descargas públicas activas en: https://github.com/${owner}/${releasesRepo}/releases\n`);
+          console.log(`  • Descargas activas en: https://github.com/${owner}/${releasesRepo}/releases\n`);
         } else {
           console.log(`\n${ANSI.bold}${ANSI.red}❌ El flujo de compilación terminó con estado: ${runData.conclusion}${ANSI.reset}`);
           console.log(`  Revisa los logs en: ${workflowRun.html_url}`);
@@ -339,17 +338,16 @@ async function main() {
   printBanner();
 
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  const currentVersion = pkg.version || '1.0.8';
+  const currentVersion = pkg.version || '1.0.9';
 
   const owner = 'xg0d9999';
   const repoName = 'god_tweaks';
-  const releasesRepo = 'god_suite_releases';
+  const releasesRepo = 'god_tweaks';
   const token = readEnvToken();
 
   // 1. Mostrar versiones anteriores
   console.log(`${ANSI.bold}${ANSI.yellow}📋 Versión actual configurada en el proyecto:${ANSI.reset} ${ANSI.bold}${ANSI.green}v${currentVersion}${ANSI.reset}`);
-  console.log(`${ANSI.dim}🔒 Repositorio de código: ${owner}/${repoName} [PRIVADO]${ANSI.reset}`);
-  console.log(`${ANSI.dim}📦 Repositorio de releases: ${owner}/${releasesRepo} [PÚBLICO - SIN CÓDIGO]${ANSI.reset}\n`);
+  console.log(`${ANSI.dim}📦 Repositorio oficial: ${owner}/${repoName}${ANSI.reset}\n`);
 
   console.log(`${ANSI.bold}${ANSI.cyan}📜 HISTORIAL DE VERSIONES ANTERIORES REGISTRADAS:${ANSI.reset}`);
   const prevReleases = await fetchPreviousReleases(token, owner, repoName, releasesRepo);

@@ -23,7 +23,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   const { user, userRecord, logout } = useAuth();
   const isTweaksBlocked = userRecord?.can_use_tweaks === false;
   const isSancionesBlocked = userRecord?.can_use_sanciones === false;
-  const [appVersion, setAppVersion] = React.useState("1.0.8");
+  const [appVersion, setAppVersion] = React.useState("1.0.9");
 
   React.useEffect(() => {
     const loadVersion = async () => {

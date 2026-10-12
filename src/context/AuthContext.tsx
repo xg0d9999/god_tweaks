@@ -24,6 +24,7 @@ interface AuthContextType {
   userRecord: AppUserRecord | null;
   hardware: HardwareProfile | null;
   ipAddress: string | null;
+  onlineUserIds: Set<string>;
   isAuthenticated: boolean;
   isLoading: boolean;
   startDiscordOAuth: () => Promise<void>;
@@ -50,6 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Cargar hardware local mediante Rust IPC
@@ -179,17 +181,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       config: { presence: { key: user.id } },
     });
 
-    presenceChannel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        try {
-          await presenceChannel.track({
-            discord_id: user.id,
-            username: user.username,
-            online_at: new Date().toISOString(),
-          });
-        } catch {}
-      }
-    });
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState();
+        const activeIds = new Set<string>();
+        for (const key of Object.keys(state)) {
+          const presences = state[key] as Array<{ discord_id?: string }>;
+          if (Array.isArray(presences)) {
+            for (const p of presences) {
+              if (p?.discord_id) activeIds.add(p.discord_id);
+            }
+          }
+        }
+        if (user?.id) activeIds.add(user.id);
+        setOnlineUserIds(activeIds);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          try {
+            await presenceChannel.track({
+              discord_id: user.id,
+              username: user.username,
+              online_at: new Date().toISOString(),
+            });
+          } catch {}
+        }
+      });
 
     const presenceHeartbeat = setInterval(() => {
       presenceChannel
@@ -388,6 +405,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         userRecord,
         hardware,
         ipAddress,
+        onlineUserIds,
         isAuthenticated: !!user,
         isLoading,
         startDiscordOAuth,

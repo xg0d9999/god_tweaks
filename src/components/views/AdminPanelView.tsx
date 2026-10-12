@@ -16,9 +16,8 @@ import { useAuth } from '../../context/AuthContext';
 import { fetchAllUsers, updateUserPermissions, AppUserRecord, supabase } from '../../services/supabase';
 
 export const AdminPanelView: React.FC = () => {
-  const { userRecord, refreshUserRecord } = useAuth();
+  const { userRecord, refreshUserRecord, onlineUserIds } = useAuth();
   const [users, setUsers] = useState<AppUserRecord[]>([]);
-  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -44,7 +43,7 @@ export const AdminPanelView: React.FC = () => {
   useEffect(() => {
     loadUsers();
 
-    // 1. Suscripción Realtime en el panel admin para ver altas, cambios y logins en directo
+    // Suscripción Realtime en el panel admin para ver altas, cambios y logins en directo
     const dbChannel = supabase
       .channel('admin_panel_users_live')
       .on(
@@ -74,31 +73,10 @@ export const AdminPanelView: React.FC = () => {
       )
       .subscribe();
 
-    // 2. Suscripción a canal de presencia para detectar quién está conectado en tiempo real
-    const presenceChannel = supabase.channel('g0d_suite_presence');
-
-    presenceChannel
-      .on('presence', { event: 'sync' }, () => {
-        const state = presenceChannel.presenceState();
-        const activeIds = new Set<string>();
-        for (const key of Object.keys(state)) {
-          const presences = state[key] as Array<{ discord_id?: string }>;
-          if (Array.isArray(presences)) {
-            for (const p of presences) {
-              if (p?.discord_id) activeIds.add(p.discord_id);
-            }
-          }
-        }
-        if (userRecord?.discord_id) activeIds.add(userRecord.discord_id);
-        setOnlineUserIds(activeIds);
-      })
-      .subscribe();
-
     return () => {
       supabase.removeChannel(dbChannel);
-      supabase.removeChannel(presenceChannel);
     };
-  }, [userRecord?.discord_id]);
+  }, []);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);

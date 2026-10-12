@@ -1,17 +1,14 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Ghost, Radio, Sparkles, Activity, Sliders } from "lucide-react";
+import { Gamepad2, Ghost, Radio, Sparkles, Sliders } from "lucide-react";
 import { GamingView } from "./GamingView";
 import { DebloatView } from "./DebloatView";
 import { NetworkView } from "./NetworkView";
 import { MemoryView } from "./MemoryView";
-import { BenchmarkView } from "./BenchmarkView";
 import {
   GamingStatus,
   DebloatStatus,
   NetworkStatus,
-  PcBenchmarkMetrics,
-  FiveMBenchmarkMetrics,
 } from "../../types";
 
 export interface AdvancedModeViewProps {
@@ -37,15 +34,10 @@ export interface AdvancedModeViewProps {
   lastRamCleanResult?: string;
   lastCacheCleanResult?: string;
 
-  pcBenchmark: PcBenchmarkMetrics | null;
-  fivemBenchmark: FiveMBenchmarkMetrics | null;
-  onRefreshPcBenchmark: () => void;
-  onScanFivemLog: () => void;
-
   loadingKeys: Record<string, boolean>;
 }
 
-type AdvancedSubTab = "gaming" | "debloat" | "network" | "memory" | "telemetry";
+type AdvancedSubTab = "gaming" | "debloat" | "network" | "memory";
 
 export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
   gamingStatus,
@@ -66,10 +58,6 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
   onPurgeCaches,
   lastRamCleanResult,
   lastCacheCleanResult,
-  pcBenchmark,
-  fivemBenchmark,
-  onRefreshPcBenchmark,
-  onScanFivemLog,
   loadingKeys,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<AdvancedSubTab>("gaming");
@@ -94,11 +82,6 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
       id: "memory" as AdvancedSubTab,
       label: "Limpieza Profunda",
       icon: <Sparkles className="w-3.5 h-3.5" />,
-    },
-    {
-      id: "telemetry" as AdvancedSubTab,
-      label: "Telemetría & Diagnóstico",
-      icon: <Activity className="w-3.5 h-3.5" />,
     },
   ];
 
@@ -201,17 +184,6 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
                 loadingKeys={loadingKeys}
                 lastRamCleanResult={lastRamCleanResult}
                 lastCacheCleanResult={lastCacheCleanResult}
-              />
-            )}
-
-            {activeSubTab === "telemetry" && (
-              <BenchmarkView
-                pcMetrics={pcBenchmark}
-                fivemMetrics={fivemBenchmark}
-                onRefreshPcBenchmark={onRefreshPcBenchmark}
-                onScanFivemLog={onScanFivemLog}
-                isLoadingPc={loadingKeys["pc_bench"]}
-                isLoadingFivem={loadingKeys["fivem_bench"]}
               />
             )}
           </motion.div>

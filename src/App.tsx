@@ -32,8 +32,6 @@ import {
   FiveMStatus,
   BackupItem,
   RestorePointItem,
-  PcBenchmarkMetrics,
-  FiveMBenchmarkMetrics,
   LogEntry,
 } from "./types";
 
@@ -184,8 +182,6 @@ const AppContent: React.FC = () => {
   });
   const [backups, setBackups] = useState<BackupItem[]>([]);
   const [restorePoints, setRestorePoints] = useState<RestorePointItem[]>([]);
-  const [pcBenchmark, setPcBenchmark] = useState<PcBenchmarkMetrics | null>(null);
-  const [fivemBenchmark, setFivemBenchmark] = useState<FiveMBenchmarkMetrics | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loadingKeys, setLoadingKeys] = useState<Record<string, boolean>>({});
   const [lastRamMsg, setLastRamMsg] = useState<string>();
@@ -332,35 +328,9 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
-  const fetchPcBenchmark = useCallback(async () => {
-    setLoading("pc_bench", true);
-    try {
-      const data = await safeInvoke<PcBenchmarkMetrics>("get_pc_benchmark");
-      setPcBenchmark(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading("pc_bench", false);
-    }
-  }, []);
-
-  const fetchFivemBenchmark = useCallback(async () => {
-    setLoading("fivem_bench", true);
-    try {
-      const data = await safeInvoke<FiveMBenchmarkMetrics>("analyze_fivem_benchmark");
-      setFivemBenchmark(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading("fivem_bench", false);
-    }
-  }, []);
-
   useEffect(() => {
     fetchMetrics();
     fetchStatuses();
-    fetchPcBenchmark();
-    fetchFivemBenchmark();
     addLog("g0d suite inicializado. Kernel & Hispan subsystems listos.", "info");
 
     // Check for updates automatically in the background on startup
@@ -373,7 +343,7 @@ const AppContent: React.FC = () => {
       clearTimeout(updateTimeout);
       clearInterval(interval);
     };
-  }, [fetchMetrics, fetchStatuses, fetchPcBenchmark, fetchFivemBenchmark, addLog, handleCheckForUpdates]);
+  }, [fetchMetrics, fetchStatuses, addLog, handleCheckForUpdates]);
 
   const setLoading = (key: string, val: boolean) => {
     setLoadingKeys((prev) => ({ ...prev, [key]: val }));
@@ -565,7 +535,6 @@ const AppContent: React.FC = () => {
       const res = await safeInvoke<{ message: string }>("clean_fivem_caches");
       setLastFiveMCleanMsg(res.message);
       addLog(res.message, "success");
-      fetchFivemBenchmark();
     } catch (err) {
       addLog(String(err), "error");
     } finally {
@@ -579,7 +548,6 @@ const AppContent: React.FC = () => {
       const res = await safeInvoke<string>("set_fivem_priority", { enable });
       setFivemStatus((prev) => ({ ...prev, priority_active: enable }));
       addLog(res, "success");
-      fetchFivemBenchmark();
     } catch (err) {
       addLog(String(err), "error");
     } finally {
@@ -794,8 +762,6 @@ const AppContent: React.FC = () => {
     fetchStatuses();
     fetchMetrics();
     fetchBackups();
-    fetchPcBenchmark();
-    fetchFivemBenchmark();
   };
 
   // Preset Trigger: Lite (Sin purga de caché)
@@ -1144,10 +1110,6 @@ const AppContent: React.FC = () => {
                     onPurgeCaches={handlePurgeCaches}
                     lastRamCleanResult={lastRamMsg}
                     lastCacheCleanResult={lastCacheMsg}
-                    pcBenchmark={pcBenchmark}
-                    fivemBenchmark={fivemBenchmark}
-                    onRefreshPcBenchmark={fetchPcBenchmark}
-                    onScanFivemLog={fetchFivemBenchmark}
                     loadingKeys={loadingKeys}
                   />
                 ))}

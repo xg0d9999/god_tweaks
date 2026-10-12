@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Ghost, Radio, Sparkles, Sliders } from "lucide-react";
+import { Gamepad2, Ghost, Radio, Sparkles, Sliders, AlertTriangle } from "lucide-react";
 import { GamingView } from "./GamingView";
 import { DebloatView } from "./DebloatView";
 import { NetworkView } from "./NetworkView";
@@ -95,7 +95,7 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
           </div>
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
-              Modo Avanzado
+              Modo Avanzado Pro
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-white/[0.08] text-white/90 border border-white/10">
                 CONFIGURACIÓN MANUAL
               </span>
@@ -103,6 +103,21 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
             <p className="text-xs text-[#8B949E]">
               Elige y activa manualmente los módulos específicos que deseas aplicar en tu sistema
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Warning Notice Banner */}
+      <div className="relative overflow-hidden rounded-xl border border-white/[0.1] bg-white/[0.02] p-3.5 backdrop-blur-md">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+          <div className="flex-1 text-xs leading-relaxed">
+            <span className="font-semibold text-white">Aviso:</span>{" "}
+            <span className="text-[#8B949E]">
+              Modifica estos parámetros únicamente si sabes lo que estás haciendo. Estos ajustes aplican cambios directos en el kernel, temporizadores y registro del sistema.
+            </span>
           </div>
         </div>
       </div>

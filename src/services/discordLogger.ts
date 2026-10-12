@@ -50,6 +50,8 @@ export interface DiscordEmbed {
   timestamp?: string;
 }
 
+const EMBED_COLOR_WHITE = 0xffffff;
+
 /**
  * Envía un mensaje embebido al Webhook oficial de Discord
  */
@@ -59,12 +61,13 @@ export async function sendDiscordWebhook(embed: DiscordEmbed): Promise<boolean> 
 
   try {
     const payload = {
-      username: 'g0d suite • Telemetría & HWID',
+      username: 'g0d suite',
       avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
       embeds: [
         {
           ...embed,
-          footer: embed.footer || { text: 'g0d suite • Control de Hardware & Auditoría' },
+          color: embed.color ?? EMBED_COLOR_WHITE,
+          footer: embed.footer || { text: 'g0d suite' },
           timestamp: embed.timestamp || new Date().toISOString(),
         },
       ],
@@ -97,7 +100,8 @@ export async function sendDiscordLog(embed: DiscordEmbed): Promise<boolean> {
       embeds: [
         {
           ...embed,
-          footer: embed.footer || { text: 'g0d suite • Discord Audit Logger' },
+          color: embed.color ?? EMBED_COLOR_WHITE,
+          footer: embed.footer || { text: 'g0d suite' },
           timestamp: embed.timestamp || new Date().toISOString(),
         },
       ],
@@ -133,32 +137,25 @@ export async function logUserLogin(data: {
   const { user, hardware, ip } = data;
 
   const fields: DiscordEmbedField[] = [
-    { name: '👤 Usuario Discord', value: `**${user.username}** (<@${user.id}>)`, inline: true },
-    { name: '🆔 Discord ID', value: `\`${user.id}\``, inline: true },
-    { name: '🌐 Dirección IP Pública', value: `\`${ip || 'Desconocida'}\``, inline: true },
-    { name: '💻 Hardware ID (HWID)', value: `\`${hardware?.hwid || 'No disponible'}\``, inline: false },
+    { name: 'Usuario', value: `**${user.username}** (<@${user.id}>)`, inline: true },
+    { name: 'IP', value: `\`${ip || 'N/A'}\``, inline: true },
+    { name: 'RAM', value: hardware ? `${(hardware.ram_mb / 1024).toFixed(1)} GB` : 'N/A', inline: true },
+    { name: 'HWID', value: `\`${hardware?.hwid || 'N/A'}\``, inline: false },
     {
-      name: '⚙️ Procesador (CPU)',
+      name: 'CPU',
       value: hardware ? `${hardware.cpu} (${hardware.cpu_cores} núcleos)` : 'N/A',
       inline: true,
     },
-    { name: '🎮 Tarjeta Gráfica (GPU)', value: hardware?.gpu || 'N/A', inline: true },
-    {
-      name: '🧠 Memoria RAM',
-      value: hardware ? `${(hardware.ram_mb / 1024).toFixed(1)} GB (${hardware.ram_mb} MB)` : 'N/A',
-      inline: true,
-    },
-    { name: '🪟 Sistema Operativo', value: hardware?.os || 'Windows 11 / 10', inline: true },
-    { name: '📡 Base de Datos Supabase', value: '🟢 Sincronizado en `app_users`', inline: true },
+    { name: 'GPU', value: hardware?.gpu || 'N/A', inline: true },
+    { name: 'SO', value: hardware?.os || 'Windows', inline: true },
   ];
 
   return sendDiscordLog({
-    title: '🛡️ [TELEMETRÍA] Conexión de Usuario & HWID Registrado',
-    description: `El usuario **${user.username}** se ha conectado a **g0d suite**. Se ha registrado su hardware completo.`,
-    color: 0x00f0ff, // Neon Cyan
+    title: 'Conexión de Usuario',
+    color: EMBED_COLOR_WHITE,
     fields,
     thumbnail: { url: user.avatar_url },
-    footer: { text: 'g0d suite • Control Total de Hardware & Auditoría' },
+    footer: { text: 'g0d suite' },
   });
 }
 
@@ -172,15 +169,16 @@ export async function logOptimizationApplied(data: {
   appliedCount: number;
 }) {
   const fields: DiscordEmbedField[] = [
-    { name: '👤 Usuario', value: data.username || 'Usuario Local', inline: true },
-    { name: '🚀 Plan Aplicado', value: `**${data.planTitle}**`, inline: true },
-    { name: '⚡ Optimizaciones Activas', value: `${data.appliedCount} módulos activados`, inline: true },
+    { name: 'Usuario', value: data.username || 'Usuario Local', inline: true },
+    { name: 'Plan', value: `**${data.planTitle}**`, inline: true },
+    { name: 'Módulos', value: `${data.appliedCount}`, inline: true },
   ];
 
   return sendDiscordLog({
-    title: '⚡ [LOG] Optimización de Rendimiento Aplicada',
-    color: 0x00f0ff, // Neon Cyan
+    title: 'Optimización Aplicada',
+    color: EMBED_COLOR_WHITE,
     fields,
+    footer: { text: 'g0d suite' },
   });
 }
 
@@ -194,14 +192,15 @@ export async function logHispanSanction(data: {
   hours: number;
 }) {
   return sendDiscordLog({
-    title: '🚨 [LOG] Sanción HispanLife Aplicada',
-    color: 0xe11d48, // Rose Red
+    title: 'Sanción HispanLife',
+    color: EMBED_COLOR_WHITE,
     fields: [
-      { name: 'Staff Responsable', value: `**${data.staffAtt}**`, inline: true },
-      { name: 'ID Sancionada', value: `\`${data.targetId}\``, inline: true },
-      { name: 'Duración', value: `${data.hours} Horas`, inline: true },
+      { name: 'Staff', value: `**${data.staffAtt}**`, inline: true },
+      { name: 'ID', value: `\`${data.targetId}\``, inline: true },
+      { name: 'Duración', value: `${data.hours}h`, inline: true },
       { name: 'Motivo', value: data.reason, inline: false },
     ],
+    footer: { text: 'g0d suite' },
   });
 }
 
@@ -237,37 +236,27 @@ export async function logAppError(data: {
 
   const fields: DiscordEmbedField[] = [
     {
-      name: '👤 Usuario Afectado',
-      value: user ? `**${user.username}** (<@${user.id}>)` : '`Sesión no iniciada / Anónimo`',
+      name: 'Usuario',
+      value: user ? `**${user.username}** (<@${user.id}>)` : '`Anónimo`',
       inline: true,
     },
     {
-      name: '🆔 Discord ID',
-      value: user ? `\`${user.id}\`` : '`N/A`',
+      name: 'Contexto',
+      value: `\`${data.context || 'General'}\``,
       inline: true,
     },
     {
-      name: '🌐 Dirección IP',
-      value: `\`${ip || 'Desconocida'}\``,
+      name: 'IP',
+      value: `\`${ip || 'N/A'}\``,
       inline: true,
     },
     {
-      name: '📢 Canal Destino',
-      value: `<#${DISCORD_ERRORS_CHANNEL_ID}> (\`${DISCORD_ERRORS_CHANNEL_ID}\`)`,
+      name: 'HWID',
+      value: `\`${hardware?.hwid || 'N/A'}\``,
       inline: true,
     },
     {
-      name: '📍 Contexto / Vista',
-      value: `\`${data.context || 'Ejecución general de la aplicación'}\``,
-      inline: true,
-    },
-    {
-      name: '💻 HWID',
-      value: `\`${hardware?.hwid || 'No disponible'}\``,
-      inline: true,
-    },
-    {
-      name: '⚠️ Descripción del Error',
+      name: 'Error',
       value: `\`\`\`${errMessage.slice(0, 500)}\`\`\``,
       inline: false,
     },
@@ -275,19 +264,18 @@ export async function logAppError(data: {
 
   if (errStack && errStack !== errMessage) {
     fields.push({
-      name: '📜 Pila de Trazabilidad (Stack Trace)',
-      value: `\`\`\`${errStack.slice(0, 800)}\`\`\``,
+      name: 'Pila de Error',
+      value: `\`\`\`${errStack.slice(0, 600)}\`\`\``,
       inline: false,
     });
   }
 
   const embed: DiscordEmbed = {
-    title: '⚠️ [ERROR REPORT] Incidencia Detectada en la Aplicación',
-    description: `Se ha reportado un problema en **g0d suite** afectando a **${user?.username || 'Usuario'}**. Enlace al canal <#${DISCORD_ERRORS_CHANNEL_ID}>.`,
-    color: 0xef4444, // Red
+    title: 'Error en Aplicación',
+    color: EMBED_COLOR_WHITE,
     fields,
     thumbnail: user?.avatar_url ? { url: user.avatar_url } : undefined,
-    footer: { text: `g0d suite • Notificación de Error • Canal ${DISCORD_ERRORS_CHANNEL_ID}` },
+    footer: { text: 'g0d suite' },
     timestamp: new Date().toISOString(),
   };
 

@@ -58,7 +58,7 @@ export async function checkForAppUpdate(): Promise<UpdateInfo> {
 
       // 2. Direct GitHub Releases API Check (guarantees update detection as soon as a release is published)
       try {
-        const res = await fetch("https://api.github.com/repos/xg0d9999/god_tweaks/releases/latest", {
+        const res = await fetch("https://api.github.com/repos/xg0d9999/god_suite_releases/releases/latest", {
           headers: { Accept: "application/vnd.github+json" },
         });
 

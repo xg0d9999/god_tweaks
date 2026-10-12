@@ -52,29 +52,34 @@ function readEnvToken() {
   return null;
 }
 
-async function fetchPreviousReleases(token, owner, repo) {
+async function fetchPreviousReleases(token, owner, codeRepo, releasesRepo) {
   const releases = [];
-  try {
-    const headers = {
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'god-tweaks-release-manager',
-    };
-    if (token) headers.Authorization = `Bearer ${token}`;
+  const reposToTry = [releasesRepo, codeRepo].filter(Boolean);
 
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`, { headers });
-    if (res.ok) {
-      const data = await res.json();
-      for (const r of data) {
-        releases.push({
-          tag: r.tag_name,
-          name: r.name || r.tag_name,
-          date: r.published_at ? new Date(r.published_at).toLocaleDateString('es-ES') : 'N/A',
-          assets: r.assets ? r.assets.length : 0,
-        });
+  for (const rName of reposToTry) {
+    try {
+      const headers = {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'god-tweaks-release-manager',
+      };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`https://api.github.com/repos/${owner}/${rName}/releases?per_page=10`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        for (const r of data) {
+          if (!releases.some((x) => x.tag === r.tag_name)) {
+            releases.push({
+              tag: r.tag_name,
+              name: r.name || r.tag_name,
+              date: r.published_at ? new Date(r.published_at).toLocaleDateString('es-ES') : 'N/A',
+              assets: r.assets ? r.assets.length : 0,
+            });
+          }
+        }
       }
-    }
-  } catch (err) {
-    // Silently continue with local git tags
+    } catch {}
+    if (releases.length > 0) break;
   }
 
   // Fallback to local git tags
@@ -227,21 +232,127 @@ async function uploadSecretToGitHub(token, owner, repo, secretName, secretValue)
   } catch {}
 }
 
+async function monitorWorkflowAndRelease(token, owner, codeRepo, releasesRepo, targetVersion) {
+  if (!token) {
+    console.log(`\n${ANSI.yellow}ℹ No se detectó GITHUB_TOKEN en .env. El flujo se ejecutará en GitHub Actions en segundo plano.${ANSI.reset}`);
+    return;
+  }
+
+  console.log(`\n${ANSI.bold}${ANSI.cyan}================================================================${ANSI.reset}`);
+  console.log(`${ANSI.bold}${ANSI.white}    ⚡ MONITORIZANDO COMPILACIÓN Y PUBLICACIÓN EN GITHUB ⚡    ${ANSI.reset}`);
+  console.log(`${ANSI.dim}      Compilando setup oficial, firmando con Minisign y subiendo... ${ANSI.reset}`);
+  console.log(`${ANSI.bold}${ANSI.cyan}================================================================${ANSI.reset}\n`);
+
+  const startTime = Date.now();
+  let workflowRun = null;
+
+  // 1. Localizar el workflow run iniciado por el tag
+  process.stdout.write(`  ${ANSI.yellow}Conectando con GitHub Actions...${ANSI.reset}`);
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    try {
+      const runsRes = await fetch(`https://api.github.com/repos/${owner}/${codeRepo}/actions/runs?per_page=10`, {
+        headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'god-tweaks-publisher' },
+      });
+      if (runsRes.ok) {
+        const data = await runsRes.json();
+        workflowRun = data.workflow_runs?.find(
+          (r) => r.head_branch === `v${targetVersion}` || (r.name?.includes('Release') && r.status !== 'completed' && new Date(r.created_at).getTime() > startTime - 45000)
+        );
+        if (workflowRun) break;
+      }
+    } catch {}
+    process.stdout.write('.');
+  }
+
+  if (!workflowRun) {
+    console.log(`\n  ${ANSI.yellow}El tag v${targetVersion} está creado en GitHub y el workflow se ha iniciado.${ANSI.reset}`);
+    console.log(`  ${ANSI.dim}GitHub Actions completará la compilación en ~7-8 minutos.${ANSI.reset}\n`);
+    return;
+  }
+
+  console.log(`\n  ✔ Workflow detectado: ${ANSI.bold}${workflowRun.name}${ANSI.reset} (#${workflowRun.id})`);
+  console.log(`  🌐 Ver en navegador : ${ANSI.cyan}${workflowRun.html_url}${ANSI.reset}\n`);
+  console.log(`  ${ANSI.dim}Tip: Puedes cerrar esta ventana con Ctrl+C si prefieres que siga en la nube.${ANSI.reset}\n`);
+
+  // 2. Polling de pasos hasta finalizar
+  let lastStepName = '';
+  while (true) {
+    await new Promise((r) => setTimeout(r, 8000));
+    const elapsedMinutes = ((Date.now() - startTime) / 60000).toFixed(1);
+
+    try {
+      const runRes = await fetch(`https://api.github.com/repos/${owner}/${codeRepo}/actions/runs/${workflowRun.id}`, {
+        headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'god-tweaks-publisher' },
+      });
+      if (!runRes.ok) continue;
+      const runData = await runRes.json();
+
+      const jobsRes = await fetch(runData.jobs_url, {
+        headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'god-tweaks-publisher' },
+      });
+      if (jobsRes.ok) {
+        const jobsData = await jobsRes.json();
+        const mainJob = jobsData.jobs?.[0];
+        const currentStep = mainJob?.steps?.find((s) => s.status === 'in_progress') || mainJob?.steps?.filter((s) => s.status === 'completed').pop();
+        if (currentStep && currentStep.name !== lastStepName) {
+          lastStepName = currentStep.name;
+          console.log(`  [${elapsedMinutes} min] ➔ Paso: ${ANSI.cyan}${currentStep.name}${ANSI.reset}`);
+        }
+      }
+
+      if (runData.status === 'completed') {
+        if (runData.conclusion === 'success') {
+          console.log(`\n${ANSI.bold}${ANSI.green}✔ ¡Compilación y firmado en GitHub Actions completados con éxito! (${elapsedMinutes} min)${ANSI.reset}`);
+
+          // Comprobar la Release en god_suite_releases
+          const relRes = await fetch(`https://api.github.com/repos/${owner}/${releasesRepo}/releases/tags/v${targetVersion}`, {
+            headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'god-tweaks-publisher' },
+          });
+          if (relRes.ok) {
+            const relData = await relRes.json();
+            console.log(`\n${ANSI.bold}${ANSI.white}📦 Archivos oficiales publicados en ${releasesRepo}:${ANSI.reset}`);
+            for (const a of relData.assets || []) {
+              console.log(`  • ${ANSI.green}${a.name}${ANSI.reset} (${(a.size / 1024 / 1024).toFixed(2)} MB)`);
+            }
+          }
+
+          console.log(`\n${ANSI.bold}${ANSI.green}================================================================${ANSI.reset}`);
+          console.log(`${ANSI.bold}${ANSI.green}      🎉 ¡RELEASE v${targetVersion} DISPONIBLE EN PRODUCCIÓN! 🚀       ${ANSI.reset}`);
+          console.log(`${ANSI.bold}${ANSI.green}================================================================${ANSI.reset}\n`);
+          console.log(`  • La app ya detectará automáticamente la versión v${targetVersion}.`);
+          console.log(`  • Tu código fuente sigue 100% privado en ${codeRepo} (protegido contra copias).`);
+          console.log(`  • Descargas públicas activas en: https://github.com/${owner}/${releasesRepo}/releases\n`);
+        } else {
+          console.log(`\n${ANSI.bold}${ANSI.red}❌ El flujo de compilación terminó con estado: ${runData.conclusion}${ANSI.reset}`);
+          console.log(`  Revisa los logs en: ${workflowRun.html_url}`);
+        }
+        break;
+      }
+    } catch {
+      // Ignorar errores puntuales de red
+    }
+  }
+}
+
 async function main() {
   printBanner();
 
   const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  const currentVersion = pkg.version || '1.0.7';
+  const currentVersion = pkg.version || '1.0.8';
 
   const owner = 'xg0d9999';
   const repoName = 'god_tweaks';
+  const releasesRepo = 'god_suite_releases';
   const token = readEnvToken();
 
   // 1. Mostrar versiones anteriores
-  console.log(`${ANSI.bold}${ANSI.yellow}📋 Versión actual configurada en el proyecto:${ANSI.reset} ${ANSI.bold}${ANSI.green}v${currentVersion}${ANSI.reset}\n`);
+  console.log(`${ANSI.bold}${ANSI.yellow}📋 Versión actual configurada en el proyecto:${ANSI.reset} ${ANSI.bold}${ANSI.green}v${currentVersion}${ANSI.reset}`);
+  console.log(`${ANSI.dim}🔒 Repositorio de código: ${owner}/${repoName} [PRIVADO]${ANSI.reset}`);
+  console.log(`${ANSI.dim}📦 Repositorio de releases: ${owner}/${releasesRepo} [PÚBLICO - SIN CÓDIGO]${ANSI.reset}\n`);
 
   console.log(`${ANSI.bold}${ANSI.cyan}📜 HISTORIAL DE VERSIONES ANTERIORES REGISTRADAS:${ANSI.reset}`);
-  const prevReleases = await fetchPreviousReleases(token, owner, repoName);
+  const prevReleases = await fetchPreviousReleases(token, owner, repoName, releasesRepo);
   if (prevReleases.length === 0) {
     console.log(`  ${ANSI.dim}• No se encontraron versiones previas.${ANSI.reset}`);
   } else {
@@ -262,7 +373,7 @@ async function main() {
   console.log(`  [2] Siguiente Minor  ➔ ${ANSI.bold}${ANSI.yellow}${variants.minor}${ANSI.reset} (Nuevas características/módulos)`);
   console.log(`  [3] Siguiente Major  ➔ ${ANSI.bold}${ANSI.magenta}${variants.major}${ANSI.reset} (Gran actualización del sistema)`);
   console.log(`  [4] Mantener actual  ➔ ${ANSI.bold}${ANSI.cyan}${currentVersion}${ANSI.reset} (Re-publicar misma versión)`);
-  console.log(`  [5] Escribir Manual  ➔ Introducir versión personalizada (ej: 1.0.8, 1.2.0)`);
+  console.log(`  [5] Escribir Manual  ➔ Introducir versión personalizada (ej: 1.0.9, 1.2.0)`);
   console.log(`  [0] Cancelar`);
   console.log(`${ANSI.bold}${ANSI.white}----------------------------------------------------------------${ANSI.reset}`);
 
@@ -294,9 +405,9 @@ async function main() {
   } else if (choice === '4') {
     targetVersion = currentVersion;
   } else if (choice === '5') {
-    const custom = await promptQuestion(`Introduce el número de versión deseado (ej: 1.0.8): `);
+    const custom = await promptQuestion(`Introduce el número de versión deseado (ej: 1.0.9): `);
     if (!custom || !/^\d+\.\d+\.\d+/.test(custom.replace(/^v/, ''))) {
-      console.log(`${ANSI.red}Formato inválido. Debe ser de tipo X.Y.Z (ej: 1.0.8). Cancelando.${ANSI.reset}`);
+      console.log(`${ANSI.red}Formato inválido. Debe ser de tipo X.Y.Z (ej: 1.0.9). Cancelando.${ANSI.reset}`);
       process.exit(1);
     }
     targetVersion = custom.replace(/^v/, '').trim();
@@ -310,7 +421,7 @@ async function main() {
   // 3. Actualizar todos los archivos de configuración
   updateAllProjectFiles(targetVersion, currentVersion);
 
-  // 4. Inyectar Secret de Minisign si existe .updater.key
+  // 4. Inyectar Secrets en GitHub Actions
   if (token) {
     const keyPath = path.resolve('.updater.key');
     if (fs.existsSync(keyPath)) {
@@ -319,6 +430,9 @@ async function main() {
         await uploadSecretToGitHub(token, owner, repoName, 'TAURI_SIGNING_PRIVATE_KEY', pk);
       } catch {}
     }
+    try {
+      await uploadSecretToGitHub(token, owner, repoName, 'GH_RELEASE_TOKEN', token);
+    } catch {}
   }
 
   // 5. Verificación de compilación del Frontend
@@ -361,16 +475,10 @@ async function main() {
     console.log(`  Subiendo cambios a la rama main y tags a GitHub...`);
     execSync('git push -u origin main --tags --force', { stdio: 'inherit' });
 
-    console.log(`\n${ANSI.bold}${ANSI.green}================================================================${ANSI.reset}`);
-    console.log(`${ANSI.bold}${ANSI.green}       🎉 ¡VERSIÓN v${targetVersion} SUBIDA A GITHUB CON ÉXITO! 🎉       ${ANSI.reset}`);
-    console.log(`${ANSI.bold}${ANSI.green}================================================================${ANSI.reset}\n`);
+    console.log(`\n${ANSI.bold}${ANSI.green}✔ Código y Tag subidos a GitHub.${ANSI.reset}`);
 
-    console.log(`  • Repositorio  : ${ANSI.cyan}https://github.com/${owner}/${repoName}${ANSI.reset}`);
-    console.log(`  • GitHub Actions: ${ANSI.cyan}https://github.com/${owner}/${repoName}/actions${ANSI.reset}`);
-    console.log(`  • Releases     : ${ANSI.cyan}https://github.com/${owner}/${repoName}/releases${ANSI.reset}\n`);
-    console.log(`  ${ANSI.dim}GitHub Actions está compilando los instaladores y el archivo latest.json.`);
-    console.log(`  Tan pronto termine el flujo en GitHub (1-2 min), la app detectará`);
-    console.log(`  la actualización automáticamente al iniciar o pulsar en la versión superior.${ANSI.reset}\n`);
+    // 7. Monitorizar GitHub Actions hasta que el Release esté completado
+    await monitorWorkflowAndRelease(token, owner, repoName, releasesRepo, targetVersion);
   } catch (err) {
     console.error(`\n${ANSI.red}${ANSI.bold}Error durante la publicación a Git:${ANSI.reset}`, err.message);
     process.exit(1);

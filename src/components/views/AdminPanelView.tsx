@@ -13,7 +13,7 @@ import {
   Monitor,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchAllUsers, updateUserPermissions, AppUserRecord } from '../../services/supabase';
+import { fetchAllUsers, updateUserPermissions, AppUserRecord, supabase } from '../../services/supabase';
 
 export const AdminPanelView: React.FC = () => {
   const { userRecord, refreshUserRecord } = useAuth();
@@ -42,6 +42,40 @@ export const AdminPanelView: React.FC = () => {
 
   useEffect(() => {
     loadUsers();
+
+    // Suscripción Realtime en el panel admin para ver altas, cambios y logins en directo
+    const channel = supabase
+      .channel('admin_panel_users_live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'app_users',
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const updated = payload.new as AppUserRecord;
+            setUsers((prev) =>
+              prev.map((u) => (u.discord_id === updated.discord_id ? { ...u, ...updated } : u))
+            );
+          } else if (payload.eventType === 'INSERT' && payload.new) {
+            const inserted = payload.new as AppUserRecord;
+            setUsers((prev) => {
+              if (prev.some((u) => u.discord_id === inserted.discord_id)) return prev;
+              return [inserted, ...prev];
+            });
+          } else if (payload.eventType === 'DELETE' && payload.old) {
+            const deleted = payload.old as AppUserRecord;
+            setUsers((prev) => prev.filter((u) => u.discord_id !== deleted.discord_id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleCopy = (text: string, id: string) => {
@@ -58,7 +92,7 @@ export const AdminPanelView: React.FC = () => {
     const newVal = !currentVal;
     setUpdatingId(targetUser.discord_id);
 
-    // Actualización optimista en interfaz
+    // Actualización optimista inmediata en interfaz
     setUsers((prev) =>
       prev.map((u) =>
         u.discord_id === targetUser.discord_id ? { ...u, [permissionKey]: newVal } : u
@@ -66,9 +100,14 @@ export const AdminPanelView: React.FC = () => {
     );
 
     try {
-      await updateUserPermissions(targetUser.discord_id, {
+      const updated = await updateUserPermissions(targetUser.discord_id, {
         [permissionKey]: newVal,
       });
+
+      // Confirmar con el registro exacto devuelto por Supabase
+      setUsers((prev) =>
+        prev.map((u) => (u.discord_id === targetUser.discord_id ? updated : u))
+      );
 
       const permName = permissionKey === 'can_use_tweaks' ? 'Optimizaciones' : 'Sanciones';
       setActionSuccessMsg(
@@ -76,7 +115,7 @@ export const AdminPanelView: React.FC = () => {
       );
       setTimeout(() => setActionSuccessMsg(null), 3000);
 
-      // Si nos modificamos a nosotros mismos, refrescar
+      // Si nos modificamos a nosotros mismos, refrescar estado local
       if (userRecord && userRecord.discord_id === targetUser.discord_id) {
         refreshUserRecord();
       }

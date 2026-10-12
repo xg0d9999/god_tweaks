@@ -103,17 +103,21 @@ export async function fetchAllUsers(): Promise<AppUserRecord[]> {
 export async function updateUserPermissions(
   discordId: string,
   perms: { can_use_tweaks?: boolean; can_use_sanciones?: boolean; is_admin?: boolean }
-): Promise<boolean> {
-  const { error } = await supabase
+): Promise<AppUserRecord> {
+  const { data, error } = await supabase
     .from('app_users')
     .update(perms)
-    .eq('discord_id', discordId);
+    .eq('discord_id', discordId)
+    .select();
 
   if (error) {
     console.error('[Supabase] Error al actualizar permisos de usuario:', error);
     throw error;
   }
-  return true;
+  if (!data || data.length === 0) {
+    throw new Error(`No se encontró el registro para el usuario con ID ${discordId}`);
+  }
+  return data[0] as AppUserRecord;
 }
 
 /**

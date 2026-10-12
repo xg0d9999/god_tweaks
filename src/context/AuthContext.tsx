@@ -36,10 +36,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'g0d_suite_auth_session';
+const RECORD_STORAGE_KEY = 'g0d_suite_user_record';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<DiscordUser | null>(null);
-  const [userRecord, setUserRecord] = useState<AppUserRecord | null>(null);
+  const [userRecord, setUserRecord] = useState<AppUserRecord | null>(() => {
+    try {
+      const cached = localStorage.getItem(RECORD_STORAGE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
   const [ipAddress, setIpAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -97,10 +105,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setGlobalLoggerSession({ user, hardware, ip: ipAddress });
   }, [user, hardware, ipAddress]);
 
-  // Suscripción Realtime a Supabase para recibir actualizaciones de permisos en vivo
+  const refreshUserRecord = async (): Promise<AppUserRecord | null> => {
+    if (!user?.id) return null;
+    try {
+      const rec = await fetchCurrentUserRecord(user.id);
+      if (rec) {
+        setUserRecord(rec);
+        localStorage.setItem(RECORD_STORAGE_KEY, JSON.stringify(rec));
+      }
+      return rec;
+    } catch {
+      return null;
+    }
+  };
+
+  // Suscripción Realtime a Supabase + Polling de seguridad para recibir cambios de permisos en vivo
   useEffect(() => {
     if (!user?.id) return;
 
+    // 1. Suscripción WebSocket Realtime
     const channel = supabase
       .channel(`user_perms_${user.id}`)
       .on(
@@ -113,27 +136,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         (payload) => {
           if (payload.new) {
-            setUserRecord(payload.new as AppUserRecord);
+            console.log('[Auth Realtime] Permisos actualizados por el Administrador:', payload.new);
+            const updated = payload.new as AppUserRecord;
+            setUserRecord(updated);
+            localStorage.setItem(RECORD_STORAGE_KEY, JSON.stringify(updated));
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[Auth Realtime] Canal user_perms_${user.id} estado:`, status);
+      });
+
+    // 2. Polling periódico de seguridad cada 10 segundos
+    const pollInterval = setInterval(() => {
+      fetchCurrentUserRecord(user.id)
+        .then((rec) => {
+          if (rec) {
+            setUserRecord(rec);
+            localStorage.setItem(RECORD_STORAGE_KEY, JSON.stringify(rec));
+          }
+        })
+        .catch(() => {});
+    }, 10000);
+
+    // 3. Refrescar al enfocar ventana o regresar a la aplicación
+    const handleFocusSync = () => {
+      fetchCurrentUserRecord(user.id)
+        .then((rec) => {
+          if (rec) {
+            setUserRecord(rec);
+            localStorage.setItem(RECORD_STORAGE_KEY, JSON.stringify(rec));
+          }
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener('focus', handleFocusSync);
+    document.addEventListener('visibilitychange', handleFocusSync);
 
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocusSync);
+      document.removeEventListener('visibilitychange', handleFocusSync);
     };
   }, [user?.id]);
-
-  const refreshUserRecord = async (): Promise<AppUserRecord | null> => {
-    if (!user?.id) return null;
-    try {
-      const rec = await fetchCurrentUserRecord(user.id);
-      if (rec) setUserRecord(rec);
-      return rec;
-    } catch {
-      return null;
-    }
-  };
 
   // Restaurar sesión de localStorage al arrancar
   useEffect(() => {
@@ -161,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ip_address: ip || saved.ip || 'Local',
               });
               setUserRecord(record);
+              localStorage.setItem(RECORD_STORAGE_KEY, JSON.stringify(record));
             } catch (e) {
               console.warn('[Auth] Background sync warning:', e);
             }
@@ -219,6 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const savedRecord = await upsertAppUser(record);
       setUserRecord(savedRecord);
+      localStorage.setItem(RECORD_STORAGE_KEY, JSON.stringify(savedRecord));
 
       // Enviar log en vivo al canal de Discord (1543324127283253270)
       logUserLogin({
@@ -297,6 +346,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setUserRecord(null);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(RECORD_STORAGE_KEY);
     sessionStorage.removeItem('g0d_session_reported');
     setGlobalLoggerSession({ user: null });
   };

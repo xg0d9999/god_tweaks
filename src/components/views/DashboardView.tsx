@@ -8,10 +8,12 @@ import {
   CheckCircle2,
   Layers,
   ArrowRight,
+  Lock,
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { ActionButton } from "../ui/ActionButton";
 import { SystemMetrics, LogEntry } from "../../types";
+import { useAuth } from "../../context/AuthContext";
 
 export interface ActivePlanData {
   id: "lite" | "premium" | "ultra";
@@ -32,6 +34,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   activePlan,
   onNavigateToPresets,
 }) => {
+  const { userRecord } = useAuth();
+  const tweaksBlocked = userRecord?.can_use_tweaks === false;
+
   const cpuVal = metrics ? Math.round(metrics.cpu_usage) : 0;
   const ramPercent = metrics ? Math.round(metrics.ram_usage_percent) : 0;
   const ramUsedGb = metrics ? (metrics.ram_used_mb / 1024).toFixed(1) : "0.0";
@@ -46,7 +51,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-2.5 max-w-xl">
-            {activePlan ? (
+            {tweaksBlocked ? (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/25">
+                  <Lock className="w-3 h-3 text-rose-400" />
+                  <span>MÓDULO DE TWEAKS RESTRINGIDO</span>
+                </div>
+                <h1 className="text-xl font-semibold tracking-tight text-white">
+                  Optimizaciones Deshabilitadas
+                </h1>
+                <p className="text-xs text-[#828792] leading-relaxed">
+                  Tu cuenta tiene restringido temporalmente el acceso a los planes de optimización del kernel por parte de la administración.
+                </p>
+              </>
+            ) : activePlan ? (
               <>
                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -83,7 +101,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="flex-shrink-0">
-            {activePlan ? (
+            {tweaksBlocked ? (
+              <ActionButton
+                variant="secondary"
+                size="md"
+                onClick={onNavigateToPresets}
+                icon={<Lock className="w-3.5 h-3.5 text-rose-400" />}
+              >
+                Optimizaciones Bloqueadas
+              </ActionButton>
+            ) : activePlan ? (
               <ActionButton
                 variant="secondary"
                 size="md"

@@ -1,14 +1,16 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gamepad2, Ghost, Radio, Sparkles, Sliders, AlertTriangle } from "lucide-react";
+import { Gamepad2, Ghost, Radio, Sparkles, Sliders, AlertTriangle, Crosshair } from "lucide-react";
 import { GamingView } from "./GamingView";
 import { DebloatView } from "./DebloatView";
 import { NetworkView } from "./NetworkView";
 import { MemoryView } from "./MemoryView";
+import { FiveMView } from "./FiveMView";
 import {
   GamingStatus,
   DebloatStatus,
   NetworkStatus,
+  FiveMStatus,
 } from "../../types";
 
 export interface AdvancedModeViewProps {
@@ -34,10 +36,15 @@ export interface AdvancedModeViewProps {
   lastRamCleanResult?: string;
   lastCacheCleanResult?: string;
 
+  fivemStatus: FiveMStatus;
+  onCleanFivemCache: () => void;
+  onToggleFivemPriority: (enable: boolean) => void;
+  lastFivemCleanResult?: string;
+
   loadingKeys: Record<string, boolean>;
 }
 
-type AdvancedSubTab = "gaming" | "debloat" | "network" | "memory";
+type AdvancedSubTab = "gaming" | "fivem" | "debloat" | "network" | "memory";
 
 export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
   gamingStatus,
@@ -58,6 +65,10 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
   onPurgeCaches,
   lastRamCleanResult,
   lastCacheCleanResult,
+  fivemStatus,
+  onCleanFivemCache,
+  onToggleFivemPriority,
+  lastFivemCleanResult,
   loadingKeys,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<AdvancedSubTab>("gaming");
@@ -67,6 +78,11 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
       id: "gaming" as AdvancedSubTab,
       label: "Input Lag & Gaming",
       icon: <Gamepad2 className="w-3.5 h-3.5" />,
+    },
+    {
+      id: "fivem" as AdvancedSubTab,
+      label: "FiveM & GTA V",
+      icon: <Crosshair className="w-3.5 h-3.5" />,
     },
     {
       id: "debloat" as AdvancedSubTab,
@@ -168,6 +184,16 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
                 onToggleGameDvr={onToggleGameDvr}
                 onToggleMmcss={onToggleMmcss}
                 loadingKeys={loadingKeys}
+              />
+            )}
+
+            {activeSubTab === "fivem" && (
+              <FiveMView
+                status={fivemStatus}
+                onCleanCache={onCleanFivemCache}
+                onTogglePriority={onToggleFivemPriority}
+                loadingKeys={loadingKeys}
+                lastCleanResult={lastFivemCleanResult}
               />
             )}
 

@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import {
   Activity,
   Layers,
-  Crosshair,
   Sliders,
   RotateCcw,
   Cpu,
@@ -53,12 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "presets",
       label: "Planes de Optimización",
       icon: <Layers className="w-4 h-4 flex-shrink-0" />,
-      isBlocked: tweaksBlocked,
-    },
-    {
-      id: "fivem",
-      label: "FiveM & GTA V",
-      icon: <Crosshair className="w-4 h-4 flex-shrink-0" />,
       isBlocked: tweaksBlocked,
     },
     {

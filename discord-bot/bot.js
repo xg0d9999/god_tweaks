@@ -67,23 +67,23 @@ client.on('interactionCreate', async (interaction) => {
 
     // Crear Embed de la Actualización
     const embed = new EmbedBuilder()
-      .setTitle(`⚡ g0d suite | Actualización v${version}`)
-      .setDescription(`### ${titulo}\n\n${novedades}`)
-      .setColor(0x00F0FF)
+      .setTitle(`⚡ g0d suite • Actualización v${version}`)
+      .setDescription(`**${titulo}**\n\n${novedades}`)
+      .setColor(0xFFFFFF)
       .addFields(
         {
-          name: '📦 Versión Oficial',
+          name: 'Versión',
           value: `\`v${version}\``,
           inline: true,
         },
         {
-          name: '🔄 Actualización Automática',
-          value: 'La suite detectará y aplicará esta versión automáticamente en tu PC.',
+          name: 'Actualización',
+          value: 'Automática al abrir la suite',
           inline: true,
         }
       )
       .setFooter({
-        text: 'g0d suite • Sistema de Notificaciones Directas',
+        text: 'g0d suite',
         iconURL: client.user.displayAvatarURL(),
       })
       .setTimestamp();
@@ -122,7 +122,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // 3. Enviar Mensaje Privado (DM) a todos los usuarios de Supabase
     let dmSuccess = 0;
-    let dmFailed = 0;
+    const failedUsers = [];
 
     if (enviarDm) {
       try {
@@ -141,9 +141,22 @@ client.on('interactionCreate', async (interaction) => {
                   embeds: [embed],
                 });
                 dmSuccess++;
+              } else {
+                failedUsers.push({
+                  id: u.discord_id,
+                  username: u.discord_username || 'Desconocido',
+                  reason: 'Usuario no encontrado',
+                });
               }
             } catch (err) {
-              dmFailed++;
+              const reason = err.code === 50007
+                ? 'DMs cerrados / no comparte servidor'
+                : err.message || 'Error desconocido';
+              failedUsers.push({
+                id: u.discord_id,
+                username: u.discord_username || 'Desconocido',
+                reason,
+              });
             }
           }
         }
@@ -153,14 +166,29 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // Responder a quien ejecutó el comando
+    const responseLines = [
+      `### ✔ Actualización **v${version}** procesada con éxito`,
+      `• **Canal:** ${channelNotice}`,
+    ];
+
+    if (enviarDm) {
+      responseLines.push(
+        `• **Mensajes Directos:** Enviados a **${dmSuccess}** usuarios registrados (${failedUsers.length} fallidos).`
+      );
+      if (failedUsers.length > 0) {
+        responseLines.push(
+          `\n⚠️ **Usuarios que no recibieron el DM:**`,
+          ...failedUsers.map(
+            (f) => `• <@${f.id}> (\`${f.username}\`) — *${f.reason}*`
+          )
+        );
+      }
+    } else {
+      responseLines.push('• **Mensajes Directos:** Desactivados para este envío.');
+    }
+
     await interaction.editReply({
-      content: [
-        `### ✔ Actualización **v${version}** procesada con éxito`,
-        `• **Canal:** ${channelNotice}`,
-        enviarDm
-          ? `• **Mensajes Directos:** Enviados a **${dmSuccess}** usuarios registrados (${dmFailed} fallidos/DMs cerrados).`
-          : '• **Mensajes Directos:** Desactivados para este envío.',
-      ].join('\n'),
+      content: responseLines.join('\n'),
     });
   }
 });

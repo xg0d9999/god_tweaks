@@ -5,7 +5,6 @@ import { TitleBar } from "./components/layout/TitleBar";
 import { Sidebar } from "./components/layout/Sidebar";
 import { DashboardView } from "./components/views/DashboardView";
 import { PresetsView } from "./components/views/PresetsView";
-import { FiveMView } from "./components/views/FiveMView";
 import { CitizensManagerView } from "./components/views/CitizensManagerView";
 import { AdvancedModeView } from "./components/views/AdvancedModeView";
 import { HispanSancionesView } from "./components/views/HispanSancionesView";
@@ -1066,22 +1065,6 @@ const AppContent: React.FC = () => {
                   />
                 ))}
 
-              {activeTab === "fivem" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="FiveM & GTA V Tweaks"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <FiveMView
-                    status={fivemStatus}
-                    onCleanCache={handleCleanFiveMCache}
-                    onTogglePriority={handleToggleFiveMPriority}
-                    loadingKeys={loadingKeys}
-                    lastCleanResult={lastFiveMCleanMsg}
-                  />
-                ))}
-
               {activeTab === "citizens" && <CitizensManagerView />}
 
               {activeTab === "advanced" &&
@@ -1110,6 +1093,10 @@ const AppContent: React.FC = () => {
                     onPurgeCaches={handlePurgeCaches}
                     lastRamCleanResult={lastRamMsg}
                     lastCacheCleanResult={lastCacheMsg}
+                    fivemStatus={fivemStatus}
+                    onCleanFivemCache={handleCleanFiveMCache}
+                    onToggleFivemPriority={handleToggleFiveMPriority}
+                    lastFivemCleanResult={lastFiveMCleanMsg}
                     loadingKeys={loadingKeys}
                   />
                 ))}

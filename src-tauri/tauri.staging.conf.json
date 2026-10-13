@@ -30,26 +30,17 @@
       {
         "label": "game-selector",
         "title": "g0d suite - Selector de Juego (Staging)",
-        "url": "index.html?window=game-selector",
         "width": 1350,
         "height": 850,
         "minWidth": 1200,
         "minHeight": 750,
-        "resizable": false,
+        "resizable": true,
         "fullscreen": false,
         "decorations": false,
-        "transparent": true,
+        "transparent": false,
         "shadow": true,
         "center": true,
-        "visible": false,
-        "windowEffects": {
-          "effects": [
-            "acrylic",
-            "mica"
-          ],
-          "state": "active",
-          "radius": 14
-        }
+        "visible": false
       }
     ]
   },

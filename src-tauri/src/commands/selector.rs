@@ -14,14 +14,14 @@ pub fn open_game_selector_window(app_handle: AppHandle) -> Result<(), String> {
             let builder = tauri::WebviewWindowBuilder::new(
                 &app_handle,
                 "game-selector",
-                tauri::WebviewUrl::App("index.html?window=game-selector".into()),
+                tauri::WebviewUrl::default(),
             )
             .title("g0d suite - Selector de Juego")
             .inner_size(1350.0, 850.0)
             .min_inner_size(1200.0, 750.0)
-            .resizable(false)
+            .resizable(true)
             .decorations(false)
-            .transparent(true)
+            .transparent(false)
             .shadow(true)
             .center();
 

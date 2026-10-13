@@ -4,6 +4,7 @@ pub mod tray;
 
 use std::sync::Mutex;
 use sysinfo::System;
+use tauri::Manager;
 
 use tray::force_exit_app;
 use commands::backup::*;
@@ -40,6 +41,12 @@ pub fn run() {
                 if window.label() == "main" {
                     api.prevent_close();
                     let _ = window.hide();
+                } else if window.label() == "game-selector" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                    if let Some(main) = window.app_handle().get_webview_window("main") {
+                        let _ = main.set_focus();
+                    }
                 }
             }
         })

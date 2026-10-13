@@ -14,7 +14,6 @@ import { PermissionBlockedView } from "./components/views/PermissionBlockedView"
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal";
 import { GameSelectorModal } from "./components/ui/GameSelectorModal";
-import { GameSelectorStandaloneView } from "./components/ui/GameSelectorStandaloneView";
 import { UpdateModal } from "./components/ui/UpdateModal";
 import { HotkeySettingsModal } from "./components/common/HotkeySettingsModal";
 import { checkForAppUpdate, UpdateInfo } from "./services/updater";
@@ -1271,30 +1270,6 @@ const AppContent: React.FC = () => {
 };
 
 export const App: React.FC = () => {
-  const [isSelectorWindow, setIsSelectorWindow] = useState(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("window") === "game-selector";
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-      import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
-        try {
-          if (getCurrentWindow().label === "game-selector") {
-            setIsSelectorWindow(true);
-          }
-        } catch {}
-      });
-    }
-  }, []);
-
-  if (isSelectorWindow) {
-    return <GameSelectorStandaloneView />;
-  }
-
   return (
     <ErrorBoundary>
       <AuthProvider>

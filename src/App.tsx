@@ -1051,6 +1051,7 @@ const AppContent: React.FC = () => {
         <Sidebar
           activeTab={activeTab}
           onTabChange={(tab) => {
+            if (tab === activeTab) return;
             if (tab === "admin") {
               setActiveTab("admin");
             } else {
@@ -1065,134 +1066,131 @@ const AppContent: React.FC = () => {
 
         {/* Content View Container */}
         <main className="flex-1 overflow-y-auto p-6 relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="max-w-6xl mx-auto pb-10"
-            >
-              {activeTab === "dashboard" && (
-                <DashboardView
-                  metrics={metrics}
-                  logs={logs}
-                  activePlan={activePlan}
-                  onNavigateToPresets={() => setActiveTab("presets")}
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="max-w-6xl mx-auto pb-10"
+          >
+            {activeTab === "dashboard" && (
+              <DashboardView
+                metrics={metrics}
+                logs={logs}
+                activePlan={activePlan}
+                onNavigateToPresets={() => setActiveTab("presets")}
+              />
+            )}
+
+            {activeTab === "presets" &&
+              (!canUseTweaks ? (
+                <PermissionBlockedView
+                  moduleName="Planes de Optimización"
+                  onBackToDashboard={() => setActiveTab("dashboard")}
                 />
-              )}
+              ) : (
+                <PresetsView
+                  onSelectPreset={handleSelectPreset}
+                  onOpenGameSelector={handleOpenGameSelector}
+                  isRunning={isModalOpen && modalPhase === "running"}
+                  activePlanId={activePlan?.id}
+                  activePlanTitle={activePlan?.title}
+                  hardware={hardware}
+                />
+              ))}
 
-              {activeTab === "presets" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="Planes de Optimización"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <PresetsView
-                    onSelectPreset={handleSelectPreset}
-                    onOpenGameSelector={handleOpenGameSelector}
-                    isRunning={isModalOpen && modalPhase === "running"}
-                    activePlanId={activePlan?.id}
-                    activePlanTitle={activePlan?.title}
-                    hardware={hardware}
-                  />
-                ))}
+            {activeTab === "citizens" && <CitizensManagerView />}
 
-              {activeTab === "citizens" && <CitizensManagerView />}
-
-              {activeTab === "advanced" &&
-                (!canUseTweaks ? (
-                  <PermissionBlockedView
-                    moduleName="Modo Avanzado"
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ) : (
-                  <AdvancedModeView
-                    gamingStatus={gamingStatus}
-                    onToggleHpet={handleToggleHpet}
-                    onToggleUltimatePower={handleToggleUltimatePower}
-                    onToggleGameDvr={handleToggleGameDvr}
-                    onToggleMmcss={handleToggleMmcss}
-                    debloatStatus={debloatStatus}
-                    onToggleTelemetry={handleToggleTelemetry}
-                    onToggleCortana={handleToggleCortana}
-                    onToggleCopilot={handleToggleCopilot}
-                    onUninstallBloatware={handleUninstallBloatware}
-                    networkStatus={networkStatus}
-                    onToggleNagle={handleToggleNagle}
-                    onFlushDns={handleFlushDns}
-                    onToggleNetworkThrottling={handleToggleNetworkThrottling}
-                    onToggleQosLimit={handleToggleQosLimit}
-                    onCleanRam={handleCleanRam}
-                    onPurgeCaches={handlePurgeCaches}
-                    lastRamCleanResult={lastRamMsg}
-                    lastCacheCleanResult={lastCacheMsg}
-                    memoryCompressionDisabled={memoryCompressionDisabled}
-                    onToggleMemoryCompression={handleToggleMemoryCompression}
-                    fivemStatus={fivemStatus}
-                    onCleanFivemCache={handleCleanFiveMCache}
-                    onToggleFivemPriority={handleToggleFiveMPriority}
-                    lastFivemCleanResult={lastFiveMCleanMsg}
-                    loadingKeys={loadingKeys}
-                  />
-                ))}
-
-              {activeTab === "backup" && (
-                <BackupView
-                  onCreateRestorePoint={handleCreateRestorePoint}
-                  onExportRegistry={handleExportRegistry}
-                  backups={backups}
-                  restorePoints={restorePoints}
-                  onDeleteBackup={handleDeleteBackup}
-                  onDeleteAllBackups={handleDeleteAllBackups}
-                  onDeleteRestorePoint={handleDeleteRestorePoint}
-                  onRefreshBackups={fetchBackups}
+            {activeTab === "advanced" &&
+              (!canUseTweaks ? (
+                <PermissionBlockedView
+                  moduleName="Modo Avanzado"
+                  onBackToDashboard={() => setActiveTab("dashboard")}
+                />
+              ) : (
+                <AdvancedModeView
+                  gamingStatus={gamingStatus}
+                  onToggleHpet={handleToggleHpet}
+                  onToggleUltimatePower={handleToggleUltimatePower}
+                  onToggleGameDvr={handleToggleGameDvr}
+                  onToggleMmcss={handleToggleMmcss}
+                  debloatStatus={debloatStatus}
+                  onToggleTelemetry={handleToggleTelemetry}
+                  onToggleCortana={handleToggleCortana}
+                  onToggleCopilot={handleToggleCopilot}
+                  onUninstallBloatware={handleUninstallBloatware}
+                  networkStatus={networkStatus}
+                  onToggleNagle={handleToggleNagle}
+                  onFlushDns={handleFlushDns}
+                  onToggleNetworkThrottling={handleToggleNetworkThrottling}
+                  onToggleQosLimit={handleToggleQosLimit}
+                  onCleanRam={handleCleanRam}
+                  onPurgeCaches={handlePurgeCaches}
+                  lastRamCleanResult={lastRamMsg}
+                  lastCacheCleanResult={lastCacheMsg}
+                  memoryCompressionDisabled={memoryCompressionDisabled}
+                  onToggleMemoryCompression={handleToggleMemoryCompression}
+                  fivemStatus={fivemStatus}
+                  onCleanFivemCache={handleCleanFiveMCache}
+                  onToggleFivemPriority={handleToggleFiveMPriority}
+                  lastFivemCleanResult={lastFiveMCleanMsg}
                   loadingKeys={loadingKeys}
-                  lastBackupMsg={lastBackupMsg}
                 />
-              )}
+              ))}
 
-              {activeTab === "hispan" &&
-                (!canUseSanciones ? (
-                  <PermissionBlockedView
-                    moduleName="HispanLife Sanciones"
-                    onBackToDashboard={() => {
-                      setAppMode("optimizer");
-                      setActiveTab("dashboard");
-                    }}
-                  />
-                ) : (
-                  <HispanSancionesView
-                    onCopyClipboard={handleCopyClipboard}
-                    onSendFivemCommand={handleSendFivemCommand}
-                    onSendDiscordReport={handleSendDiscordReport}
-                    onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
-                    alwaysOnTop={alwaysOnTop}
-                    staffAtt={staffAtt}
-                    onUpdateStaffAtt={handleUpdateStaffAtt}
-                    discordGuild={discordGuild}
-                    discordChannel={discordChannel}
-                    onUpdateDiscordConfig={handleUpdateDiscordConfig}
-                    showToast={showToast}
-                    currentHotkey={currentHotkey}
-                    onOpenHotkeySettings={() => setIsHotkeyModalOpen(true)}
-                  />
-                ))}
+            {activeTab === "backup" && (
+              <BackupView
+                onCreateRestorePoint={handleCreateRestorePoint}
+                onExportRegistry={handleExportRegistry}
+                backups={backups}
+                restorePoints={restorePoints}
+                onDeleteBackup={handleDeleteBackup}
+                onDeleteAllBackups={handleDeleteAllBackups}
+                onDeleteRestorePoint={handleDeleteRestorePoint}
+                onRefreshBackups={fetchBackups}
+                loadingKeys={loadingKeys}
+                lastBackupMsg={lastBackupMsg}
+              />
+            )}
 
-              {activeTab === "admin" &&
-                (isAdmin ? (
-                  <AdminPanelView />
-                ) : (
-                  <PermissionBlockedView
-                    moduleName="Panel de Administración"
-                    reason="Se requieren privilegios de Administrador para acceder a esta sección."
-                    onBackToDashboard={() => setActiveTab("dashboard")}
-                  />
-                ))}
-            </motion.div>
-          </AnimatePresence>
+            {activeTab === "hispan" &&
+              (!canUseSanciones ? (
+                <PermissionBlockedView
+                  moduleName="HispanLife Sanciones"
+                  onBackToDashboard={() => {
+                    setAppMode("optimizer");
+                    setActiveTab("dashboard");
+                  }}
+                />
+              ) : (
+                <HispanSancionesView
+                  onCopyClipboard={handleCopyClipboard}
+                  onSendFivemCommand={handleSendFivemCommand}
+                  onSendDiscordReport={handleSendDiscordReport}
+                  onToggleAlwaysOnTop={handleToggleAlwaysOnTop}
+                  alwaysOnTop={alwaysOnTop}
+                  staffAtt={staffAtt}
+                  onUpdateStaffAtt={handleUpdateStaffAtt}
+                  discordGuild={discordGuild}
+                  discordChannel={discordChannel}
+                  onUpdateDiscordConfig={handleUpdateDiscordConfig}
+                  showToast={showToast}
+                  currentHotkey={currentHotkey}
+                  onOpenHotkeySettings={() => setIsHotkeyModalOpen(true)}
+                />
+              ))}
+
+            {activeTab === "admin" &&
+              (isAdmin ? (
+                <AdminPanelView />
+              ) : (
+                <PermissionBlockedView
+                  moduleName="Panel de Administración"
+                  reason="Se requieren privilegios de Administrador para acceder a esta sección."
+                  onBackToDashboard={() => setActiveTab("dashboard")}
+                />
+              ))}
+          </motion.div>
         </main>
       </div>
 

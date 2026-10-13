@@ -46,7 +46,7 @@ const COVER_PRESETS = [
     url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
   },
   {
-    name: 'FPS Boost Ultra',
+    name: 'FPS Boost',
     url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
   },
   {
@@ -510,7 +510,7 @@ export const CitizensManagerView: React.FC = () => {
 
   const categories = [
     { id: 'pvp', label: `Competitivo PvP (${citizens.filter((c) => c.category === 'pvp').length})` },
-    { id: 'fps_boost', label: `FPS Boost Ultra (${citizens.filter((c) => c.category === 'fps_boost').length})` },
+    { id: 'fps_boost', label: `FPS Boost (${citizens.filter((c) => c.category === 'fps_boost').length})` },
     { id: 'graphics_quality', label: `Calidad Gráfica (${citizens.filter((c) => c.category === 'graphics_quality').length})` },
     { id: 'potato', label: `Patata (${citizens.filter((c) => c.category === 'potato').length})` },
   ];
@@ -726,20 +726,18 @@ export const CitizensManagerView: React.FC = () => {
           <p className="text-sm font-medium text-white">No hay Citizens en esta categoría</p>
         </motion.div>
       ) : (
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedCategory + searchQuery}
-            initial={{ opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, y: -12, scale: 0.98, filter: 'blur(4px)' }}
-            transition={{
-              type: 'spring',
-              stiffness: 340,
-              damping: 26,
-              mass: 0.8,
-            }}
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
-          >
+        <motion.div
+          key={selectedCategory}
+          initial={{ opacity: 0, y: 12, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            type: 'spring',
+            stiffness: 380,
+            damping: 26,
+            mass: 0.8,
+          }}
+          className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+        >
             {filteredCitizens.map((citizen, idx) => {
               const isActive = info?.active_citizen_id === citizen.id;
               const isDownloaded = info?.installed_citizen_ids.includes(citizen.id);
@@ -903,7 +901,6 @@ export const CitizensManagerView: React.FC = () => {
               );
             })}
           </motion.div>
-        </AnimatePresence>
       )}
 
       {/* 
@@ -1010,7 +1007,7 @@ export const CitizensManagerView: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
                   >
                     <option value="pvp">Competitivo PvP</option>
-                    <option value="fps_boost">FPS Boost Ultra</option>
+                    <option value="fps_boost">FPS Boost</option>
                     <option value="graphics_quality">Calidad Gráfica</option>
                     <option value="potato">Patata</option>
                   </select>
@@ -1437,7 +1434,7 @@ export const CitizensManagerView: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
                   >
                     <option value="pvp">Competitivo PvP</option>
-                    <option value="fps_boost">FPS Boost Ultra</option>
+                    <option value="fps_boost">FPS Boost</option>
                     <option value="graphics_quality">Calidad Gráfica</option>
                     <option value="potato">Patata</option>
                   </select>

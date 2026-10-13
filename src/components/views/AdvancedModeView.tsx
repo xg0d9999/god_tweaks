@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Gamepad2, Ghost, Radio, Sparkles, Sliders, AlertTriangle, Crosshair } from "lucide-react";
 import { GamingView } from "./GamingView";
 import { DebloatView } from "./DebloatView";
@@ -174,14 +174,12 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
 
       {/* Sub-Tab Content View */}
       <div className="pt-1">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSubTab}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-          >
+        <motion.div
+          key={activeSubTab}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
             {activeSubTab === "gaming" && (
               <GamingView
                 status={gamingStatus}
@@ -237,7 +235,6 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
               />
             )}
           </motion.div>
-        </AnimatePresence>
       </div>
     </div>
   );

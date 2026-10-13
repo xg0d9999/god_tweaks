@@ -40,8 +40,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
-                    api.prevent_close();
-                    let _ = window.hide();
+                    window.app_handle().exit(0);
                 } else if window.label() == "game-selector" {
                     api.prevent_close();
                     let _ = window.hide();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -20,6 +20,9 @@ import {
   X,
   Layers,
   Zap,
+  FileArchive,
+  Image as ImageIcon,
+  Link as LinkIcon,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +34,8 @@ import {
   updateCitizen,
   deleteCitizen,
   incrementCitizenDownload,
+  uploadCitizenPackage,
+  uploadCitizenCover,
 } from '../../services/citizens';
 
 const COVER_PRESETS = [
@@ -39,16 +44,16 @@ const COVER_PRESETS = [
     url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1000&auto=format&fit=crop',
   },
   {
-    name: 'Potato 512x (Low End)',
+    name: 'FPS Boost Ultra',
     url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
   },
   {
-    name: 'Clear Sky & Night',
-    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop',
+    name: 'Calidad Gráfica HD',
+    url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1000&auto=format&fit=crop',
   },
   {
-    name: 'Clean Water & FX',
-    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop',
+    name: 'Cinematic Visuals',
+    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop',
   },
 ];
 
@@ -75,6 +80,14 @@ export const CitizensManagerView: React.FC = () => {
   const [isConfirmVanillaOpen, setIsConfirmVanillaOpen] = useState<boolean>(false);
   const [runningAlertPendingAction, setRunningAlertPendingAction] = useState<(() => Promise<void>) | null>(null);
 
+  // Subida de archivos en modal
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPackage, setIsUploadingPackage] = useState<boolean>(false);
+  const [uploadedPackageName, setUploadedPackageName] = useState<string | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState<boolean>(false);
+  const [showManualUrl, setShowManualUrl] = useState<boolean>(false);
+
   // Formulario de Subida (Admin)
   const [uploadForm, setUploadForm] = useState({
     title: '',
@@ -84,6 +97,7 @@ export const CitizensManagerView: React.FC = () => {
     cover_url: COVER_PRESETS[0].url,
     download_url: '',
     file_size_formatted: '850 MB',
+    file_size_bytes: 891289600,
     version: 'v1.0',
     is_published: true,
     is_featured: false,
@@ -262,11 +276,57 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
+  // Admin: Manejar selección y subida automática de .zip / .rar a Supabase Storage
+  const handlePackageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPackage(true);
+    setUploadedPackageName(file.name);
+    try {
+      showToast('success', `Subiendo ${file.name} a Supabase Storage...`);
+      const { publicUrl, fileSizeFormatted, fileSizeBytes } = await uploadCitizenPackage(file);
+      
+      setUploadForm((prev) => ({
+        ...prev,
+        download_url: publicUrl,
+        file_size_formatted: fileSizeFormatted,
+        file_size_bytes: fileSizeBytes,
+        title: prev.title || file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+      }));
+
+      showToast('success', '¡Archivo subido a Storage y vinculado correctamente!');
+    } catch (err: any) {
+      console.error(err);
+      showToast('error', `Error al subir a Storage: ${err.message}`);
+      setUploadedPackageName(null);
+    } finally {
+      setIsUploadingPackage(false);
+    }
+  };
+
+  // Admin: Manejar subida de portada personalizada a Supabase Storage
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCover(true);
+    try {
+      const coverUrl = await uploadCitizenCover(file);
+      setUploadForm((prev) => ({ ...prev, cover_url: coverUrl }));
+      showToast('success', 'Portada subida con éxito a Storage.');
+    } catch (err: any) {
+      showToast('error', `Error al subir imagen: ${err.message}`);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
   // Admin: Crear nuevo Citizen
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadForm.title || !uploadForm.download_url) {
-      showToast('error', 'Por favor, introduce el título y la URL de descarga directa.');
+      showToast('error', 'Por favor, sube un archivo .zip/.rar o introduce la URL de descarga directa.');
       return;
     }
     setIsSubmitting(true);
@@ -275,6 +335,7 @@ export const CitizensManagerView: React.FC = () => {
       setCitizens((prev) => [created, ...prev]);
       showToast('success', `¡Citizen '${created.title}' añadido con éxito al catálogo!`);
       setIsUploadModalOpen(false);
+      setUploadedPackageName(null);
       setUploadForm({
         title: '',
         category: 'pvp',
@@ -283,6 +344,7 @@ export const CitizensManagerView: React.FC = () => {
         cover_url: COVER_PRESETS[0].url,
         download_url: '',
         file_size_formatted: '850 MB',
+        file_size_bytes: 891289600,
         version: 'v1.0',
         is_published: true,
         is_featured: false,
@@ -294,7 +356,7 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
-  // Filtros
+  // Filtros (Categorías: Todos, Competitivo PvP, FPS Boost, Calidad Gráfica, Potato, Descargados)
   const filteredCitizens = useMemo(() => {
     return citizens.filter((c) => {
       const matchesSearch =
@@ -315,9 +377,9 @@ export const CitizensManagerView: React.FC = () => {
   const categories = [
     { id: 'all', label: `Todos (${citizens.length})` },
     { id: 'pvp', label: `Competitivo PvP (${citizens.filter((c) => c.category === 'pvp').length})` },
-    { id: 'fps_boost', label: `FPS Boost (${citizens.filter((c) => c.category === 'fps_boost').length})` },
-    { id: 'sky_night', label: `Cielos & Noche (${citizens.filter((c) => c.category === 'sky_night').length})` },
-    { id: 'effects', label: `Efectos & Audio (${citizens.filter((c) => c.category === 'effects').length})` },
+    { id: 'fps_boost', label: `FPS Boost Ultra (${citizens.filter((c) => c.category === 'fps_boost').length})` },
+    { id: 'graphics_quality', label: `Calidad Gráfica (${citizens.filter((c) => c.category === 'graphics_quality').length})` },
+    { id: 'potato', label: `Potato / Low End (${citizens.filter((c) => c.category === 'potato').length})` },
     {
       id: 'downloaded',
       label: `Descargados (${citizens.filter((c) => info?.installed_citizen_ids.includes(c.id)).length})`,
@@ -524,6 +586,13 @@ export const CitizensManagerView: React.FC = () => {
             const isDownloaded = info?.installed_citizen_ids.includes(citizen.id);
             const isActionLoading = actionLoadingId === citizen.id;
 
+            const categoryNameMap: Record<string, string> = {
+              pvp: 'COMPETITIVO',
+              fps_boost: 'FPS BOOST',
+              graphics_quality: 'CALIDAD GRÁFICA',
+              potato: 'LOW END',
+            };
+
             return (
               <div
                 key={citizen.id}
@@ -545,7 +614,7 @@ export const CitizensManagerView: React.FC = () => {
                   {/* Badges Flotantes Superiores */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-medium tracking-wide bg-black/60 backdrop-blur-md border border-white/10 text-white">
-                      {citizen.category.toUpperCase()}
+                      {categoryNameMap[citizen.category] || citizen.category.toUpperCase()}
                     </span>
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wide bg-cyan-500/20 backdrop-blur-md border border-cyan-400/40 text-cyan-300 shadow-sm">
                       {citizen.performance_badge}
@@ -781,7 +850,7 @@ export const CitizensManagerView: React.FC = () => {
 
       {/* 
         ========================================================================
-        MODAL SUBIDA NUEVO CITIZEN (ADMIN ONLY)
+        MODAL SUBIDA NUEVO CITIZEN (ADMIN ONLY) CON SUBIDA AUTOMÁTICA A STORAGE
         ========================================================================
       */}
       <AnimatePresence>
@@ -796,7 +865,12 @@ export const CitizensManagerView: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
                   <UploadCloud className="w-5 h-5 text-cyan-400" />
-                  <h3 className="text-base font-bold text-white">Subir Nuevo Citizen al Catálogo</h3>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Subir Nuevo Citizen al Catálogo</h3>
+                    <p className="text-[11px] text-[#8B949E]">
+                      Sube tu archivo .zip o .rar y se almacenará automáticamente en Supabase Storage
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsUploadModalOpen(false)}
@@ -807,6 +881,87 @@ export const CitizensManagerView: React.FC = () => {
               </div>
 
               <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
+                {/* ZONA DE CARGA AUTOMÁTICA DE ARCHIVO .ZIP / .RAR */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-white/90 font-semibold flex items-center gap-1.5">
+                      <FileArchive className="w-4 h-4 text-cyan-400" />
+                      <span>Paquete del Citizen (.zip o .rar)</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowManualUrl(!showManualUrl)}
+                      className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
+                    >
+                      <LinkIcon className="w-3 h-3" />
+                      <span>{showManualUrl ? 'Subir archivo de mi PC' : 'O pegar URL manual'}</span>
+                    </button>
+                  </div>
+
+                  {!showManualUrl ? (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`relative border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                        uploadForm.download_url
+                          ? 'border-emerald-500/50 bg-emerald-500/10'
+                          : 'border-white/15 hover:border-cyan-400/50 hover:bg-white/[0.02]'
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handlePackageFileChange}
+                        accept=".zip,.rar,.7z"
+                        className="hidden"
+                      />
+
+                      {isUploadingPackage ? (
+                        <div className="flex flex-col items-center gap-2 py-2">
+                          <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
+                          <span className="font-medium text-cyan-300">
+                            Subiendo paquete a Supabase Storage...
+                          </span>
+                          <span className="text-[10px] text-[#8B949E]">{uploadedPackageName}</span>
+                        </div>
+                      ) : uploadForm.download_url ? (
+                        <div className="flex flex-col items-center gap-1.5 py-1">
+                          <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+                          <span className="font-semibold text-emerald-300">
+                            ¡Archivo subido y vinculado con éxito!
+                          </span>
+                          <span className="text-[11px] font-mono text-[#CBD5E1]">
+                            {uploadedPackageName || 'Paquete listo en Storage'} • {uploadForm.file_size_formatted}
+                          </span>
+                          <span className="text-[10px] text-emerald-400/80 underline mt-1">
+                            Haz clic para reemplazar por otro archivo
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-1.5 py-2">
+                          <UploadCloud className="w-7 h-7 text-white/40" />
+                          <span className="font-medium text-white">
+                            Haz clic aquí o arrastra tu archivo <strong className="text-cyan-400">.zip</strong> o{' '}
+                            <strong className="text-cyan-400">.rar</strong>
+                          </span>
+                          <span className="text-[10px] text-[#8B949E]">
+                            Se subirá directamente a la nube y se vinculará de forma automática
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <input
+                        type="url"
+                        placeholder="https://.../citizen_preset.zip o .rar"
+                        value={uploadForm.download_url}
+                        onChange={(e) => setUploadForm({ ...uploadForm, download_url: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400 font-mono text-[11px]"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Título */}
                 <div className="space-y-1">
                   <label className="text-white/80 font-medium">Nombre / Título del Preset</label>
@@ -831,8 +986,7 @@ export const CitizensManagerView: React.FC = () => {
                     >
                       <option value="pvp">Competitivo PvP</option>
                       <option value="fps_boost">FPS Boost Ultra</option>
-                      <option value="sky_night">Cielos & Noche</option>
-                      <option value="effects">Efectos & Audio</option>
+                      <option value="graphics_quality">Calidad Gráfica</option>
                       <option value="potato">Potato / Low End</option>
                     </select>
                   </div>
@@ -840,7 +994,7 @@ export const CitizensManagerView: React.FC = () => {
                     <label className="text-white/80 font-medium">Badge de Rendimiento</label>
                     <input
                       type="text"
-                      placeholder="ej: +45 FPS, PVP READY"
+                      placeholder="ej: +45 FPS, ULTRA HD, PVP READY"
                       value={uploadForm.performance_badge}
                       onChange={(e) => setUploadForm({ ...uploadForm, performance_badge: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
@@ -848,26 +1002,10 @@ export const CitizensManagerView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* URL de Descarga Directa (.zip) */}
-                <div className="space-y-1">
-                  <label className="text-white/80 font-medium">URL de Descarga Directa (.zip)</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://.../citizen_preset.zip"
-                    value={uploadForm.download_url}
-                    onChange={(e) => setUploadForm({ ...uploadForm, download_url: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400 font-mono text-[11px]"
-                  />
-                  <p className="text-[10px] text-[#8B949E]">
-                    Enlace directo al paquete .zip (GitHub Releases, Supabase Storage, CDN o servidor privado).
-                  </p>
-                </div>
-
                 {/* Tamaño y Versión */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-white/80 font-medium">Peso Aproximado</label>
+                    <label className="text-white/80 font-medium">Peso Estimado</label>
                     <input
                       type="text"
                       placeholder="ej: 850 MB"
@@ -900,9 +1038,28 @@ export const CitizensManagerView: React.FC = () => {
                   />
                 </div>
 
-                {/* Imagen de Portada */}
+                {/* Imagen de Portada con Subida a Storage */}
                 <div className="space-y-1.5">
-                  <label className="text-white/80 font-medium">Imagen de Portada (URL o Presets)</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-white/80 font-medium flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Imagen de Portada</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => coverInputRef.current?.click()}
+                      className="text-[11px] text-cyan-400 hover:underline"
+                    >
+                      {isUploadingCover ? 'Subiendo imagen...' : 'Subir imagen desde PC'}
+                    </button>
+                    <input
+                      type="file"
+                      ref={coverInputRef}
+                      onChange={handleCoverFileChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
                   <input
                     type="url"
                     placeholder="https://.../cover.jpg"
@@ -917,10 +1074,10 @@ export const CitizensManagerView: React.FC = () => {
                         type="button"
                         key={idx}
                         onClick={() => setUploadForm({ ...uploadForm, cover_url: preset.url })}
-                        className={`px-2 py-1 rounded text-[10px] border whitespace-nowrap ${
+                        className={`px-2 py-1 rounded text-[10px] border whitespace-nowrap transition-colors ${
                           uploadForm.cover_url === preset.url
                             ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40'
-                            : 'bg-white/[0.04] text-white/70 border-white/[0.08]'
+                            : 'bg-white/[0.04] text-white/70 border-white/[0.08] hover:bg-white/[0.08]'
                         }`}
                       >
                         {preset.name}
@@ -953,8 +1110,8 @@ export const CitizensManagerView: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+                    disabled={isSubmitting || isUploadingPackage}
+                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-xs font-bold transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
                   >
                     {isSubmitting ? (
                       <>

@@ -162,3 +162,65 @@ export async function deleteCitizen(id: string): Promise<void> {
     throw new Error(`Error al eliminar Citizen de la base de datos: ${error.message}`);
   }
 }
+
+/**
+ * Sube un archivo .zip, .rar o .7z directamente al bucket 'citizens-packages' de Supabase Storage.
+ * Devuelve la URL pública y el tamaño formateado.
+ */
+export async function uploadCitizenPackage(
+  file: File
+): Promise<{ publicUrl: string; fileSizeFormatted: string; fileSizeBytes: number }> {
+  const sanitizedName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const filePath = `packages/${sanitizedName}`;
+
+  const { error } = await supabase.storage
+    .from('citizens-packages')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(`Error al subir archivo a Supabase Storage: ${error.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from('citizens-packages')
+    .getPublicUrl(filePath);
+
+  const bytes = file.size;
+  const mb = (bytes / (1024 * 1024)).toFixed(0);
+  const fileSizeFormatted =
+    bytes > 1024 * 1024 * 1024
+      ? `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
+      : `${mb} MB`;
+
+  return {
+    publicUrl: publicUrlData.publicUrl,
+    fileSizeFormatted,
+    fileSizeBytes: bytes,
+  };
+}
+
+/**
+ * Sube una imagen de portada para un Citizen a Supabase Storage.
+ */
+export async function uploadCitizenCover(file: File): Promise<string> {
+  const sanitizedName = `covers/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+  const { error } = await supabase.storage
+    .from('citizens-packages')
+    .upload(sanitizedName, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(`Error al subir imagen de portada: ${error.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from('citizens-packages')
+    .getPublicUrl(sanitizedName);
+
+  return publicUrlData.publicUrl;
+}

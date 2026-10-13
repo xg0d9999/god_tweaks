@@ -311,30 +311,37 @@ pub async fn download_and_apply_citizen(
     let _ = fs::create_dir_all(&vault_dir);
 
     let preset_vault_path = vault_dir.join(&citizen_id);
-    let temp_zip_path = vault_dir.join(format!("tmp_{}.zip", citizen_id));
+    let ext = if download_url.to_lowercase().contains(".rar") {
+        "rar"
+    } else if download_url.to_lowercase().contains(".7z") {
+        "7z"
+    } else {
+        "zip"
+    };
+    let temp_archive_path = vault_dir.join(format!("tmp_{}.{}", citizen_id, ext));
     let temp_extract_path = vault_dir.join(format!("tmp_extract_{}", citizen_id));
 
     // 1. Download archive using curl.exe
-    let zip_str = temp_zip_path.to_string_lossy().to_string();
-    let curl_cmd = format!("curl.exe -L -k -s -S -o \"{}\" \"{}\"", zip_str, download_url);
+    let archive_str = temp_archive_path.to_string_lossy().to_string();
+    let curl_cmd = format!("curl.exe -L -k -s -S -o \"{}\" \"{}\"", archive_str, download_url);
     
     let download_output = run_hidden_cmd(&curl_cmd);
     if let Err(e) = download_output {
-        let _ = fs::remove_file(&temp_zip_path);
+        let _ = fs::remove_file(&temp_archive_path);
         return Err(format!("Error al descargar el paquete del Citizen desde la nube: {e}"));
     }
 
-    if !temp_zip_path.exists() {
+    if !temp_archive_path.exists() {
         return Err("El archivo descargado no se pudo encontrar en el disco local.".to_string());
     }
 
     // 2. Extract using tar.exe
     let _ = fs::create_dir_all(&temp_extract_path);
     let extract_str = temp_extract_path.to_string_lossy().to_string();
-    let tar_cmd = format!("tar.exe -xf \"{}\" -C \"{}\"", zip_str, extract_str);
+    let tar_cmd = format!("tar.exe -xf \"{}\" -C \"{}\"", archive_str, extract_str);
 
     let extract_output = run_hidden_cmd(&tar_cmd);
-    let _ = fs::remove_file(&temp_zip_path);
+    let _ = fs::remove_file(&temp_archive_path);
 
     if let Err(e) = extract_output {
         let _ = fs::remove_dir_all(&temp_extract_path);

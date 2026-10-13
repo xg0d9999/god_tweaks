@@ -40,10 +40,15 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
   const handleClose = async () => {
     try {
-      const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().hide();
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("force_exit_app");
     } catch {
-      console.log("Window close invoked (browser preview)");
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        await getCurrentWindow().close();
+      } catch {
+        console.log("Window close invoked (browser preview)");
+      }
     }
   };
 

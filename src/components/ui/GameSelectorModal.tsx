@@ -142,7 +142,7 @@ const GameLogoHeader: React.FC<{ gameId: TargetGameId }> = ({ gameId }) => {
           <img
             src="/fotos/FortniteLogo.svg"
             alt="Fortnite Logo"
-            className="h-8 md:h-9 w-auto max-w-[170px] object-contain"
+            className="h-8 md:h-9 w-auto max-w-[170px] object-contain brightness-0 invert"
           />
         </div>
       );

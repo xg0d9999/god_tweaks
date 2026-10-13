@@ -58,13 +58,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "citizens",
       label: "Gestor de Citizens",
       icon: <Sparkles className="w-4 h-4 flex-shrink-0 text-cyan-400" />,
-      badge: "PRÓXIMO",
     },
     {
       id: "advanced",
       label: "Modo Avanzado",
       icon: <Sliders className="w-4 h-4 flex-shrink-0" />,
-      badge: tweaksBlocked ? "BLOQUEADO" : "PRO",
       isBlocked: tweaksBlocked,
     },
     {
@@ -78,7 +76,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             id: "admin" as TabType,
             label: "Panel Admin",
             icon: <ShieldCheck className="w-4 h-4 text-amber-400 flex-shrink-0" />,
-            badge: "ROOT",
             isSpecial: true,
           },
         ]

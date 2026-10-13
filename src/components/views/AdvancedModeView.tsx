@@ -30,11 +30,14 @@ export interface AdvancedModeViewProps {
   onToggleNagle: (disable: boolean) => void;
   onFlushDns: () => void;
   onToggleNetworkThrottling: (disable: boolean) => void;
+  onToggleQosLimit?: (disable: boolean) => void;
 
   onCleanRam: () => void;
   onPurgeCaches: () => void;
   lastRamCleanResult?: string;
   lastCacheCleanResult?: string;
+  memoryCompressionDisabled?: boolean;
+  onToggleMemoryCompression?: (disable: boolean) => void;
 
   fivemStatus: FiveMStatus;
   onCleanFivemCache: () => void;
@@ -61,10 +64,13 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
   onToggleNagle,
   onFlushDns,
   onToggleNetworkThrottling,
+  onToggleQosLimit,
   onCleanRam,
   onPurgeCaches,
   lastRamCleanResult,
   lastCacheCleanResult,
+  memoryCompressionDisabled,
+  onToggleMemoryCompression,
   fivemStatus,
   onCleanFivemCache,
   onToggleFivemPriority,
@@ -214,6 +220,7 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
                 onToggleNagle={onToggleNagle}
                 onFlushDns={onFlushDns}
                 onToggleNetworkThrottling={onToggleNetworkThrottling}
+                onToggleQosLimit={onToggleQosLimit}
                 loadingKeys={loadingKeys}
               />
             )}
@@ -222,6 +229,8 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
               <MemoryView
                 onCleanRam={onCleanRam}
                 onPurgeCaches={onPurgeCaches}
+                memoryCompressionDisabled={memoryCompressionDisabled}
+                onToggleMemoryCompression={onToggleMemoryCompression}
                 loadingKeys={loadingKeys}
                 lastRamCleanResult={lastRamCleanResult}
                 lastCacheCleanResult={lastCacheCleanResult}

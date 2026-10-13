@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 use winreg::enums::*;
-use crate::utils::registry::{enum_subkeys, get_dword, set_dword};
+use crate::utils::registry::{enum_subkeys, get_dword, set_dword, delete_value};
 use crate::utils::win32::run_hidden_cmd;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NetworkStatus {
     pub nagle_disabled: bool,
     pub network_throttling_disabled: bool,
+    pub qos_limit_disabled: bool,
 }
 
 #[tauri::command]
@@ -20,6 +21,15 @@ pub fn get_network_status() -> Result<NetworkStatus, String> {
         "NetworkThrottlingIndex",
     ) {
         status.network_throttling_disabled = val == 0xFFFFFFFF;
+    }
+
+    // Check QoS NonBestEffortLimit
+    if let Ok(val) = get_dword(
+        HKEY_LOCAL_MACHINE,
+        "SOFTWARE\\Policies\\Microsoft\\Windows\\Psched",
+        "NonBestEffortLimit",
+    ) {
+        status.qos_limit_disabled = val == 0;
     }
 
     // Check if Nagle is disabled on at least one adapter
@@ -80,3 +90,16 @@ pub fn set_network_throttling(disable: bool) -> Result<String, String> {
         "Default network throttling restored.".to_string()
     })
 }
+
+#[tauri::command]
+pub fn set_qos_limit(disable: bool) -> Result<String, String> {
+    let path = "SOFTWARE\\Policies\\Microsoft\\Windows\\Psched";
+    if disable {
+        set_dword(HKEY_LOCAL_MACHINE, path, "NonBestEffortLimit", 0)?;
+        Ok("Límite de reserva QoS de ancho de banda eliminado (NonBestEffortLimit = 0).".to_string())
+    } else {
+        let _ = delete_value(HKEY_LOCAL_MACHINE, path, "NonBestEffortLimit");
+        Ok("Límite de reserva QoS restaurado a valores por defecto.".to_string())
+    }
+}
+

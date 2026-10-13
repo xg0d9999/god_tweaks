@@ -120,9 +120,25 @@ pub fn get_hardware_profile(state: State<'_, TelemetryState>) -> Result<Hardware
             use winreg::enums::*;
             use winreg::RegKey;
             let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-            hklm.open_subkey("SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0000")
-                .and_then(|k| k.get_value::<String, _>("DriverDesc"))
-                .unwrap_or_else(|_| "NVIDIA / AMD Graphic Adapter".to_string())
+            let mut detected_gpu = "NVIDIA / AMD Graphic Adapter".to_string();
+            let base_path = "SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}";
+            
+            for index in ["0000", "0001", "0002", "0003"] {
+                let subkey_path = format!("{base_path}\\{index}");
+                if let Ok(key) = hklm.open_subkey(&subkey_path) {
+                    if let Ok(desc) = key.get_value::<String, _>("DriverDesc") {
+                        let desc_lower = desc.to_lowercase();
+                        // Prefer dedicated GPU over basic/integrated
+                        if desc_lower.contains("nvidia") || desc_lower.contains("geforce") || desc_lower.contains("radeon rx") {
+                            detected_gpu = desc;
+                            break;
+                        } else if !desc.is_empty() && detected_gpu == "NVIDIA / AMD Graphic Adapter" {
+                            detected_gpu = desc;
+                        }
+                    }
+                }
+            }
+            detected_gpu
         }
         #[cfg(not(windows))]
         {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use winreg::enums::*;
-use crate::utils::registry::{get_dword, set_dword, set_string};
+use crate::utils::registry::{get_dword, set_dword, set_string, delete_value};
 use crate::utils::win32::run_hidden_cmd;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
@@ -249,3 +249,83 @@ pub fn get_pc_benchmark() -> Result<PcBenchmarkMetrics, String> {
         overall_improvement_percent: overall_improvement,
     })
 }
+
+#[tauri::command]
+pub fn set_visual_effects(performance_mode: bool) -> Result<String, String> {
+    let path = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects";
+    if performance_mode {
+        set_dword(HKEY_CURRENT_USER, path, "VisualFXSetting", 2)?;
+        Ok("Efectos visuales configurados en 'Mejor rendimiento' (animaciones de ventanas mínimas).".to_string())
+    } else {
+        set_dword(HKEY_CURRENT_USER, path, "VisualFXSetting", 0)?;
+        Ok("Efectos visuales restaurados a 'Dejar que Windows elija'.".to_string())
+    }
+}
+
+const FORTNITE_TARGETS: &[&str] = &[
+    "FortniteClient-Win64-Shipping.exe",
+    "FortniteClient-Win64-Shipping_EAC.exe",
+    "FortniteClient-Win64-Shipping_BE.exe",
+    "FortniteLauncher.exe",
+];
+
+const VALORANT_TARGETS: &[&str] = &[
+    "VALORANT-Win64-Shipping.exe",
+    "RiotClientServices.exe",
+];
+
+const CS2_TARGETS: &[&str] = &[
+    "cs2.exe",
+];
+
+const FIVEM_TARGETS: &[&str] = &[
+    "FiveM.exe",
+    "GTA5.exe",
+    "FiveM_b3095_GTAProcess.exe",
+    "FiveM_b2802_GTAProcess.exe",
+    "FiveM_b2699_GTAProcess.exe",
+    "FiveM_b2545_GTAProcess.exe",
+    "FiveM_b2372_GTAProcess.exe",
+    "FiveM_b2189_GTAProcess.exe",
+    "FiveM_b2060_GTAProcess.exe",
+    "FiveM_b1604_GTAProcess.exe",
+    "FiveM_GTAProcess.exe",
+];
+
+#[tauri::command]
+pub fn set_game_priority_profile(game_id: String, enable: bool) -> Result<String, String> {
+    if !crate::utils::win32::is_elevated() {
+        return Err("Se requieren permisos de Administrador para ajustar perfiles de prioridad de juegos.".to_string());
+    }
+
+    let targets = match game_id.to_lowercase().as_str() {
+        "fivem" => FIVEM_TARGETS,
+        "fortnite" => FORTNITE_TARGETS,
+        "valorant" => VALORANT_TARGETS,
+        "cs2" => CS2_TARGETS,
+        _ => return Err(format!("Juego no reconocido: {game_id}")),
+    };
+
+    if enable {
+        for exe in targets {
+            let path = format!("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\{exe}\\PerfOptions");
+            let _ = set_dword(HKEY_LOCAL_MACHINE, &path, "CpuPriorityClass", 3);
+            let _ = set_dword(HKEY_LOCAL_MACHINE, &path, "IoPriority", 3);
+            if game_id.to_lowercase() == "fivem" {
+                let _ = set_dword(HKEY_LOCAL_MACHINE, &path, "PagePriority", 5);
+            }
+        }
+        Ok(format!("Prioridad Alta de CPU e I/O aplicada a los ejecutables de {}.", game_id.to_uppercase()))
+    } else {
+        for exe in targets {
+            let path = format!("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\{exe}\\PerfOptions");
+            let _ = delete_value(HKEY_LOCAL_MACHINE, &path, "CpuPriorityClass");
+            let _ = delete_value(HKEY_LOCAL_MACHINE, &path, "IoPriority");
+            if game_id.to_lowercase() == "fivem" {
+                let _ = delete_value(HKEY_LOCAL_MACHINE, &path, "PagePriority");
+            }
+        }
+        Ok(format!("Prioridades de {} restauradas a valores estándar.", game_id.to_uppercase()))
+    }
+}
+

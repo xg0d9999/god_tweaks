@@ -13,6 +13,7 @@ import { AdminPanelView } from "./components/views/AdminPanelView";
 import { PermissionBlockedView } from "./components/views/PermissionBlockedView";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal";
+import { GameSelectorModal } from "./components/ui/GameSelectorModal";
 import { UpdateModal } from "./components/ui/UpdateModal";
 import { HotkeySettingsModal } from "./components/common/HotkeySettingsModal";
 import { checkForAppUpdate, UpdateInfo } from "./services/updater";
@@ -23,6 +24,7 @@ import {
   TabType,
   AppMode,
   PresetType,
+  TargetGameId,
   ActivePlanData,
   SystemMetrics,
   GamingStatus,
@@ -152,7 +154,7 @@ async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>): Promi
 }
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading, user, userRecord } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user, userRecord, hardware } = useAuth();
   const canUseTweaks = userRecord?.can_use_tweaks !== false;
   const canUseSanciones = userRecord?.can_use_sanciones !== false;
   const isAdmin = userRecord?.is_admin === true;
@@ -183,6 +185,7 @@ const AppContent: React.FC = () => {
   const [restorePoints, setRestorePoints] = useState<RestorePointItem[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loadingKeys, setLoadingKeys] = useState<Record<string, boolean>>({});
+  const [memoryCompressionDisabled, setMemoryCompressionDisabled] = useState(false);
   const [lastRamMsg, setLastRamMsg] = useState<string>();
   const [lastCacheMsg, setLastCacheMsg] = useState<string>();
   const [lastBackupMsg, setLastBackupMsg] = useState<string>();
@@ -218,6 +221,7 @@ const AppContent: React.FC = () => {
 
   // Full-screen Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [modalPhase, setModalPhase] = useState<"confirm" | "running" | "completed">("confirm");
   const [modalPlanTitle, setModalPlanTitle] = useState("g0d Mode eSports");
   const [modalSteps, setModalSteps] = useState<ModalStep[]>([]);
@@ -303,6 +307,9 @@ const AppContent: React.FC = () => {
       if (f) setFivemStatus((prev) => ({ ...prev, ...f }));
       if (b) setBackups(b);
       if (rp) setRestorePoints(rp);
+      safeInvoke<boolean>("get_memory_compression_status").then((res) => {
+        if (typeof res === "boolean") setMemoryCompressionDisabled(res);
+      }).catch(() => {});
       if (hispan) {
         if (hispan.staff_att) setStaffAtt(hispan.staff_att);
         if (hispan.discord_guild) setDiscordGuild(hispan.discord_guild);
@@ -495,7 +502,36 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleToggleQosLimit = async (disable: boolean) => {
+    setLoading("qos_limit", true);
+    try {
+      const res = await safeInvoke<string>("set_qos_limit", { disable });
+      setNetworkStatus((prev) => ({
+        ...prev,
+        qos_limit_disabled: disable,
+      }));
+      addLog(res, "success");
+    } catch (err) {
+      addLog(String(err), "error");
+    } finally {
+      setLoading("qos_limit", false);
+    }
+  };
+
   // Memory Handlers
+  const handleToggleMemoryCompression = async (disable: boolean) => {
+    setLoading("memory_compression", true);
+    try {
+      const res = await safeInvoke<string>("set_memory_compression", { disable });
+      setMemoryCompressionDisabled(disable);
+      addLog(res, "success");
+    } catch (err) {
+      addLog(String(err), "error");
+    } finally {
+      setLoading("memory_compression", false);
+    }
+  };
+
   const handleCleanRam = async () => {
     setLoading("ram", true);
     try {
@@ -841,63 +877,130 @@ const AppContent: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Preset Trigger: Ultra (Sin purga de caché - Con Optimizaciones Extremas)
-  const triggerUltraPlan = () => {
-    const rawSteps = [
+  // Preset Trigger: Adaptativo por Juego y Hardware
+  const triggerAdaptiveGameOptimization = (gameId: TargetGameId) => {
+    if (!canUseTweaks) {
+      showToast("Acceso restringido: Permiso de optimizaciones deshabilitado.", "error");
+      return;
+    }
+
+    const isAmdCpu = hardware?.cpu.toLowerCase().includes("amd") || hardware?.cpu.toLowerCase().includes("ryzen");
+    const isIntelCpu = hardware?.cpu.toLowerCase().includes("intel") || hardware?.cpu.toLowerCase().includes("core");
+    const isNvidiaGpu = hardware?.gpu.toLowerCase().includes("nvidia") || hardware?.gpu.toLowerCase().includes("geforce") || hardware?.gpu.toLowerCase().includes("rtx");
+    const ramGb = hardware?.ram_mb ? Math.round(hardware.ram_mb / 1024) : 16;
+    const hasHighRam = ramGb >= 16;
+
+    const gameNames: Record<TargetGameId, string> = {
+      general: "Sistema Completo",
+      fivem: "FiveM & GTA V",
+      fortnite: "Fortnite",
+      valorant: "Valorant",
+      cs2: "Counter-Strike 2",
+    };
+
+    const cpuLabel = isAmdCpu ? "AMD Ryzen" : isIntelCpu ? "Intel Core" : "CPU";
+    const gpuLabel = isNvidiaGpu ? "NVIDIA" : "GPU";
+
+    const rawSteps: { label: string; action: () => Promise<unknown> }[] = [
       {
-        label: "Crear Punto de Restauración del Sistema (VSS)",
-        action: () => safeInvoke("create_restore_point", { description: "g0d_tweaks_Ultra_Extreme" }),
+        label: "Punto de Restauración del Sistema (VSS)",
+        action: () => safeInvoke("create_restore_point", { description: `g0d_tweaks_${gameId}_Adaptive` }),
       },
       {
         label: "Exportar Copia de Seguridad del Registro (.reg)",
-        action: () => safeInvoke("export_registry_backup", { backup_name: "backup_ultra" }),
+        action: () => safeInvoke("export_registry_backup", { backup_name: `backup_${gameId}` }),
       },
       {
-        label: "Desactivar HPET y Ticks Dinámicos (bcdedit)",
+        label: "Temporizadores de Kernel & HPET (bcdedit TSC)",
         action: () => safeInvoke("set_hpet", { disable: true }),
       },
       {
-        label: "Inyectar Esquema 'Ultimate Performance' & Core Unparking",
+        label: "Plan 'Ultimate Performance' & CPU Core Unparking",
         action: () => safeInvoke("enable_ultimate_performance"),
       },
       {
-        label: "Win32PrioritySeparation=38, PowerThrottling=Off & HAGS",
-        action: () => safeInvoke("set_extreme_gaming_optimizations", { enable: true }),
+        label: "Efectos Visuales de Rendimiento Mínimo de Windows",
+        action: () => safeInvoke("set_visual_effects", { performance_mode: true }),
       },
       {
-        label: "Prioridad Alta en FiveM y Subprocesos (b2699..b3095)",
-        action: () => safeInvoke("set_fivem_priority", { enable: true }),
-      },
-      {
-        label: "Optimizar MMCSS, GameDVR y Prioridad GPU a 8",
+        label: "MMCSS, Prioridad de GPU a 8 y GameDVR Off",
         action: () => Promise.all([
           safeInvoke("set_gamedvr", { disable: true }),
           safeInvoke("set_mmcss_and_priority", { enable: true }),
         ]),
       },
       {
-        label: "Optimizar Red TCP: Nagle Desactivado & Flush DNS",
+        label: "Red TCP/IP: Nagle Off, Flush DNS y Reserva QoS al 0%",
         action: () => Promise.all([
           safeInvoke("set_nagle_algorithm", { disable: true }),
           safeInvoke("set_network_throttling", { disable: true }),
+          safeInvoke("set_qos_limit", { disable: true }),
           safeInvoke("flush_dns"),
         ]),
       },
       {
+        label: isAmdCpu
+          ? "Calibración AMD Ryzen (Win32PrioritySeparation=38, PowerThrottling Off & HAGS)"
+          : isIntelCpu
+          ? "Calibración Intel (Thread Director para P-Cores, PowerThrottling Off & HAGS)"
+          : "Win32PrioritySeparation=38, PowerThrottling Off & HAGS",
+        action: () => safeInvoke("set_extreme_gaming_optimizations", { enable: true }),
+      },
+    ];
+
+    // Hardware RAM Tweak (Precision Optimizer)
+    if (hasHighRam) {
+      rawSteps.push({
+        label: `Desactivar Compresión de RAM (MMAgent - Zero Stutters para ${ramGb}GB)`,
+        action: () => safeInvoke("set_memory_compression", { disable: true }),
+      });
+    }
+
+    // Game-specific tweaks
+    if (gameId === "fivem") {
+      rawSteps.push({
+        label: "Prioridad Alta en FiveM.exe, GTA5.exe y Subprocesos (b2699..b3095)",
+        action: () => safeInvoke("set_fivem_priority", { enable: true }),
+      });
+      rawSteps.push({
+        label: "Purga de Caché de Servidores y NUI Storage (FiveM)",
+        action: () => safeInvoke("clean_fivem_caches"),
+      });
+    } else if (gameId === "fortnite") {
+      rawSteps.push({
+        label: "Prioridad Alta en FortniteClient-Win64-Shipping (Unreal Engine 5)",
+        action: () => safeInvoke("set_game_priority_profile", { gameId: "fortnite", enable: true }),
+      });
+    } else if (gameId === "valorant") {
+      rawSteps.push({
+        label: "Prioridad Alta en VALORANT-Win64-Shipping (Riot Vanguard Safe)",
+        action: () => safeInvoke("set_game_priority_profile", { gameId: "valorant", enable: true }),
+      });
+    } else if (gameId === "cs2") {
+      rawSteps.push({
+        label: "Prioridad Alta en cs2.exe & Sub-tick Packet Sync (Source 2)",
+        action: () => safeInvoke("set_game_priority_profile", { gameId: "cs2", enable: true }),
+      });
+    } else {
+      // General
+      rawSteps.push({
         label: "Debloat de Privacidad: Cortana, Copilot & Telemetría",
         action: () => Promise.all([
           safeInvoke("set_telemetry", { disable: true }),
           safeInvoke("set_cortana_and_search", { disable: true }),
           safeInvoke("set_copilot", { disable: true }),
         ]),
-      },
-      {
-        label: "Compactar Memoria RAM de Procesos Activos",
-        action: () => safeInvoke("clean_ram_working_set"),
-      },
-    ];
+      });
+    }
 
-    setModalPlanTitle("Plan Ultra - Rendimiento Máximo");
+    // Final RAM working set compact
+    rawSteps.push({
+      label: "Compactar Memoria RAM de Procesos Activos",
+      action: () => safeInvoke("clean_ram_working_set"),
+    });
+
+    const title = `Plan Adaptativo: ${gameNames[gameId]} (${cpuLabel} + ${gpuLabel})`;
+    setModalPlanTitle(title);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
     setActivePipelineRunner(() => () => runStepsSequentially("ultra", rawSteps));
@@ -913,7 +1016,7 @@ const AppContent: React.FC = () => {
     }
     if (preset === "lite") triggerLitePlan();
     else if (preset === "premium") triggerPremiumPlan();
-    else if (preset === "ultra") triggerUltraPlan();
+    else if (preset === "ultra") setIsGameModalOpen(true);
   };
 
   // Toggle Mode Handler
@@ -1060,8 +1163,11 @@ const AppContent: React.FC = () => {
                 ) : (
                   <PresetsView
                     onSelectPreset={handleSelectPreset}
+                    onOpenGameSelector={() => setIsGameModalOpen(true)}
                     isRunning={isModalOpen && modalPhase === "running"}
                     activePlanId={activePlan?.id}
+                    activePlanTitle={activePlan?.title}
+                    hardware={hardware}
                   />
                 ))}
 
@@ -1089,10 +1195,13 @@ const AppContent: React.FC = () => {
                     onToggleNagle={handleToggleNagle}
                     onFlushDns={handleFlushDns}
                     onToggleNetworkThrottling={handleToggleNetworkThrottling}
+                    onToggleQosLimit={handleToggleQosLimit}
                     onCleanRam={handleCleanRam}
                     onPurgeCaches={handlePurgeCaches}
                     lastRamCleanResult={lastRamMsg}
                     lastCacheCleanResult={lastCacheMsg}
+                    memoryCompressionDisabled={memoryCompressionDisabled}
+                    onToggleMemoryCompression={handleToggleMemoryCompression}
                     fivemStatus={fivemStatus}
                     onCleanFivemCache={handleCleanFiveMCache}
                     onToggleFivemPriority={handleToggleFiveMPriority}
@@ -1181,6 +1290,14 @@ const AppContent: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Game Selector Modal */}
+      <GameSelectorModal
+        isOpen={isGameModalOpen}
+        onClose={() => setIsGameModalOpen(false)}
+        onSelectGame={triggerAdaptiveGameOptimization}
+        hardware={hardware}
+      />
 
       {/* Unclosable Full-Screen Loading & Confirmation Modal */}
       <OptimizationModal

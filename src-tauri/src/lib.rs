@@ -46,6 +46,8 @@ pub fn run() {
             set_mmcss_and_priority,
             set_extreme_gaming_optimizations,
             get_pc_benchmark,
+            set_visual_effects,
+            set_game_priority_profile,
             // Debloat
             get_debloat_status,
             set_telemetry,
@@ -57,9 +59,12 @@ pub fn run() {
             set_nagle_algorithm,
             flush_dns,
             set_network_throttling,
+            set_qos_limit,
             // Memory
             clean_ram_working_set,
             purge_shader_and_temp_caches,
+            get_memory_compression_status,
+            set_memory_compression,
             // FiveM & GTA V
             get_fivem_status,
             is_fivem_running,

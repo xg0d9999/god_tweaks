@@ -87,3 +87,36 @@ pub fn purge_shader_and_temp_caches() -> Result<CacheCleanResult, String> {
         paths_processed,
     })
 }
+
+#[tauri::command]
+pub fn get_memory_compression_status() -> Result<bool, String> {
+    let script = "try { $mc=(Get-MMAgent).MemoryCompression; if ($mc -eq $false) { 'disabled' } else { 'enabled' } } catch { 'unavailable' }";
+    let output = crate::utils::win32::run_hidden_powershell(script).unwrap_or_default();
+    Ok(output.trim().to_lowercase() == "disabled")
+}
+
+#[tauri::command]
+pub fn set_memory_compression(disable: bool) -> Result<String, String> {
+    if !crate::utils::win32::is_elevated() {
+        return Err("Permisos insuficientes: Modificar la compresión de memoria (MMAgent) requiere ejecutar como Administrador.".to_string());
+    }
+
+    if disable {
+        let script = "try { $mc=(Get-MMAgent).MemoryCompression; if ($mc) { Disable-MMAgent -MemoryCompression; 'OK' } else { 'ALREADY_DISABLED' } } catch { 'ERROR' }";
+        let res = crate::utils::win32::run_hidden_powershell(script)?;
+        if res.contains("ERROR") {
+            Err("No se pudo desactivar la compresión de memoria en este sistema.".to_string())
+        } else {
+            Ok("Compresión de memoria RAM desactivada con éxito (MMAgent -MemoryCompression deshabilitado).".to_string())
+        }
+    } else {
+        let script = "try { Enable-MMAgent -MemoryCompression; 'OK' } catch { 'ERROR' }";
+        let res = crate::utils::win32::run_hidden_powershell(script)?;
+        if res.contains("ERROR") {
+            Err("No se pudo reactivar la compresión de memoria.".to_string())
+        } else {
+            Ok("Compresión de memoria RAM restaurada a valores por defecto de Windows.".to_string())
+        }
+    }
+}
+

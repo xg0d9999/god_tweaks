@@ -11,6 +11,7 @@ interface NetworkViewProps {
   onToggleNagle: (disable: boolean) => void;
   onFlushDns: () => void;
   onToggleNetworkThrottling: (disable: boolean) => void;
+  onToggleQosLimit?: (disable: boolean) => void;
   loadingKeys: Record<string, boolean>;
 }
 
@@ -19,6 +20,7 @@ export const NetworkView: React.FC<NetworkViewProps> = ({
   onToggleNagle,
   onFlushDns,
   onToggleNetworkThrottling,
+  onToggleQosLimit,
   loadingKeys,
 }) => {
   return (
@@ -85,6 +87,34 @@ export const NetworkView: React.FC<NetworkViewProps> = ({
               checked={status.network_throttling_disabled}
               disabled={loadingKeys["throttling"]}
               onChange={(val) => onToggleNetworkThrottling(val)}
+            />
+          </div>
+        </GlassCard>
+
+        {/* QoS Bandwidth Limit (Psched) */}
+        <GlassCard className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-white/[0.04] text-white/80 border border-white/[0.08] mt-0.5">
+                <Wifi className="w-4 h-4" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-white">
+                    Eliminar Reserva de Ancho de Banda QoS (Psched)
+                  </h3>
+                  <Badge level="Gaming" />
+                </div>
+                <p className="text-xs text-[#717680] max-w-xl">
+                  Inyecta NonBestEffortLimit = 0 en las directivas de red. Windows por defecto reserva hasta un 20% del ancho de banda total para paquetes y servicios del sistema.
+                </p>
+              </div>
+            </div>
+
+            <ToggleSwitch
+              checked={!!status.qos_limit_disabled}
+              disabled={loadingKeys["qos_limit"]}
+              onChange={(val) => onToggleQosLimit && onToggleQosLimit(val)}
             />
           </div>
         </GlassCard>

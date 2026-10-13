@@ -3,10 +3,13 @@ import { Sparkles, Trash2, Cpu, HardDrive } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { Badge } from "../ui/Badge";
 import { ActionButton } from "../ui/ActionButton";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 
 interface MemoryViewProps {
   onCleanRam: () => void;
   onPurgeCaches: () => void;
+  memoryCompressionDisabled?: boolean;
+  onToggleMemoryCompression?: (disable: boolean) => void;
   loadingKeys: Record<string, boolean>;
   lastRamCleanResult?: string;
   lastCacheCleanResult?: string;
@@ -15,6 +18,8 @@ interface MemoryViewProps {
 export const MemoryView: React.FC<MemoryViewProps> = ({
   onCleanRam,
   onPurgeCaches,
+  memoryCompressionDisabled,
+  onToggleMemoryCompression,
   loadingKeys,
   lastRamCleanResult,
   lastCacheCleanResult,
@@ -26,7 +31,7 @@ export const MemoryView: React.FC<MemoryViewProps> = ({
           Gestión de Memoria RAM & Basura
         </h2>
         <p className="text-xs text-[#828792]">
-          Llamadas nativas directas a la API de Win32 para compactar la memoria y limpiar de forma segura acumulaciones residuales de sombreadores de GPU.
+          Llamadas nativas directas a la API de Win32 para compactar la memoria, controlar la compresión del kernel y limpiar sombreadores residuales.
         </p>
       </div>
 
@@ -101,6 +106,34 @@ export const MemoryView: React.FC<MemoryViewProps> = ({
           >
             Purgar Shaders & Temporales
           </ActionButton>
+        </GlassCard>
+
+        {/* Memory Compression (MMAgent) */}
+        <GlassCard className="p-4 md:col-span-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-white/[0.04] text-white/80 border border-white/[0.08] mt-0.5">
+                <Cpu className="w-4 h-4 text-white" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-white">
+                    Desactivar Compresión de Memoria RAM (MMAgent)
+                  </h3>
+                  <Badge level="Extremo" />
+                </div>
+                <p className="text-xs text-[#717680] max-w-2xl leading-relaxed">
+                  Desactiva la compresión en tiempo real de Windows (Disable-MMAgent -MemoryCompression). En equipos con 16GB o más de RAM evita que la CPU gaste ciclos comprimiendo datos en espera, eliminando micro-cortes y caídas de 1% lows en partidas.
+                </p>
+              </div>
+            </div>
+
+            <ToggleSwitch
+              checked={!!memoryCompressionDisabled}
+              disabled={loadingKeys["memory_compression"]}
+              onChange={(val) => onToggleMemoryCompression && onToggleMemoryCompression(val)}
+            />
+          </div>
         </GlassCard>
       </div>
     </div>

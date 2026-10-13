@@ -45,9 +45,36 @@ export interface DebloatStatus {
   copilot_disabled: boolean;
 }
 
+export type TargetGameId = "general" | "fivem" | "fortnite" | "valorant" | "cs2";
+
+export interface HardwareProfile {
+  hwid: string;
+  cpu: string;
+  cpu_cores: number;
+  ram_mb: number;
+  gpu: string;
+  os: string;
+  cpu_vendor?: "amd" | "intel" | "other";
+  gpu_vendor?: "nvidia" | "amd" | "intel" | "other";
+}
+
+export interface GameProfileOption {
+  id: TargetGameId;
+  name: string;
+  shortName: string;
+  categoryBadge: string;
+  description: string;
+  bgImage: string;
+  logoText: string;
+  themeColor: string;
+  glowColor: string;
+  exclusiveTweaks: string[];
+}
+
 export interface NetworkStatus {
   nagle_disabled: boolean;
   network_throttling_disabled: boolean;
+  qos_limit_disabled?: boolean;
 }
 
 export interface FiveMStatus {

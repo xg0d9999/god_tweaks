@@ -41,7 +41,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   const handleClose = async () => {
     try {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().close();
+      await getCurrentWindow().hide();
     } catch {
       console.log("Window close invoked (browser preview)");
     }
@@ -75,7 +75,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={handleClose}
-            aria-label="Cerrar ventana"
+            title="Minimizar a la bandeja de apps en segundo plano (System Tray)"
+            aria-label="Minimizar a segundo plano"
             className="group relative flex items-center justify-center w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E] hover:opacity-90 active:scale-95 transition-transform cursor-pointer"
           >
             <span className="opacity-0 group-hover:opacity-100 text-[8px] font-bold text-black/70 leading-none">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Keyboard, X, Check, RotateCcw } from "lucide-react";
+import { Keyboard, X, Check, RotateCcw, Power } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface HotkeySettingsModalProps {
@@ -201,6 +201,38 @@ export const HotkeySettingsModal: React.FC<HotkeySettingsModalProps> = ({
                   );
                 })}
               </div>
+            </div>
+
+            {/* Background Apps / System Tray Section */}
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-xs font-bold text-white uppercase tracking-tight">
+                    Apps en Segundo Plano de Windows (System Tray)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  ACTIVO
+                </span>
+              </div>
+              <p className="text-[11px] text-[#828792] leading-relaxed">
+                g0d suite permanece activo en la bandeja del sistema junto al reloj. Puedes hacer clic izquierdo para abrir/ocultar, o hacer clic derecho para <strong className="text-rose-400 font-medium">Forzar cierre</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await invoke("force_exit_app");
+                  } catch {
+                    window.close();
+                  }
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <Power className="w-3.5 h-3.5 text-rose-400" />
+                <span>Forzar cierre de la aplicación ahora</span>
+              </button>
             </div>
 
             {/* Modal Actions */}

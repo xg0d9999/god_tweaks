@@ -109,6 +109,8 @@ export async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>)
             bytes_cleared: 3820491024,
             paths_processed: ["C:\\AppData\\Local\\NVIDIA\\DXCache", "C:\\Temp"],
           } as unknown as T);
+        } else if (cmd === "force_exit_app") {
+          resolve(undefined as unknown as T);
         } else {
           resolve(`Success: ${cmd} executed.` as unknown as T);
         }

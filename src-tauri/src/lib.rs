@@ -1,9 +1,11 @@
 pub mod commands;
 pub mod utils;
+pub mod tray;
 
 use std::sync::Mutex;
 use sysinfo::System;
 
+use tray::force_exit_app;
 use commands::backup::*;
 use commands::debloat::*;
 use commands::fivem::*;
@@ -28,7 +30,18 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             init_hotkey_service(app.handle().clone());
+            if let Err(e) = tray::setup_system_tray(app) {
+                eprintln!("Failed to setup system tray: {e}");
+            }
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "main" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
         })
         .manage(TelemetryState {
             sys: Mutex::new(sys),
@@ -96,6 +109,8 @@ pub fn run() {
             open_game_selector_window,
             close_game_selector_window,
             select_game_and_optimize,
+            // System Tray Lifecycle
+            force_exit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running g0d tweaks application");

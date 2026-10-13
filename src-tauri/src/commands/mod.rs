@@ -10,3 +10,4 @@ pub mod test_bench;
 pub mod oauth;
 pub mod hotkey;
 pub mod selector;
+pub mod citizens;

@@ -19,6 +19,7 @@ use commands::test_bench::*;
 use commands::oauth::*;
 use commands::hotkey::*;
 use commands::selector::*;
+use commands::citizens::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -118,6 +119,14 @@ pub fn run() {
             select_game_and_optimize,
             // System Tray Lifecycle
             force_exit_app,
+            // FiveM Citizens Manager
+            get_fivem_citizen_info,
+            open_fivem_citizen_folder,
+            force_kill_fivem_processes,
+            apply_local_citizen,
+            restore_vanilla_citizen,
+            download_and_apply_citizen,
+            delete_local_citizen,
         ])
         .run(tauri::generate_context!())
         .expect("error while running g0d tweaks application");

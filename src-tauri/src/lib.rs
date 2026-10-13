@@ -15,6 +15,7 @@ use commands::telemetry::*;
 use commands::test_bench::*;
 use commands::oauth::*;
 use commands::hotkey::*;
+use commands::selector::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -91,6 +92,10 @@ pub fn run() {
             get_toggle_hotkey,
             set_toggle_hotkey,
             toggle_main_window,
+            // Game Selector Popup Window
+            open_game_selector_window,
+            close_game_selector_window,
+            select_game_and_optimize,
         ])
         .run(tauri::generate_context!())
         .expect("error while running g0d tweaks application");

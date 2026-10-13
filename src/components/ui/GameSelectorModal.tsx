@@ -394,17 +394,21 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Middle: Clean Character Artwork 
-                          - ZERO drop-shadow box (pure alpha cutout)
-                          - ZERO maskImage box (no rectangular halo)
-                          - Blends 100% cleanly into the background gradient */}
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden pt-12 pb-24 z-10">
+                      {/* Bottom Shadow Gradient to seamlessly blend character bases */}
+                      <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black via-black/60 to-transparent pointer-events-none z-10" />
+
+                      {/* Middle: Clean Character Artwork - Grounded to bottom (never floating in mid-air) */}
+                      <div className="absolute inset-x-0 bottom-0 top-14 flex items-end justify-center pointer-events-none overflow-hidden z-10">
                         <img
                           src={game.characterImg}
                           alt={game.title}
-                          className={`max-h-[72%] max-w-[85%] object-contain transition-transform duration-500 ease-out ${
-                            isHovered ? "scale-105 -translate-y-2" : "scale-100"
+                          className={`h-[85%] max-h-[510px] w-auto max-w-[92%] object-contain object-bottom transition-all duration-500 ease-out ${
+                            isHovered ? "scale-105 -translate-y-1" : "scale-100"
                           }`}
+                          style={{
+                            maskImage: "linear-gradient(to bottom, black 82%, transparent 100%)",
+                            WebkitMaskImage: "linear-gradient(to bottom, black 82%, transparent 100%)",
+                          }}
                         />
                       </div>
 

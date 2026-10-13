@@ -50,13 +50,13 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "RAGE Engine & NUI Textures",
     engineBadge: "RAGE ENGINE & FIVEM",
     characterImg: "/fotos/fivemplayers.png",
-    gradientClass: "from-amber-500/35 via-orange-600/20 to-[#140601]/85",
-    glowColor: "rgba(245, 158, 11, 0.45)",
+    gradientClass: "from-amber-500/40 via-orange-600/25 to-[#160802]/90",
+    glowColor: "rgba(245, 158, 11, 0.5)",
     accentHex: "#FF8A00",
     exclusiveTweaks: [
       "Prioridad Alta CPU/IO en FiveM.exe, GTA5.exe y b2699..b3095",
-      "Purga profunda de server-cache y memoria NUI",
-      "Eliminación de pérdida de texturas y micro-congelamientos",
+      "Purga profunda de server-cache y memoria de texturas NUI",
+      "Eliminación de caída de texturas y micro-congelamientos",
     ],
     hardwareHighlight: (hw) =>
       `MMCSS Priority 6 + ${hw.isNvidiaGpu ? "NVIDIA Reflex Ultra" : hw.isAmdGpu ? "Radeon Anti-Lag" : "GPU Max Clock"} | RAM ${hw.ramGb}GB ${hw.hasHighRam ? "MMAgent Off" : "Trimmed"}`,
@@ -67,8 +67,8 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "Unreal Engine 5 & Anti-Cheat",
     engineBadge: "UNREAL ENGINE 5",
     characterImg: "/fotos/fortniteplayers_opt.png",
-    gradientClass: "from-sky-400/30 via-fuchsia-600/25 to-[#120026]/85",
-    glowColor: "rgba(168, 85, 247, 0.45)",
+    gradientClass: "from-sky-400/35 via-fuchsia-600/25 to-[#120026]/90",
+    glowColor: "rgba(168, 85, 247, 0.5)",
     accentHex: "#D946EF",
     exclusiveTweaks: [
       "Prioridad IFEO en FortniteClient-Win64-Shipping",
@@ -84,8 +84,8 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "Source 2 Sub-Tick Precision",
     engineBadge: "SOURCE 2 SUB-TICK",
     characterImg: "/fotos/cs2_players.svg",
-    gradientClass: "from-cyan-500/30 via-slate-800/40 to-[#ea580c]/35",
-    glowColor: "rgba(234, 88, 12, 0.45)",
+    gradientClass: "from-cyan-500/35 via-slate-800/45 to-[#ea580c]/40",
+    glowColor: "rgba(234, 88, 12, 0.5)",
     accentHex: "#F97316",
     exclusiveTweaks: [
       "Prioridad de proceso y GPU en cs2.exe",
@@ -101,8 +101,8 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "Riot Vanguard 100% Safe",
     engineBadge: "RIOT VANGUARD SAFE",
     characterImg: "/fotos/valorantplayer.png",
-    gradientClass: "from-rose-500/35 via-red-900/25 to-[#0b0407]/85",
-    glowColor: "rgba(255, 70, 85, 0.45)",
+    gradientClass: "from-rose-500/40 via-red-900/30 to-[#0c0408]/90",
+    glowColor: "rgba(255, 70, 85, 0.5)",
     accentHex: "#FF4655",
     exclusiveTweaks: [
       "Prioridad Alta en VALORANT-Win64-Shipping (Riot Safe)",
@@ -114,7 +114,7 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
   },
 ];
 
-// Dedicated Transparent Logo Renderer using the user's files in /fotos
+// Clean Header Logos using user files from /fotos
 const GameLogoHeader: React.FC<{ gameId: TargetGameId }> = ({ gameId }) => {
   switch (gameId) {
     case "fivem":
@@ -228,7 +228,7 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-5 overflow-hidden">
         {/* Dark Cinematic Backdrop with Heavy Blur */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -238,16 +238,16 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
           className="absolute inset-0 bg-[#030507]/90 backdrop-blur-xl"
         />
 
-        {/* Grand Modal Window */}
+        {/* Grand Format Modal Window: High theater scale */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
+          initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ duration: 0.28, ease: "easeOut" }}
-          className="relative w-[96vw] max-w-[1360px] h-[90vh] max-h-[880px] bg-[#07090D] border border-white/[0.12] rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.95)] overflow-hidden flex flex-col z-10"
+          exit={{ opacity: 0, scale: 0.95, y: 16 }}
+          transition={{ duration: 0.26, ease: "easeOut" }}
+          className="relative w-[98vw] max-w-[1540px] h-[94vh] max-h-[920px] bg-[#07090D] border border-white/[0.14] rounded-3xl shadow-[0_0_90px_rgba(0,0,0,0.98)] overflow-hidden flex flex-col z-10"
         >
           {/* Top Bar: Title, Hardware Detection & Close */}
-          <div className="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.08] bg-white/[0.02] flex-shrink-0">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-white/[0.08] bg-white/[0.02] flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-white/[0.06] border border-white/[0.12] text-amber-400">
                 <Flame className="w-5 h-5" />
@@ -262,7 +262,7 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-[#8A919E]">
-                  Pasa el ratón sobre un juego para enfocarlo. Barras diagonales con fondos transparentes y degradados calibrados para tu equipo.
+                  Pasa el ratón sobre tu juego para enfocarlo. Barras diagonales con fondos transparentes y degradados vivos.
                 </p>
               </div>
             </div>
@@ -327,212 +327,203 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
             </button>
           </div>
 
-          {/* MAIN DIAGONAL SLICE CONTAINER */}
+          {/* MAIN STAGE: THE DIAGONAL COMIC ACCORDION */}
           <div
             onMouseLeave={() => setHoveredId(null)}
-            className="flex-1 min-h-[460px] md:min-h-[520px] p-4 flex flex-row w-full relative overflow-hidden select-none bg-[#05070A]"
+            className="flex-1 min-h-[580px] p-4 flex flex-row w-full relative overflow-hidden select-none bg-[#05070A]"
           >
-            {/* Outer Box Frame */}
-            <div className="w-full h-full rounded-2xl border-4 border-[#07090C] overflow-hidden relative shadow-2xl bg-[#030406]">
-              {/* Inner Skewed Flex Row: 
-                  Container has -ml-[7%] w-[114%] so the -13deg diagonal slant covers edges completely */}
-              <div className="flex flex-row w-[114%] -ml-[7%] h-full">
-                {DIAGONAL_PANELS.map((game, index) => {
-                  const isHovered = hoveredId === game.id;
-                  const isAnyHovered = hoveredId !== null;
+            <div className="w-full h-full rounded-2xl border-4 border-[#07090D] overflow-hidden relative shadow-2xl bg-[#030406] flex flex-row">
+              {DIAGONAL_PANELS.map((game, index) => {
+                const isHovered = hoveredId === game.id;
+                const isAnyHovered = hoveredId !== null;
 
-                  // Accordion flex:
-                  // Idle: all 4 share equal flex (1) -> 25% each
-                  // Hovered: focused panel expands to 3.2 (~55%), others contract to 0.65 (~15%)
-                  // Leftmost expands rightwards, rightmost expands leftwards
-                  const flexStyle = isHovered
-                    ? "3.2 3.2 0%"
-                    : isAnyHovered
-                    ? "0.65 0.65 0%"
-                    : "1 1 0%";
+                // Balanced accordion flex:
+                // Idle: each gets flex 1 (25% each -> ~380px on a 1520px container)
+                // Hovered: active gets flex 2.5 (~46% -> ~700px), others get flex 1 (~18% -> ~270px)
+                // This ensures non-hovered panels NEVER look squished or broken!
+                const flexStyle = isHovered
+                  ? "2.5 2.5 0%"
+                  : isAnyHovered
+                  ? "1 1 0%"
+                  : "1 1 0%";
 
-                  return (
+                return (
+                  <div
+                    key={game.id}
+                    onMouseEnter={() => setHoveredId(game.id)}
+                    onClick={() => {
+                      if (!isHovered) {
+                        setHoveredId(game.id);
+                      }
+                    }}
+                    style={{
+                      flex: flexStyle,
+                      transition:
+                        "flex 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease",
+                    }}
+                    className={`relative h-full flex flex-col justify-between overflow-hidden cursor-pointer group ${
+                      !isHovered && isAnyHovered ? "brightness-85 opacity-75" : "brightness-100 opacity-100"
+                    }`}
+                  >
+                    {/* 1. SKEWED BACKGROUND GRADIENT (Slanted diagonally at -10deg) */}
                     <div
-                      key={game.id}
-                      onMouseEnter={() => setHoveredId(game.id)}
-                      onClick={() => {
-                        if (!isHovered) {
-                          setHoveredId(game.id);
-                        }
-                      }}
-                      style={{
-                        flex: flexStyle,
-                        transform: "skewX(-13deg)",
-                        transition:
-                          "flex 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease",
-                      }}
-                      className={`relative h-full overflow-hidden cursor-pointer group flex flex-col justify-between ${
-                        !isHovered && isAnyHovered ? "brightness-75 opacity-70" : "brightness-100 opacity-100"
+                      className={`absolute inset-0 bg-gradient-to-b ${game.gradientClass} transition-opacity duration-500 ${
+                        isHovered ? "opacity-100" : isAnyHovered ? "opacity-45" : "opacity-85"
                       }`}
-                    >
-                      {/* Transparent Background with Game-Specific Color Gradient (NO photo backdrop) */}
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-b ${game.gradientClass} transition-opacity duration-500 ${
-                          isHovered ? "opacity-100" : isAnyHovered ? "opacity-40" : "opacity-80"
-                        }`}
-                      />
+                      style={{
+                        transform: "skewX(-10deg) scale(1.15)",
+                        transformOrigin: "center center",
+                      }}
+                    />
 
-                      {/* Radial Glow Highlight */}
+                    {/* 2. RADIAL GLOW HIGHLIGHT */}
+                    <div
+                      className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+                      style={{
+                        opacity: isHovered ? 0.9 : 0.35,
+                        background: `radial-gradient(circle at 50% 25%, ${game.glowColor} 0%, transparent 75%)`,
+                      }}
+                    />
+
+                    {/* 3. PROMINENT DIAGONAL DIVIDER BAR (on the right edge of each panel) */}
+                    {index < DIAGONAL_PANELS.length - 1 && (
                       <div
-                        className="absolute inset-0 pointer-events-none transition-opacity duration-500"
+                        className="absolute top-[-25%] bottom-[-25%] right-[-5px] w-[9px] bg-[#07090D] shadow-[0_0_20px_rgba(0,0,0,0.95)] z-30 pointer-events-none border-x border-white/[0.14]"
                         style={{
-                          opacity: isHovered ? 0.9 : 0.4,
-                          background: `radial-gradient(circle at 50% 30%, ${game.glowColor} 0%, transparent 75%)`,
+                          transform: "skewX(-10deg)",
+                          transformOrigin: "center center",
                         }}
                       />
+                    )}
 
-                      {/* COUNTER-SKEWED CONTENT WRAPPER:
-                          skewX(13deg) makes all characters, logos, and cards completely upright! */}
-                      <div
-                        style={{ transform: "skewX(13deg)" }}
-                        className="relative z-10 w-full h-full flex flex-col justify-between p-4 md:p-6"
-                      >
-                        {/* Top: Engine Badge & Transparent Game Logo */}
-                        <div className="flex flex-col items-start gap-2.5">
-                          <div className="px-2.5 py-1 rounded-md text-[9px] md:text-[10px] font-mono font-bold tracking-widest uppercase bg-black/60 text-white/90 border border-white/15 backdrop-blur-md shadow-md">
-                            {game.engineBadge}
-                          </div>
-
-                          <div className="pt-1">
-                            <GameLogoHeader gameId={game.id} />
-                          </div>
+                    {/* 4. CONTENT LAYER: 100% UPRIGHT (NO SKEW, ZERO CLIPPING, NO CUT-OFFS) */}
+                    <div className="relative z-10 w-full h-full flex flex-col justify-between p-5 md:p-6 overflow-hidden">
+                      {/* Top: Engine Tag & Transparent Logo */}
+                      <div className="flex flex-col items-start gap-2 flex-shrink-0 z-20">
+                        <div className="px-2.5 py-1 rounded-md text-[9px] md:text-[10px] font-mono font-bold tracking-widest uppercase bg-black/60 text-white/90 border border-white/15 backdrop-blur-md shadow-md">
+                          {game.engineBadge}
                         </div>
 
-                        {/* Middle: Transparent Character / Player Artwork standing on the gradient */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden pt-8 pb-16">
-                          <img
-                            src={game.characterImg}
-                            alt={game.title}
-                            className={`max-h-[82%] max-w-[88%] object-contain transition-transform duration-500 ease-out drop-shadow-[0_10px_30px_rgba(0,0,0,0.85)] ${
-                              isHovered ? "scale-105" : "scale-100"
-                            }`}
-                            style={{
-                              maskImage:
-                                "linear-gradient(to bottom, black 65%, rgba(0,0,0,0.8) 80%, transparent 98%)",
-                              WebkitMaskImage:
-                                "linear-gradient(to bottom, black 65%, rgba(0,0,0,0.8) 80%, transparent 98%)",
-                            }}
-                          />
-                        </div>
-
-                        {/* Bottom: State Dependent (Collapsed vs Expanded Card) */}
-                        <div className="relative z-20 flex flex-col justify-end">
-                          {/* Collapsed State Title when another game is focused */}
-                          {!isHovered && isAnyHovered && (
-                            <div className="flex flex-col items-center justify-center text-center py-4">
-                              <span className="text-[11px] font-black uppercase tracking-widest text-white/80 rotate-[-90deg] whitespace-nowrap mb-6">
-                                {game.title}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Idle State Prompt */}
-                          {!isAnyHovered && (
-                            <div className="p-3 rounded-xl bg-black/60 border border-white/10 backdrop-blur-md space-y-1 transition-all">
-                              <span className="text-xs font-bold text-white block">
-                                {game.tagline}
-                              </span>
-                              <span className="text-[11px] text-[#A6ADB8] flex items-center gap-1 font-semibold">
-                                Pasa el ratón para expandir <ArrowRight className="w-3 h-3" />
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Expanded Hovered State Card */}
-                          {isHovered && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 15 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.25 }}
-                              className="p-4 md:p-5 rounded-2xl bg-black/85 border border-white/20 backdrop-blur-xl shadow-2xl space-y-3.5"
-                            >
-                              {/* Title & Tagline */}
-                              <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                                <div>
-                                  <h3 className="text-base md:text-lg font-black text-white uppercase tracking-tight flex items-center gap-2">
-                                    <span>{game.title}</span>
-                                    <span
-                                      className="w-2 h-2 rounded-full"
-                                      style={{ backgroundColor: game.accentHex }}
-                                    />
-                                  </h3>
-                                  <p className="text-xs text-slate-300 font-medium">
-                                    {game.tagline}
-                                  </p>
-                                </div>
-
-                                <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>Calibrado</span>
-                                </div>
-                              </div>
-
-                              {/* Tweaks List */}
-                              <div className="space-y-1.5 text-xs">
-                                {game.exclusiveTweaks.map((tweak, i) => (
-                                  <div
-                                    key={i}
-                                    className="flex items-center gap-2 text-slate-200"
-                                  >
-                                    <span
-                                      className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-black flex-shrink-0"
-                                      style={{ backgroundColor: game.accentHex }}
-                                    >
-                                      <Check className="w-2.5 h-2.5 stroke-[3]" />
-                                    </span>
-                                    <span className="line-clamp-1">{tweak}</span>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* Hardware Bar */}
-                              <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[11px] font-mono text-cyan-300 flex items-center gap-2">
-                                <Cpu className="w-3.5 h-3.5 flex-shrink-0 text-cyan-400" />
-                                <span className="truncate">
-                                  {game.hardwareHighlight(hwContext)}
-                                </span>
-                              </div>
-
-                              {/* Big Action Button */}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSelectGame(game.id);
-                                  onClose();
-                                }}
-                                className="w-full py-3 px-4 rounded-xl text-black font-black text-xs md:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                style={{
-                                  backgroundColor: game.accentHex,
-                                  boxShadow: `0 0 25px ${game.glowColor}`,
-                                }}
-                              >
-                                <span>OPTIMIZAR PARA {game.id.toUpperCase()}</span>
-                                <ArrowRight className="w-4 h-4 stroke-[3]" />
-                              </button>
-                            </motion.div>
-                          )}
+                        <div className="pt-1">
+                          <GameLogoHeader gameId={game.id} />
                         </div>
                       </div>
 
-                      {/* DIAGONAL DIVIDING BAR (slanted with skewX(-13deg)) */}
-                      {index < DIAGONAL_PANELS.length - 1 && (
-                        <div className="absolute top-[-25%] bottom-[-25%] right-0 w-[6px] md:w-[8px] bg-[#05070A] shadow-[0_0_20px_rgba(0,0,0,0.95)] z-30 pointer-events-none border-x border-white/[0.12]" />
-                      )}
+                      {/* Middle: Transparent Character Artwork (Zero white boxes, high contrast) */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden pt-12 pb-20 z-10">
+                        <img
+                          src={game.characterImg}
+                          alt={game.title}
+                          className={`max-h-[72%] max-w-[85%] object-contain transition-transform duration-500 ease-out drop-shadow-[0_15px_35px_rgba(0,0,0,0.9)] ${
+                            isHovered ? "scale-105 -translate-y-2" : "scale-100"
+                          }`}
+                          style={{
+                            maskImage:
+                              "linear-gradient(to bottom, black 65%, rgba(0,0,0,0.85) 80%, transparent 98%)",
+                            WebkitMaskImage:
+                              "linear-gradient(to bottom, black 65%, rgba(0,0,0,0.85) 80%, transparent 98%)",
+                          }}
+                        />
+                      </div>
+
+                      {/* Bottom Area: Balanced footer info (Collapsed vs Expanded) */}
+                      <div className="relative z-20 flex flex-col justify-end flex-shrink-0">
+                        {/* Non-hovered state: Clean horizontal label (never rotated or squished) */}
+                        {!isHovered && (
+                          <div className="p-3 rounded-xl bg-black/65 border border-white/10 backdrop-blur-md space-y-0.5 transition-all">
+                            <span className="text-xs font-bold text-white block truncate">
+                              {game.tagline}
+                            </span>
+                            <span className="text-[11px] text-[#A6ADB8] flex items-center gap-1 font-semibold">
+                              Pasa el ratón para enfocar <ArrowRight className="w-3 h-3" />
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Hovered State: Compact, elegant glassmorphic card (Doesn't cover character face) */}
+                        {isHovered && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.22 }}
+                            className="p-3.5 md:p-4 rounded-xl bg-black/85 border border-white/20 backdrop-blur-xl shadow-2xl space-y-2.5"
+                          >
+                            {/* Title & Tagline row */}
+                            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                              <div>
+                                <h3 className="text-sm md:text-base font-black text-white uppercase tracking-tight flex items-center gap-2">
+                                  <span>{game.title}</span>
+                                  <span
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: game.accentHex }}
+                                  />
+                                </h3>
+                                <p className="text-[11px] text-slate-300 font-medium">
+                                  {game.tagline}
+                                </p>
+                              </div>
+
+                              <div className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                                <Sparkles className="w-3 h-3" />
+                                <span>Calibrado</span>
+                              </div>
+                            </div>
+
+                            {/* Tweaks List (Compact 1-line bullets) */}
+                            <div className="space-y-1 text-xs">
+                              {game.exclusiveTweaks.map((tweak, i) => (
+                                <div
+                                  key={i}
+                                  className="flex items-center gap-2 text-slate-200"
+                                >
+                                  <span
+                                    className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-bold text-black flex-shrink-0"
+                                    style={{ backgroundColor: game.accentHex }}
+                                  >
+                                    <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                  </span>
+                                  <span className="truncate">{tweak}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Hardware Highlights Bar */}
+                            <div className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10.5px] font-mono text-cyan-300 flex items-center gap-2">
+                              <Cpu className="w-3 h-3 flex-shrink-0 text-cyan-400" />
+                              <span className="truncate">
+                                {game.hardwareHighlight(hwContext)}
+                              </span>
+                            </div>
+
+                            {/* Action CTA Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectGame(game.id);
+                                onClose();
+                              }}
+                              className="w-full py-2.5 px-4 rounded-xl text-black font-black text-xs md:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99]"
+                              style={{
+                                backgroundColor: game.accentHex,
+                                boxShadow: `0 0 25px ${game.glowColor}`,
+                              }}
+                            >
+                              <span>OPTIMIZAR PARA {game.id.toUpperCase()}</span>
+                              <ArrowRight className="w-4 h-4 stroke-[3]" />
+                            </button>
+                          </motion.div>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Bottom Footer: VSS Restore Guarantee & Close Button */}
-          <div className="flex items-center justify-between px-6 py-3.5 border-t border-white/[0.08] bg-white/[0.02] flex-shrink-0">
+          <div className="flex items-center justify-between px-6 py-3 border-t border-white/[0.08] bg-white/[0.02] flex-shrink-0">
             <div className="flex items-center gap-2 text-xs text-[#8A919E]">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>
@@ -555,7 +546,7 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                   onSelectGame("general");
                   onClose();
                 }}
-                className="px-5 py-2.5 text-xs font-bold text-white bg-white/[0.08] hover:bg-white/[0.15] border border-white/20 rounded-xl flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="px-5 py-2 text-xs font-bold text-white bg-white/[0.08] hover:bg-white/[0.15] border border-white/20 rounded-xl flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Layers className="w-4 h-4 text-cyan-400" />
                 <span>Optimizar Modo General (Todo el PC)</span>

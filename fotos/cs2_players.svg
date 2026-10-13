@@ -2,7 +2,7 @@
 viewBox = "0 0 512 390"
 width="512"
 height="390">
-<g fill="None" fill-opacity="0.0" stroke="#FDFDFD" stroke-opacity="1.00" stroke-width="0.3"><path d="
+<g fill="None" fill-opacity="0.0" stroke="#FDFDFD" stroke-opacity="0.00" display="none" stroke-width="0.3"><path d="
 M 0.00 213.00 
 C 8.22 200.63 23.21 192.00 36.00 184.00
 C 39.83 181.60 44.24 178.72 48.00 176.00
@@ -1818,7 +1818,7 @@ C 287.42 192.82 290.52 176.68 287.00 170.00
 C 287.76 175.92 282.89 176.86 278.00 176.00
 C 279.28 178.73 280.83 181.70 278.00 184.00 Z"/>
 </g>
-<g fill="None" fill-opacity="0.0" stroke="#FDFDFD" stroke-opacity="1.00" stroke-width="0.3"><path d="
+<g fill="None" fill-opacity="0.0" stroke="#FDFDFD" stroke-opacity="0.00" display="none" stroke-width="0.3"><path d="
 M 0.00 217.00 
 L 0.00 390.00
 L 122.00 390.00
@@ -2003,7 +2003,7 @@ M 356.00 344.00
 C 356.07 342.44 355.91 337.46 356.00 336.00
 C 355.56 338.40 355.87 341.56 356.00 344.00 Z"/>
 </g>
-<g fill="#FDFDFD" fill-opacity="1.00" stroke="None">
+<g fill="#FDFDFD" fill-opacity="0.00" display="none" stroke="None">
 <path d="
 M 0.00 213.00 
 C 8.22 200.63 23.21 192.00 36.00 184.00
@@ -3970,7 +3970,7 @@ C 287.42 192.82 290.52 176.68 287.00 170.00
 C 287.76 175.92 282.89 176.86 278.00 176.00
 C 279.28 178.73 280.83 181.70 278.00 184.00 Z"/>
 </g>
-<g fill="#FDFDFD" fill-opacity="1.00" stroke="None">
+<g fill="#FDFDFD" fill-opacity="0.00" display="none" stroke="None">
 <path d="
 M 0.00 217.00 
 L 0.00 390.00

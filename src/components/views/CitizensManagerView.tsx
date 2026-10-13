@@ -21,8 +21,9 @@ import {
   Layers,
   Zap,
   FileArchive,
-  Image as ImageIcon,
-  Link as LinkIcon,
+  ImageIcon,
+  Clipboard,
+  Maximize2,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAuth } from '../../context/AuthContext';
@@ -52,8 +53,8 @@ const COVER_PRESETS = [
     url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1000&auto=format&fit=crop',
   },
   {
-    name: 'Cinematic Visuals',
-    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop',
+    name: 'Patata Low-End',
+    url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1000&auto=format&fit=crop',
   },
 ];
 
@@ -67,8 +68,11 @@ export const CitizensManagerView: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('pvp');
   const [autoClearCache, setAutoClearCache] = useState<boolean>(true);
+
+  // Modal de vista previa de imagen en alta resolución
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
   // Estados de acción
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -124,7 +128,6 @@ export const CitizensManagerView: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    // Polling ligero para monitorear si el usuario abre o cierra FiveM
     const interval = setInterval(() => {
       invoke<FiveMCitizenInfo>('get_fivem_citizen_info')
         .then((latest) => setInfo(latest))
@@ -136,6 +139,65 @@ export const CitizensManagerView: React.FC = () => {
   const showToast = (type: 'success' | 'error', message: string) => {
     setFeedbackToast({ type, message });
     setTimeout(() => setFeedbackToast(null), 5000);
+  };
+
+  // Subida de imagen portada helper
+  const handleUploadCoverBlob = async (file: File) => {
+    setIsUploadingCover(true);
+    try {
+      showToast('success', 'Subiendo imagen pegada a Storage...');
+      const coverUrl = await uploadCitizenCover(file);
+      setUploadForm((prev) => ({ ...prev, cover_url: coverUrl }));
+      showToast('success', '✓ Captura adjuntada y vinculada con éxito');
+    } catch (err: any) {
+      showToast('error', `Error al subir imagen: ${err.message}`);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
+  // Listener para Ctrl+V de imágenes copiadas en el portapapeles
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!isUploadModalOpen) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            handleUploadCoverBlob(file);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [isUploadModalOpen]);
+
+  // Pegar manualmente desde botón del portapapeles
+  const handlePasteFromClipboardBtn = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find((t) => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            const file = new File([blob], `clipboard_${Date.now()}.png`, { type: imageType });
+            await handleUploadCoverBlob(file);
+            return;
+          }
+        }
+      }
+      showToast('error', 'No se detectó ninguna imagen en el portapapeles. Copia una captura y pulsa Ctrl+V.');
+    } catch {
+      showToast('error', 'Copia una imagen y presiona Ctrl+V dentro del modal.');
+    }
   };
 
   // Guard de FiveM en ejecución
@@ -153,7 +215,6 @@ export const CitizensManagerView: React.FC = () => {
       showToast('success', 'FiveM cerrado de forma segura.');
       const pending = runningAlertPendingAction;
       setRunningAlertPendingAction(null);
-      // Re-consultar info
       const latest = await invoke<FiveMCitizenInfo>('get_fivem_citizen_info');
       setInfo(latest);
       if (pending) {
@@ -177,9 +238,7 @@ export const CitizensManagerView: React.FC = () => {
           clearCache: autoClearCache,
         });
 
-        // Incrementar contador de descargas
         incrementCitizenDownload(citizen.id);
-
         showToast('success', `¡Citizen '${citizen.title}' instalado y activado!`);
         loadData(true);
       } catch (err: any) {
@@ -233,7 +292,7 @@ export const CitizensManagerView: React.FC = () => {
     });
   };
 
-  // Eliminar copia local para liberar espacio
+  // Eliminar copia local
   const handleDeleteLocal = async (citizenId: string, title: string) => {
     try {
       await invoke('delete_local_citizen', { citizenId });
@@ -286,7 +345,7 @@ export const CitizensManagerView: React.FC = () => {
     try {
       showToast('success', `Subiendo ${file.name} a Supabase Storage...`);
       const { publicUrl, fileSizeFormatted, fileSizeBytes } = await uploadCitizenPackage(file);
-      
+
       setUploadForm((prev) => ({
         ...prev,
         download_url: publicUrl,
@@ -305,20 +364,11 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
-  // Admin: Manejar subida de portada personalizada a Supabase Storage
+  // Admin: Subir imagen de portada desde selector de archivos
   const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingCover(true);
-    try {
-      const coverUrl = await uploadCitizenCover(file);
-      setUploadForm((prev) => ({ ...prev, cover_url: coverUrl }));
-      showToast('success', 'Portada subida con éxito a Storage.');
-    } catch (err: any) {
-      showToast('error', `Error al subir imagen: ${err.message}`);
-    } finally {
-      setIsUploadingCover(false);
+    if (file) {
+      await handleUploadCoverBlob(file);
     }
   };
 
@@ -356,34 +406,23 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
-  // Filtros (Categorías: Todos, Competitivo PvP, FPS Boost, Calidad Gráfica, Potato, Descargados)
+  // Filtros: Solo Competitivo PvP, FPS Boost Ultra, Calidad Gráfica y Patata
   const filteredCitizens = useMemo(() => {
     return citizens.filter((c) => {
       const matchesSearch =
         c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.performance_badge.toLowerCase().includes(searchQuery.toLowerCase());
+        c.description.toLowerCase().includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
-
-      if (selectedCategory === 'all') return true;
-      if (selectedCategory === 'downloaded') {
-        return info?.installed_citizen_ids.includes(c.id);
-      }
       return c.category === selectedCategory;
     });
-  }, [citizens, searchQuery, selectedCategory, info]);
+  }, [citizens, searchQuery, selectedCategory]);
 
   const categories = [
-    { id: 'all', label: `Todos (${citizens.length})` },
     { id: 'pvp', label: `Competitivo PvP (${citizens.filter((c) => c.category === 'pvp').length})` },
     { id: 'fps_boost', label: `FPS Boost Ultra (${citizens.filter((c) => c.category === 'fps_boost').length})` },
     { id: 'graphics_quality', label: `Calidad Gráfica (${citizens.filter((c) => c.category === 'graphics_quality').length})` },
-    { id: 'potato', label: `Potato / Low End (${citizens.filter((c) => c.category === 'potato').length})` },
-    {
-      id: 'downloaded',
-      label: `Descargados (${citizens.filter((c) => info?.installed_citizen_ids.includes(c.id)).length})`,
-    },
+    { id: 'potato', label: `Patata (${citizens.filter((c) => c.category === 'potato').length})` },
   ];
 
   return (
@@ -431,17 +470,14 @@ export const CitizensManagerView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold tracking-tight text-white">Gestor de Citizens</h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  CLOUD MARKETPLACE
-                </span>
                 {isAdmin && (
                   <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    ADMIN MODE
+                    ADMIN
                   </span>
                 )}
               </div>
               <p className="text-xs text-[#8B949E]">
-                Catálogo en la nube oficial: instala, descarga y cambia gráficos de FiveM en 1 solo clic.
+                Instala y cambia los gráficos de FiveM en 1 solo clic.
               </p>
             </div>
           </div>
@@ -456,7 +492,7 @@ export const CitizensManagerView: React.FC = () => {
               <span>FiveM en Ejecución</span>
               <button
                 onClick={() => handleForceCloseFiveMAndProceed()}
-                title="Cerrar FiveM de forma forzada para aplicar cambios"
+                title="Cerrar FiveM para aplicar cambios"
                 className="ml-1 p-1 rounded-md bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 transition-colors"
               >
                 <XCircle className="w-3.5 h-3.5" />
@@ -476,7 +512,7 @@ export const CitizensManagerView: React.FC = () => {
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-mono text-[#CBD5E1] transition-all"
           >
             <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">FiveM.app\citizen</span>
+            <span className="hidden sm:inline">Carpeta citizen</span>
           </button>
 
           {/* Botón Pánico Restaurar Vanilla */}
@@ -513,11 +549,11 @@ export const CitizensManagerView: React.FC = () => {
 
       {/* 
         ========================================================================
-        BARRA DE FILTROS, BÚSQUEDA Y OPCIONES
+        BARRA DE FILTROS Y BÚSQUEDA (Solo las 4 categorías requeridas)
         ========================================================================
       */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Pestañas Categorías */}
+        {/* Pestañas de Categorías */}
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0e1117] border border-white/[0.08] overflow-x-auto">
           {categories.map((cat) => (
             <button
@@ -543,7 +579,7 @@ export const CitizensManagerView: React.FC = () => {
               onChange={(e) => setAutoClearCache(e.target.checked)}
               className="rounded bg-black/40 border-white/20 text-cyan-500 focus:ring-0 cursor-pointer"
             />
-            <span>Auto-limpiar caché al cambiar</span>
+            <span>Auto-limpiar caché</span>
           </label>
 
           <div className="relative w-full md:w-64">
@@ -552,7 +588,7 @@ export const CitizensManagerView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar citizen o FPS..."
+              placeholder="Buscar..."
               className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#0e1117] border border-white/[0.08] text-xs text-white placeholder-[#8B949E] focus:outline-none focus:border-cyan-500/50"
             />
           </div>
@@ -561,23 +597,18 @@ export const CitizensManagerView: React.FC = () => {
 
       {/* 
         ========================================================================
-        GRID DE TARJETAS DE CITIZENS
+        GRID DE TARJETAS DE CITIZENS (Limpias, sin badges invasivas)
         ========================================================================
       */}
       {isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 text-[#8B949E] space-y-3">
           <RefreshCw className="w-8 h-8 animate-spin text-cyan-400" />
-          <span className="text-xs">Sincronizando catálogo oficial con Supabase...</span>
+          <span className="text-xs">Cargando citizens...</span>
         </div>
       ) : filteredCitizens.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 text-[#8B949E] space-y-3 rounded-2xl border border-white/[0.06] bg-[#0e1117]/40">
           <Layers className="w-10 h-10 text-white/20" />
-          <p className="text-sm font-medium text-white">No se encontraron Citizens</p>
-          <p className="text-xs max-w-sm text-center">
-            {searchQuery
-              ? 'Prueba con otro término de búsqueda o limpia los filtros.'
-              : 'Aún no hay Citizens publicados en esta categoría.'}
-          </p>
+          <p className="text-sm font-medium text-white">No hay Citizens en esta categoría</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -585,13 +616,6 @@ export const CitizensManagerView: React.FC = () => {
             const isActive = info?.active_citizen_id === citizen.id;
             const isDownloaded = info?.installed_citizen_ids.includes(citizen.id);
             const isActionLoading = actionLoadingId === citizen.id;
-
-            const categoryNameMap: Record<string, string> = {
-              pvp: 'COMPETITIVO',
-              fps_boost: 'FPS BOOST',
-              graphics_quality: 'CALIDAD GRÁFICA',
-              potato: 'LOW END',
-            };
 
             return (
               <div
@@ -602,34 +626,29 @@ export const CitizensManagerView: React.FC = () => {
                     : 'border-white/[0.08] hover:border-white/[0.18] hover:shadow-glassHover'
                 }`}
               >
-                {/* Cover Image con Overlay */}
-                <div className="relative h-40 w-full overflow-hidden bg-black/40">
+                {/* Cover Image con Clic para ver foto completa */}
+                <div
+                  onClick={() => setPreviewImage({ url: citizen.cover_url, title: citizen.title })}
+                  className="relative h-44 w-full overflow-hidden bg-black/40 cursor-pointer group/img"
+                  title="Haz clic para ver captura completa en grande"
+                >
                   <img
                     src={citizen.cover_url}
                     alt={citizen.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-80"
+                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500 opacity-85"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#12151d] via-[#12151d]/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#12151d] via-[#12151d]/30 to-transparent" />
 
-                  {/* Badges Flotantes Superiores */}
-                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-medium tracking-wide bg-black/60 backdrop-blur-md border border-white/10 text-white">
-                      {categoryNameMap[citizen.category] || citizen.category.toUpperCase()}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold tracking-wide bg-cyan-500/20 backdrop-blur-md border border-cyan-400/40 text-cyan-300 shadow-sm">
-                      {citizen.performance_badge}
-                    </span>
-                  </div>
-
-                  {/* Badge de No Publicado (Solo Admin) */}
-                  {!citizen.is_published && (
-                    <div className="absolute bottom-2 left-3 px-2 py-0.5 rounded text-[9px] font-mono font-semibold bg-amber-500/30 text-amber-300 border border-amber-500/40">
-                      BORRADOR / OCULTO
+                  {/* Icono de zoom en hover */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/30 backdrop-blur-[2px] transition-opacity">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-medium">
+                      <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Ver captura</span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Contenido de la Tarjeta */}
+                {/* Contenido de la Tarjeta (Limpio y directo) */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
                   <div>
                     <h3 className="text-sm font-bold text-white tracking-tight leading-snug">
@@ -640,51 +659,50 @@ export const CitizensManagerView: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Metadatos: Tamaño, Versión, Descargas */}
+                  {/* Metadatos limpios */}
                   <div className="pt-2 flex items-center justify-between border-t border-white/[0.06] text-[11px] font-mono text-[#8B949E]">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1 text-white/80">
-                        <HardDrive className="w-3 h-3 text-cyan-400" />
-                        {citizen.file_size_formatted}
-                      </span>
-                      <span>{citizen.version}</span>
-                    </div>
-                    <span className="text-[#6E7681]">⬇️ {citizen.downloads_count} users</span>
-                  </div>
+                    <span className="flex items-center gap-1 text-white/80">
+                      <HardDrive className="w-3 h-3 text-cyan-400" />
+                      {citizen.file_size_formatted}
+                    </span>
 
-                  {/* Controles de Administrador */}
-                  {isAdmin && (
-                    <div className="pt-2 flex items-center justify-between border-t border-white/[0.04] text-[11px]">
-                      <span className="text-[10px] font-mono text-purple-400">Admin Options:</span>
+                    {/* Controles rápidos de Admin si procede */}
+                    {isAdmin && (
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => handleTogglePublish(citizen)}
-                          title={citizen.is_published ? 'Ocultar a usuarios' : 'Publicar a usuarios'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTogglePublish(citizen);
+                          }}
+                          title={citizen.is_published ? 'Ocultar' : 'Publicar'}
                           className="p-1 rounded bg-white/[0.04] hover:bg-white/[0.1] text-white/80"
                         >
                           {citizen.is_published ? (
-                            <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                            <Eye className="w-3 h-3 text-emerald-400" />
                           ) : (
-                            <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                            <EyeOff className="w-3 h-3 text-amber-400" />
                           )}
                         </button>
                         <button
-                          onClick={() => handleDeleteFromCloud(citizen)}
-                          title="Eliminar Citizen de la nube"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFromCloud(citizen);
+                          }}
+                          title="Eliminar de la nube"
                           className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Botón de Acción Principal */}
                   <div className="pt-1">
                     {isActive ? (
                       <div className="w-full py-2 px-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-2 shadow-inner">
                         <Check className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Instalado & Activo en FiveM</span>
+                        <span>Activo en FiveM</span>
                       </div>
                     ) : isDownloaded ? (
                       <div className="flex items-center gap-2">
@@ -707,7 +725,7 @@ export const CitizensManagerView: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleDeleteLocal(citizen.id, citizen.title)}
-                          title="Eliminar copia local descargada para liberar espacio"
+                          title="Eliminar archivos locales"
                           className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-rose-400 transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -739,6 +757,58 @@ export const CitizensManagerView: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* 
+        ========================================================================
+        MODAL LIGHTBOX: VER FOTO DE CÓMO SE VE EL CITIZEN EN GRANDE
+        ========================================================================
+      */}
+      <AnimatePresence>
+        {previewImage && (
+          <div
+            onClick={() => setPreviewImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/85 backdrop-blur-xl cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden bg-[#12151d] border border-white/20 shadow-2xl cursor-default"
+            >
+              <div className="absolute top-3 right-3 z-10">
+                <button
+                  onClick={() => setPreviewImage(null)}
+                  className="p-2 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="overflow-hidden flex items-center justify-center bg-black/50">
+                <img
+                  src={previewImage.url}
+                  alt={previewImage.title}
+                  className="w-full max-h-[75vh] object-contain select-none"
+                />
+              </div>
+
+              <div className="p-4 bg-[#0e1117] border-t border-white/10 flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-white">{previewImage.title}</h4>
+                  <p className="text-xs text-[#8B949E]">Captura visual del Citizen en partida</p>
+                </div>
+                <button
+                  onClick={() => setPreviewImage(null)}
+                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-xs font-medium text-white transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 
         ========================================================================
@@ -850,7 +920,7 @@ export const CitizensManagerView: React.FC = () => {
 
       {/* 
         ========================================================================
-        MODAL SUBIDA NUEVO CITIZEN (ADMIN ONLY) CON SUBIDA AUTOMÁTICA A STORAGE
+        MODAL SUBIDA NUEVO CITIZEN (ADMIN ONLY) CON PEGAR CTRL+V DIRECTO
         ========================================================================
       */}
       <AnimatePresence>
@@ -868,7 +938,7 @@ export const CitizensManagerView: React.FC = () => {
                   <div>
                     <h3 className="text-base font-bold text-white">Subir Nuevo Citizen al Catálogo</h3>
                     <p className="text-[11px] text-[#8B949E]">
-                      Sube tu archivo .zip o .rar y se almacenará automáticamente en Supabase Storage
+                      Sube tu .zip o .rar y pega la captura de pantalla directamente con Ctrl+V
                     </p>
                   </div>
                 </div>
@@ -891,10 +961,9 @@ export const CitizensManagerView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setShowManualUrl(!showManualUrl)}
-                      className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
+                      className="text-[11px] text-cyan-400 hover:underline"
                     >
-                      <LinkIcon className="w-3 h-3" />
-                      <span>{showManualUrl ? 'Subir archivo de mi PC' : 'O pegar URL manual'}</span>
+                      {showManualUrl ? 'Subir archivo de mi PC' : 'O pegar URL manual'}
                     </button>
                   </div>
 
@@ -943,9 +1012,6 @@ export const CitizensManagerView: React.FC = () => {
                             Haz clic aquí o arrastra tu archivo <strong className="text-cyan-400">.zip</strong> o{' '}
                             <strong className="text-cyan-400">.rar</strong>
                           </span>
-                          <span className="text-[10px] text-[#8B949E]">
-                            Se subirá directamente a la nube y se vinculará de forma automática
-                          </span>
                         </div>
                       )}
                     </div>
@@ -962,96 +1028,30 @@ export const CitizensManagerView: React.FC = () => {
                   )}
                 </div>
 
-                {/* Título */}
-                <div className="space-y-1">
-                  <label className="text-white/80 font-medium">Nombre / Título del Preset</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="ej: g0d eSports PvP Ultimate v2"
-                    value={uploadForm.title}
-                    onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                {/* Categoría y Badge */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-white/80 font-medium">Categoría</label>
-                    <select
-                      value={uploadForm.category}
-                      onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
-                    >
-                      <option value="pvp">Competitivo PvP</option>
-                      <option value="fps_boost">FPS Boost Ultra</option>
-                      <option value="graphics_quality">Calidad Gráfica</option>
-                      <option value="potato">Potato / Low End</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-white/80 font-medium">Badge de Rendimiento</label>
-                    <input
-                      type="text"
-                      placeholder="ej: +45 FPS, ULTRA HD, PVP READY"
-                      value={uploadForm.performance_badge}
-                      onChange={(e) => setUploadForm({ ...uploadForm, performance_badge: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
-                    />
-                  </div>
-                </div>
-
-                {/* Tamaño y Versión */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-white/80 font-medium">Peso Estimado</label>
-                    <input
-                      type="text"
-                      placeholder="ej: 850 MB"
-                      value={uploadForm.file_size_formatted}
-                      onChange={(e) => setUploadForm({ ...uploadForm, file_size_formatted: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-white/80 font-medium">Versión</label>
-                    <input
-                      type="text"
-                      placeholder="ej: v1.0"
-                      value={uploadForm.version}
-                      onChange={(e) => setUploadForm({ ...uploadForm, version: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
-                    />
-                  </div>
-                </div>
-
-                {/* Descripción */}
-                <div className="space-y-1">
-                  <label className="text-white/80 font-medium">Descripción y Tweaks incluidos</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Detalla los cambios (niebla, lluvia, sombras, sangre, etc.)..."
-                    value={uploadForm.description}
-                    onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400 resize-none"
-                  />
-                </div>
-
-                {/* Imagen de Portada con Subida a Storage */}
+                {/* ZONA DE CAPTURA DE PANTALLA: PEGAR DIRECTO CON CTRL+V */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-white/80 font-medium flex items-center gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Imagen de Portada</span>
+                    <label className="text-white/90 font-semibold flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-cyan-400" />
+                      <span>Captura de Fondo / Portada</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => coverInputRef.current?.click()}
-                      className="text-[11px] text-cyan-400 hover:underline"
-                    >
-                      {isUploadingCover ? 'Subiendo imagen...' : 'Subir imagen desde PC'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handlePasteFromClipboardBtn}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 text-[11px] font-medium transition-colors"
+                      >
+                        <Clipboard className="w-3 h-3" />
+                        <span>Pegar captura (Ctrl+V)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => coverInputRef.current?.click()}
+                        className="text-[11px] text-[#8B949E] hover:text-white underline"
+                      >
+                        Subir archivo
+                      </button>
+                    </div>
                     <input
                       type="file"
                       ref={coverInputRef}
@@ -1060,43 +1060,60 @@ export const CitizensManagerView: React.FC = () => {
                       className="hidden"
                     />
                   </div>
-                  <input
-                    type="url"
-                    placeholder="https://.../cover.jpg"
-                    value={uploadForm.cover_url}
-                    onChange={(e) => setUploadForm({ ...uploadForm, cover_url: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400 font-mono text-[11px]"
-                  />
-                  <div className="flex items-center gap-2 pt-1 overflow-x-auto">
-                    <span className="text-[10px] text-[#8B949E] whitespace-nowrap">Presets rápidos:</span>
-                    {COVER_PRESETS.map((preset, idx) => (
-                      <button
-                        type="button"
-                        key={idx}
-                        onClick={() => setUploadForm({ ...uploadForm, cover_url: preset.url })}
-                        className={`px-2 py-1 rounded text-[10px] border whitespace-nowrap transition-colors ${
-                          uploadForm.cover_url === preset.url
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40'
-                            : 'bg-white/[0.04] text-white/70 border-white/[0.08] hover:bg-white/[0.08]'
-                        }`}
-                      >
-                        {preset.name}
-                      </button>
-                    ))}
+
+                  {/* Previsualización de la portada actual */}
+                  <div className="relative h-28 w-full rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                    <img
+                      src={uploadForm.cover_url}
+                      alt="Vista previa de portada"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+                      <span className="text-[11px] bg-black/70 px-3 py-1 rounded-lg text-white/90 border border-white/10">
+                        {isUploadingCover ? 'Subiendo imagen pegada...' : 'Puedes pulsar Ctrl+V aquí para pegar una captura'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Switch de Publicación */}
-                <div className="flex items-center gap-4 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs">
-                    <input
-                      type="checkbox"
-                      checked={uploadForm.is_published}
-                      onChange={(e) => setUploadForm({ ...uploadForm, is_published: e.target.checked })}
-                      className="rounded bg-black/40 border-white/20 text-cyan-500 focus:ring-0 cursor-pointer"
-                    />
-                    <span className="text-white">Publicar inmediatamente en el catálogo</span>
-                  </label>
+                {/* Título */}
+                <div className="space-y-1">
+                  <label className="text-white/80 font-medium">Nombre / Título del Preset</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ej: g0d eSports PvP Ultimate"
+                    value={uploadForm.title}
+                    onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                {/* Categoría */}
+                <div className="space-y-1">
+                  <label className="text-white/80 font-medium">Categoría</label>
+                  <select
+                    value={uploadForm.category}
+                    onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="pvp">Competitivo PvP</option>
+                    <option value="fps_boost">FPS Boost Ultra</option>
+                    <option value="graphics_quality">Calidad Gráfica</option>
+                    <option value="potato">Patata</option>
+                  </select>
+                </div>
+
+                {/* Descripción */}
+                <div className="space-y-1">
+                  <label className="text-white/80 font-medium">Descripción breve</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Detalles del preset visual..."
+                    value={uploadForm.description}
+                    onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400 resize-none"
+                  />
                 </div>
 
                 {/* Botones de Envío */}

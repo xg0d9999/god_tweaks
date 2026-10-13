@@ -30,7 +30,7 @@ interface HardwareContext {
   hasHighRam: boolean;
 }
 
-interface DiagonalGamePanel {
+interface VerticalGamePanel {
   id: TargetGameId;
   title: string;
   tagline: string;
@@ -43,15 +43,15 @@ interface DiagonalGamePanel {
   hardwareHighlight: (hw: HardwareContext) => string;
 }
 
-const DIAGONAL_PANELS: DiagonalGamePanel[] = [
+const GAME_PANELS: VerticalGamePanel[] = [
   {
     id: "fivem",
     title: "FiveM & GTA V",
     tagline: "RAGE Engine & NUI Textures",
     engineBadge: "RAGE ENGINE & FIVEM",
     characterImg: "/fotos/fivemplayers.png",
-    gradientClass: "from-amber-500/40 via-orange-600/25 to-[#160802]/90",
-    glowColor: "rgba(245, 158, 11, 0.5)",
+    gradientClass: "from-amber-500/35 via-orange-600/20 to-[#140601]/90",
+    glowColor: "rgba(245, 158, 11, 0.45)",
     accentHex: "#FF8A00",
     exclusiveTweaks: [
       "Prioridad Alta CPU/IO en FiveM.exe, GTA5.exe y b2699..b3095",
@@ -67,8 +67,8 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "Unreal Engine 5 & Anti-Cheat",
     engineBadge: "UNREAL ENGINE 5",
     characterImg: "/fotos/fortniteplayers_opt.png",
-    gradientClass: "from-sky-400/35 via-fuchsia-600/25 to-[#120026]/90",
-    glowColor: "rgba(168, 85, 247, 0.5)",
+    gradientClass: "from-sky-400/30 via-fuchsia-600/20 to-[#120026]/90",
+    glowColor: "rgba(168, 85, 247, 0.45)",
     accentHex: "#D946EF",
     exclusiveTweaks: [
       "Prioridad IFEO en FortniteClient-Win64-Shipping",
@@ -84,8 +84,8 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "Source 2 Sub-Tick Precision",
     engineBadge: "SOURCE 2 SUB-TICK",
     characterImg: "/fotos/cs2_players.svg",
-    gradientClass: "from-cyan-500/35 via-slate-800/45 to-[#ea580c]/40",
-    glowColor: "rgba(234, 88, 12, 0.5)",
+    gradientClass: "from-cyan-500/30 via-slate-800/40 to-[#ea580c]/35",
+    glowColor: "rgba(234, 88, 12, 0.45)",
     accentHex: "#F97316",
     exclusiveTweaks: [
       "Prioridad de proceso y GPU en cs2.exe",
@@ -101,8 +101,8 @@ const DIAGONAL_PANELS: DiagonalGamePanel[] = [
     tagline: "Riot Vanguard 100% Safe",
     engineBadge: "RIOT VANGUARD SAFE",
     characterImg: "/fotos/valorantplayer.png",
-    gradientClass: "from-rose-500/40 via-red-900/30 to-[#0c0408]/90",
-    glowColor: "rgba(255, 70, 85, 0.5)",
+    gradientClass: "from-rose-500/35 via-red-900/25 to-[#0b0407]/90",
+    glowColor: "rgba(255, 70, 85, 0.45)",
     accentHex: "#FF4655",
     exclusiveTweaks: [
       "Prioridad Alta en VALORANT-Win64-Shipping (Riot Safe)",
@@ -153,7 +153,7 @@ const GameLogoHeader: React.FC<{ gameId: TargetGameId }> = ({ gameId }) => {
           <img
             src="/fotos/cs2_logop.svg"
             alt="CS2 Logo"
-            className="h-9 md:h-10 w-auto object-contain flex-shrink-0"
+            className="h-8 md:h-9 w-auto object-contain flex-shrink-0"
           />
           <div className="flex flex-col text-left">
             <span className="text-xs md:text-sm font-black tracking-wider text-slate-100 uppercase leading-none">
@@ -196,7 +196,7 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
   onSelectGame,
   hardware,
 }) => {
-  // State for hovered panel in diagonal accordion
+  // State for hovered panel in vertical accordion
   const [hoveredId, setHoveredId] = useState<TargetGameId | null>(null);
 
   if (!isOpen) return null;
@@ -258,11 +258,11 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                     CALIBRACIÓN ADAPTATIVA POR JUEGO
                   </h2>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30">
-                    DIAGONAL EDITION
+                    EDICIÓN PROFESIONAL
                   </span>
                 </div>
                 <p className="text-xs text-[#8A919E]">
-                  Pasa el ratón sobre tu juego para enfocarlo. Barras diagonales con fondos transparentes y degradados vivos.
+                  Pasa el ratón sobre tu juego para enfocarlo. Fondos limpios sin sombras artificiales con degradados calibrados a tu equipo.
                 </p>
               </div>
             </div>
@@ -327,20 +327,20 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
             </button>
           </div>
 
-          {/* MAIN STAGE: THE DIAGONAL COMIC ACCORDION */}
+          {/* MAIN STAGE: CLEAN VERTICAL COLUMNS ACCORDION */}
           <div
             onMouseLeave={() => setHoveredId(null)}
             className="flex-1 min-h-[580px] p-4 flex flex-row w-full relative overflow-hidden select-none bg-[#05070A]"
           >
-            <div className="w-full h-full rounded-2xl border-4 border-[#07090D] overflow-hidden relative shadow-2xl bg-[#030406] flex flex-row">
-              {DIAGONAL_PANELS.map((game, index) => {
+            <div className="w-full h-full rounded-2xl border-4 border-[#07090D] overflow-hidden relative shadow-2xl bg-[#030406] flex flex-row divide-x divide-white/[0.1]">
+              {GAME_PANELS.map((game) => {
                 const isHovered = hoveredId === game.id;
                 const isAnyHovered = hoveredId !== null;
 
-                // Balanced accordion flex:
+                // Balanced vertical accordion flex:
                 // Idle: each gets flex 1 (25% each -> ~380px on a 1520px container)
                 // Hovered: active gets flex 2.5 (~46% -> ~700px), others get flex 1 (~18% -> ~270px)
-                // This ensures non-hovered panels NEVER look squished or broken!
+                // Straight vertical lines, perfectly symmetric and clean
                 const flexStyle = isHovered
                   ? "2.5 2.5 0%"
                   : isAnyHovered
@@ -365,38 +365,23 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                       !isHovered && isAnyHovered ? "brightness-85 opacity-75" : "brightness-100 opacity-100"
                     }`}
                   >
-                    {/* 1. SKEWED BACKGROUND GRADIENT (Slanted diagonally at -10deg) */}
+                    {/* 1. CLEAN VERTICAL BACKGROUND GRADIENT (No distortion, pure game colors) */}
                     <div
                       className={`absolute inset-0 bg-gradient-to-b ${game.gradientClass} transition-opacity duration-500 ${
                         isHovered ? "opacity-100" : isAnyHovered ? "opacity-45" : "opacity-85"
                       }`}
-                      style={{
-                        transform: "skewX(-10deg) scale(1.15)",
-                        transformOrigin: "center center",
-                      }}
                     />
 
-                    {/* 2. RADIAL GLOW HIGHLIGHT */}
+                    {/* 2. SOFT RADIAL GLOW IN THE GAME'S OWN THEME COLOR (No dirty black shadow) */}
                     <div
                       className="absolute inset-0 pointer-events-none transition-opacity duration-500"
                       style={{
-                        opacity: isHovered ? 0.9 : 0.35,
-                        background: `radial-gradient(circle at 50% 25%, ${game.glowColor} 0%, transparent 75%)`,
+                        opacity: isHovered ? 0.85 : 0.35,
+                        background: `radial-gradient(circle at 50% 30%, ${game.glowColor} 0%, transparent 70%)`,
                       }}
                     />
 
-                    {/* 3. PROMINENT DIAGONAL DIVIDER BAR (on the right edge of each panel) */}
-                    {index < DIAGONAL_PANELS.length - 1 && (
-                      <div
-                        className="absolute top-[-25%] bottom-[-25%] right-[-5px] w-[9px] bg-[#07090D] shadow-[0_0_20px_rgba(0,0,0,0.95)] z-30 pointer-events-none border-x border-white/[0.14]"
-                        style={{
-                          transform: "skewX(-10deg)",
-                          transformOrigin: "center center",
-                        }}
-                      />
-                    )}
-
-                    {/* 4. CONTENT LAYER: 100% UPRIGHT (NO SKEW, ZERO CLIPPING, NO CUT-OFFS) */}
+                    {/* 3. CONTENT LAYER: 100% UPRIGHT & NATURAL */}
                     <div className="relative z-10 w-full h-full flex flex-col justify-between p-5 md:p-6 overflow-hidden">
                       {/* Top: Engine Tag & Transparent Logo */}
                       <div className="flex flex-col items-start gap-2 flex-shrink-0 z-20">
@@ -409,26 +394,23 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Middle: Transparent Character Artwork (Zero white boxes, high contrast) */}
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden pt-12 pb-20 z-10">
+                      {/* Middle: Clean Character Artwork 
+                          - ZERO drop-shadow box (pure alpha cutout)
+                          - ZERO maskImage box (no rectangular halo)
+                          - Blends 100% cleanly into the background gradient */}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden pt-12 pb-24 z-10">
                         <img
                           src={game.characterImg}
                           alt={game.title}
-                          className={`max-h-[72%] max-w-[85%] object-contain transition-transform duration-500 ease-out drop-shadow-[0_15px_35px_rgba(0,0,0,0.9)] ${
+                          className={`max-h-[72%] max-w-[85%] object-contain transition-transform duration-500 ease-out ${
                             isHovered ? "scale-105 -translate-y-2" : "scale-100"
                           }`}
-                          style={{
-                            maskImage:
-                              "linear-gradient(to bottom, black 65%, rgba(0,0,0,0.85) 80%, transparent 98%)",
-                            WebkitMaskImage:
-                              "linear-gradient(to bottom, black 65%, rgba(0,0,0,0.85) 80%, transparent 98%)",
-                          }}
                         />
                       </div>
 
-                      {/* Bottom Area: Balanced footer info (Collapsed vs Expanded) */}
+                      {/* Bottom Area: State Dependent (Collapsed vs Expanded Card) */}
                       <div className="relative z-20 flex flex-col justify-end flex-shrink-0">
-                        {/* Non-hovered state: Clean horizontal label (never rotated or squished) */}
+                        {/* Non-hovered state: Clean horizontal label */}
                         {!isHovered && (
                           <div className="p-3 rounded-xl bg-black/65 border border-white/10 backdrop-blur-md space-y-0.5 transition-all">
                             <span className="text-xs font-bold text-white block truncate">
@@ -440,7 +422,7 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                           </div>
                         )}
 
-                        {/* Hovered State: Compact, elegant glassmorphic card (Doesn't cover character face) */}
+                        {/* Hovered State: Compact, elegant glassmorphic card (Leaves character visible) */}
                         {isHovered && (
                           <motion.div
                             initial={{ opacity: 0, y: 12 }}

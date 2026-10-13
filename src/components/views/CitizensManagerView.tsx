@@ -24,6 +24,7 @@ import {
   ImageIcon,
   Clipboard,
   Maximize2,
+  Pencil,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAuth } from '../../context/AuthContext';
@@ -81,10 +82,11 @@ export const CitizensManagerView: React.FC = () => {
 
   // Modales
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [isConfirmVanillaOpen, setIsConfirmVanillaOpen] = useState<boolean>(false);
   const [runningAlertPendingAction, setRunningAlertPendingAction] = useState<(() => Promise<void>) | null>(null);
 
-  // Subida de archivos en modal
+  // Subida de archivos en modal de creación
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingPackage, setIsUploadingPackage] = useState<boolean>(false);
@@ -92,7 +94,7 @@ export const CitizensManagerView: React.FC = () => {
   const [isUploadingCover, setIsUploadingCover] = useState<boolean>(false);
   const [showManualUrl, setShowManualUrl] = useState<boolean>(false);
 
-  // Formulario de Subida (Admin)
+  // Formulario de Creación (Admin)
   const [uploadForm, setUploadForm] = useState({
     title: '',
     category: 'pvp',
@@ -107,6 +109,25 @@ export const CitizensManagerView: React.FC = () => {
     is_featured: false,
   });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Formulario de Edición (Admin)
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const editCoverInputRef = useRef<HTMLInputElement>(null);
+  const [editingCitizen, setEditingCitizen] = useState<CitizenRecord | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    category: 'pvp',
+    description: '',
+    cover_url: '',
+    download_url: '',
+    file_size_formatted: '',
+    version: 'v1.0',
+    is_published: true,
+  });
+  const [isEditingSubmitting, setIsEditingSubmitting] = useState<boolean>(false);
+  const [isEditUploadingPackage, setIsEditUploadingPackage] = useState<boolean>(false);
+  const [isEditUploadingCover, setIsEditUploadingCover] = useState<boolean>(false);
+  const [editUploadedPackageName, setEditUploadedPackageName] = useState<string | null>(null);
 
   // Cargar datos
   const loadData = async (silent: boolean = false) => {
@@ -142,24 +163,36 @@ export const CitizensManagerView: React.FC = () => {
   };
 
   // Subida de imagen portada helper
-  const handleUploadCoverBlob = async (file: File) => {
-    setIsUploadingCover(true);
+  const handleUploadCoverBlob = async (file: File, isEdit: boolean = false) => {
+    if (isEdit) {
+      setIsEditUploadingCover(true);
+    } else {
+      setIsUploadingCover(true);
+    }
     try {
-      showToast('success', 'Subiendo imagen pegada a Storage...');
+      showToast('success', 'Subiendo imagen a Storage...');
       const coverUrl = await uploadCitizenCover(file);
-      setUploadForm((prev) => ({ ...prev, cover_url: coverUrl }));
+      if (isEdit) {
+        setEditForm((prev) => ({ ...prev, cover_url: coverUrl }));
+      } else {
+        setUploadForm((prev) => ({ ...prev, cover_url: coverUrl }));
+      }
       showToast('success', '✓ Captura adjuntada y vinculada con éxito');
     } catch (err: any) {
       showToast('error', `Error al subir imagen: ${err.message}`);
     } finally {
-      setIsUploadingCover(false);
+      if (isEdit) {
+        setIsEditUploadingCover(false);
+      } else {
+        setIsUploadingCover(false);
+      }
     }
   };
 
   // Listener para Ctrl+V de imágenes copiadas en el portapapeles
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
-      if (!isUploadModalOpen) return;
+      if (!isUploadModalOpen && !isEditModalOpen) return;
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -168,7 +201,7 @@ export const CitizensManagerView: React.FC = () => {
           const file = items[i].getAsFile();
           if (file) {
             e.preventDefault();
-            handleUploadCoverBlob(file);
+            handleUploadCoverBlob(file, isEditModalOpen);
             break;
           }
         }
@@ -177,10 +210,10 @@ export const CitizensManagerView: React.FC = () => {
 
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [isUploadModalOpen]);
+  }, [isUploadModalOpen, isEditModalOpen]);
 
   // Pegar manualmente desde botón del portapapeles
-  const handlePasteFromClipboardBtn = async () => {
+  const handlePasteFromClipboardBtn = async (isEdit: boolean = false) => {
     try {
       if (navigator.clipboard && navigator.clipboard.read) {
         const items = await navigator.clipboard.read();
@@ -189,7 +222,7 @@ export const CitizensManagerView: React.FC = () => {
           if (imageType) {
             const blob = await item.getType(imageType);
             const file = new File([blob], `clipboard_${Date.now()}.png`, { type: imageType });
-            await handleUploadCoverBlob(file);
+            await handleUploadCoverBlob(file, isEdit);
             return;
           }
         }
@@ -335,7 +368,24 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
-  // Admin: Manejar selección y subida automática de .zip / .rar a Supabase Storage
+  // Admin: Abrir Modal de Edición
+  const openEditModal = (citizen: CitizenRecord) => {
+    setEditingCitizen(citizen);
+    setEditForm({
+      title: citizen.title,
+      category: citizen.category,
+      description: citizen.description,
+      cover_url: citizen.cover_url,
+      download_url: citizen.download_url,
+      file_size_formatted: citizen.file_size_formatted,
+      version: citizen.version || 'v1.0',
+      is_published: citizen.is_published,
+    });
+    setEditUploadedPackageName(null);
+    setIsEditModalOpen(true);
+  };
+
+  // Admin: Manejar selección y subida automática de .zip / .rar en Modal de Creación
   const handlePackageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -364,11 +414,29 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
-  // Admin: Subir imagen de portada desde selector de archivos
-  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Admin: Manejar reemplazo de archivo .zip / .rar en Modal de Edición
+  const handleEditPackageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      await handleUploadCoverBlob(file);
+    if (!file) return;
+
+    setIsEditUploadingPackage(true);
+    setEditUploadedPackageName(file.name);
+    try {
+      showToast('success', `Subiendo nuevo archivo ${file.name}...`);
+      const { publicUrl, fileSizeFormatted } = await uploadCitizenPackage(file);
+
+      setEditForm((prev) => ({
+        ...prev,
+        download_url: publicUrl,
+        file_size_formatted: fileSizeFormatted,
+      }));
+
+      showToast('success', '¡Paquete actualizado en Storage!');
+    } catch (err: any) {
+      showToast('error', `Error al subir archivo: ${err.message}`);
+      setEditUploadedPackageName(null);
+    } finally {
+      setIsEditUploadingPackage(false);
     }
   };
 
@@ -406,7 +474,29 @@ export const CitizensManagerView: React.FC = () => {
     }
   };
 
-  // Filtros: Solo Competitivo PvP, FPS Boost Ultra, Calidad Gráfica y Patata
+  // Admin: Guardar Edición de Citizen
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCitizen) return;
+    if (!editForm.title || !editForm.download_url) {
+      showToast('error', 'El título y el paquete no pueden estar vacíos.');
+      return;
+    }
+    setIsEditingSubmitting(true);
+    try {
+      const updated = await updateCitizen(editingCitizen.id, editForm);
+      setCitizens((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      showToast('success', `¡Citizen '${updated.title}' actualizado con éxito!`);
+      setIsEditModalOpen(false);
+      setEditingCitizen(null);
+    } catch (err: any) {
+      showToast('error', `Error al guardar cambios: ${err.message}`);
+    } finally {
+      setIsEditingSubmitting(false);
+    }
+  };
+
+  // Filtros: Competitivo PvP, FPS Boost Ultra, Calidad Gráfica y Patata
   const filteredCitizens = useMemo(() => {
     return citizens.filter((c) => {
       const matchesSearch =
@@ -529,7 +619,7 @@ export const CitizensManagerView: React.FC = () => {
           {isAdmin && (
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-semibold shadow-lg shadow-cyan-500/20 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-semibold shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
             >
               <UploadCloud className="w-3.5 h-3.5" />
               <span>+ Subir Citizen</span>
@@ -549,25 +639,46 @@ export const CitizensManagerView: React.FC = () => {
 
       {/* 
         ========================================================================
-        BARRA DE FILTROS Y BÚSQUEDA (Solo las 4 categorías requeridas)
+        BARRA DE CATEGORÍAS CON ANIMACIÓN DE GOTA REBOTANDO (FLUID DROPLET BOUNCE)
         ========================================================================
       */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Pestañas de Categorías */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#0e1117] border border-white/[0.08] overflow-x-auto">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
-                selectedCategory === cat.id
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-                  : 'text-[#8B949E] hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        {/* Pestañas de Categorías con Gota Rebotante */}
+        <div className="relative flex items-center gap-1.5 p-1 rounded-2xl bg-[#0e1117] border border-white/[0.08] overflow-x-auto">
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <motion.button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                whileTap={{ scale: 0.94 }}
+                whileHover={{ scale: 1.02 }}
+                className={`relative px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors z-10 cursor-pointer ${
+                  isSelected ? 'text-cyan-200' : 'text-[#8B949E] hover:text-white'
+                }`}
+              >
+                {/* La Gota de Agua Rebotante con Físicas Spring Elásticas */}
+                {isSelected && (
+                  <motion.div
+                    layoutId="dropletActiveTab"
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/30 via-cyan-400/20 to-blue-500/30 border border-cyan-400/50 shadow-[0_0_20px_rgba(0,240,255,0.3)]"
+                    transition={{
+                      type: 'spring',
+                      stiffness: 420,
+                      damping: 22,
+                      mass: 0.75,
+                    }}
+                  >
+                    {/* Reflejo acuático superior */}
+                    <div className="absolute top-0 left-2 right-2 h-[1px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent opacity-90" />
+                    {/* Brillo inferior de la gota */}
+                    <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-cyan-400/60 blur-[1px] rounded-full" />
+                  </motion.div>
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">{cat.label}</span>
+              </motion.button>
+            );
+          })}
         </div>
 
         {/* Buscador + Toggle Caché */}
@@ -597,7 +708,7 @@ export const CitizensManagerView: React.FC = () => {
 
       {/* 
         ========================================================================
-        GRID DE TARJETAS DE CITIZENS (Limpias, sin badges invasivas)
+        ANIMACIÓN FLUIDA ENTRE PÁGINAS Y CATEGORÍAS DE CITIZENS
         ========================================================================
       */}
       {isLoading ? (
@@ -606,156 +717,193 @@ export const CitizensManagerView: React.FC = () => {
           <span className="text-xs">Cargando citizens...</span>
         </div>
       ) : filteredCitizens.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 text-[#8B949E] space-y-3 rounded-2xl border border-white/[0.06] bg-[#0e1117]/40">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex-1 flex flex-col items-center justify-center p-12 text-[#8B949E] space-y-3 rounded-2xl border border-white/[0.06] bg-[#0e1117]/40"
+        >
           <Layers className="w-10 h-10 text-white/20" />
           <p className="text-sm font-medium text-white">No hay Citizens en esta categoría</p>
-        </div>
+        </motion.div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filteredCitizens.map((citizen) => {
-            const isActive = info?.active_citizen_id === citizen.id;
-            const isDownloaded = info?.installed_citizen_ids.includes(citizen.id);
-            const isActionLoading = actionLoadingId === citizen.id;
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={selectedCategory + searchQuery}
+            initial={{ opacity: 0, y: 16, scale: 0.98, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, y: -12, scale: 0.98, filter: 'blur(4px)' }}
+            transition={{
+              type: 'spring',
+              stiffness: 340,
+              damping: 26,
+              mass: 0.8,
+            }}
+            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+          >
+            {filteredCitizens.map((citizen, idx) => {
+              const isActive = info?.active_citizen_id === citizen.id;
+              const isDownloaded = info?.installed_citizen_ids.includes(citizen.id);
+              const isActionLoading = actionLoadingId === citizen.id;
 
-            return (
-              <div
-                key={citizen.id}
-                className={`group relative rounded-2xl overflow-hidden border transition-all duration-200 flex flex-col bg-[#12151d] ${
-                  isActive
-                    ? 'border-cyan-400/80 shadow-[0_0_30px_rgba(0,240,255,0.2)] ring-1 ring-cyan-400/50'
-                    : 'border-white/[0.08] hover:border-white/[0.18] hover:shadow-glassHover'
-                }`}
-              >
-                {/* Cover Image con Clic para ver foto completa */}
-                <div
-                  onClick={() => setPreviewImage({ url: citizen.cover_url, title: citizen.title })}
-                  className="relative h-44 w-full overflow-hidden bg-black/40 cursor-pointer group/img"
-                  title="Haz clic para ver captura completa en grande"
+              return (
+                <motion.div
+                  key={citizen.id}
+                  layout
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: idx * 0.04,
+                    type: 'spring',
+                    stiffness: 350,
+                    damping: 25,
+                  }}
+                  className={`group relative rounded-2xl overflow-hidden border transition-all duration-200 flex flex-col bg-[#12151d] ${
+                    isActive
+                      ? 'border-cyan-400/80 shadow-[0_0_30px_rgba(0,240,255,0.2)] ring-1 ring-cyan-400/50'
+                      : 'border-white/[0.08] hover:border-white/[0.18] hover:shadow-glassHover'
+                  }`}
                 >
-                  <img
-                    src={citizen.cover_url}
-                    alt={citizen.title}
-                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500 opacity-85"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#12151d] via-[#12151d]/30 to-transparent" />
+                  {/* Cover Image con Clic para ver foto completa */}
+                  <div
+                    onClick={() => setPreviewImage({ url: citizen.cover_url, title: citizen.title })}
+                    className="relative h-44 w-full overflow-hidden bg-black/40 cursor-pointer group/img"
+                    title="Haz clic para ver captura completa en grande"
+                  >
+                    <img
+                      src={citizen.cover_url}
+                      alt={citizen.title}
+                      className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500 opacity-85"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#12151d] via-[#12151d]/30 to-transparent" />
 
-                  {/* Icono de zoom en hover */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/30 backdrop-blur-[2px] transition-opacity">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-medium">
-                      <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Ver captura</span>
+                    {/* Icono de zoom en hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/30 backdrop-blur-[2px] transition-opacity">
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-white/20 text-white text-xs font-medium">
+                        <Maximize2 className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Ver captura</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Contenido de la Tarjeta (Limpio y directo) */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-white tracking-tight leading-snug">
-                      {citizen.title}
-                    </h3>
-                    <p className="text-xs text-[#8B949E] mt-1.5 leading-relaxed line-clamp-2">
-                      {citizen.description}
-                    </p>
-                  </div>
+                  {/* Contenido de la Tarjeta (Limpio y directo) */}
+                  <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-white tracking-tight leading-snug">
+                        {citizen.title}
+                      </h3>
+                      <p className="text-xs text-[#8B949E] mt-1.5 leading-relaxed line-clamp-2">
+                        {citizen.description}
+                      </p>
+                    </div>
 
-                  {/* Metadatos limpios */}
-                  <div className="pt-2 flex items-center justify-between border-t border-white/[0.06] text-[11px] font-mono text-[#8B949E]">
-                    <span className="flex items-center gap-1 text-white/80">
-                      <HardDrive className="w-3 h-3 text-cyan-400" />
-                      {citizen.file_size_formatted}
-                    </span>
+                    {/* Metadatos limpios */}
+                    <div className="pt-2 flex items-center justify-between border-t border-white/[0.06] text-[11px] font-mono text-[#8B949E]">
+                      <span className="flex items-center gap-1 text-white/80">
+                        <HardDrive className="w-3 h-3 text-cyan-400" />
+                        {citizen.file_size_formatted}
+                      </span>
 
-                    {/* Controles rápidos de Admin si procede */}
-                    {isAdmin && (
-                      <div className="flex items-center gap-1.5">
+                      {/* Controles de Administrador: Editar, Ocultar, Eliminar */}
+                      {isAdmin && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditModal(citizen);
+                            }}
+                            title="Editar datos de este Citizen"
+                            className="p-1 rounded bg-white/[0.04] hover:bg-cyan-500/20 text-cyan-400 hover:text-cyan-300 transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTogglePublish(citizen);
+                            }}
+                            title={citizen.is_published ? 'Ocultar' : 'Publicar'}
+                            className="p-1 rounded bg-white/[0.04] hover:bg-white/[0.1] text-white/80"
+                          >
+                            {citizen.is_published ? (
+                              <Eye className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <EyeOff className="w-3 h-3 text-amber-400" />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteFromCloud(citizen);
+                            }}
+                            title="Eliminar de la nube"
+                            className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Botón de Acción Principal */}
+                    <div className="pt-1">
+                      {isActive ? (
+                        <div className="w-full py-2 px-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-2 shadow-inner">
+                          <Check className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Activo en FiveM</span>
+                        </div>
+                      ) : isDownloaded ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleApplyLocal(citizen)}
+                            disabled={isActionLoading}
+                            className="flex-1 py-2 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all cursor-pointer"
+                          >
+                            {isActionLoading ? (
+                              <>
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                                <span>Aplicando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-3 h-3 fill-current" />
+                                <span>Aplicar (1-Click)</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLocal(citizen.id, citizen.title)}
+                            title="Eliminar archivos locales"
+                            className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-rose-400 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTogglePublish(citizen);
-                          }}
-                          title={citizen.is_published ? 'Ocultar' : 'Publicar'}
-                          className="p-1 rounded bg-white/[0.04] hover:bg-white/[0.1] text-white/80"
-                        >
-                          {citizen.is_published ? (
-                            <Eye className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <EyeOff className="w-3 h-3 text-amber-400" />
-                          )}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteFromCloud(citizen);
-                          }}
-                          title="Eliminar de la nube"
-                          className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Botón de Acción Principal */}
-                  <div className="pt-1">
-                    {isActive ? (
-                      <div className="w-full py-2 px-3 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 text-xs font-semibold flex items-center justify-center gap-2 shadow-inner">
-                        <Check className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Activo en FiveM</span>
-                      </div>
-                    ) : isDownloaded ? (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleApplyLocal(citizen)}
+                          onClick={() => handleDownloadAndApply(citizen)}
                           disabled={isActionLoading}
-                          className="flex-1 py-2 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-cyan-500/20 transition-all"
+                          className="w-full py-2 px-3 rounded-xl bg-white/[0.08] hover:bg-cyan-500 hover:text-black text-white text-xs font-bold border border-white/[0.1] hover:border-cyan-400 flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
                         >
                           {isActionLoading ? (
                             <>
                               <RefreshCw className="w-3 h-3 animate-spin" />
-                              <span>Aplicando...</span>
+                              <span>{actionProgressMsg || 'Descargando...'}</span>
                             </>
                           ) : (
                             <>
-                              <Zap className="w-3 h-3 fill-current" />
-                              <span>Aplicar (1-Click)</span>
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Descargar y Aplicar</span>
                             </>
                           )}
                         </button>
-                        <button
-                          onClick={() => handleDeleteLocal(citizen.id, citizen.title)}
-                          title="Eliminar archivos locales"
-                          className="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-rose-400 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleDownloadAndApply(citizen)}
-                        disabled={isActionLoading}
-                        className="w-full py-2 px-3 rounded-xl bg-white/[0.08] hover:bg-cyan-500 hover:text-black text-white text-xs font-bold border border-white/[0.1] hover:border-cyan-400 flex items-center justify-center gap-1.5 shadow-sm transition-all"
-                      >
-                        {isActionLoading ? (
-                          <>
-                            <RefreshCw className="w-3 h-3 animate-spin" />
-                            <span>{actionProgressMsg || 'Descargando...'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Descargar y Aplicar</span>
-                          </>
-                        )}
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
       )}
 
       {/* 
@@ -800,11 +948,202 @@ export const CitizensManagerView: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setPreviewImage(null)}
-                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-xs font-medium text-white transition-colors"
+                  className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-xs font-medium text-white transition-colors cursor-pointer"
                 >
                   Cerrar
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 
+        ========================================================================
+        MODAL EDICIÓN DE CITIZEN (ADMIN ONLY)
+        ========================================================================
+      */}
+      <AnimatePresence>
+        {isEditModalOpen && editingCitizen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-xl p-6 rounded-2xl bg-[#12151d] border border-cyan-500/30 shadow-2xl space-y-5 my-8"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                <div className="flex items-center gap-2.5">
+                  <Pencil className="w-5 h-5 text-cyan-400" />
+                  <div>
+                    <h3 className="text-base font-bold text-white">Editar Citizen</h3>
+                    <p className="text-[11px] text-[#8B949E]">Modifica los datos, captura o paquete</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="p-1 rounded-lg text-white/60 hover:text-white hover:bg-white/10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4 text-xs">
+                {/* Título */}
+                <div className="space-y-1">
+                  <label className="text-white/80 font-medium">Nombre / Título</label>
+                  <input
+                    type="text"
+                    required
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
+
+                {/* Categoría */}
+                <div className="space-y-1">
+                  <label className="text-white/80 font-medium">Categoría</label>
+                  <select
+                    value={editForm.category}
+                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400"
+                  >
+                    <option value="pvp">Competitivo PvP</option>
+                    <option value="fps_boost">FPS Boost Ultra</option>
+                    <option value="graphics_quality">Calidad Gráfica</option>
+                    <option value="potato">Patata</option>
+                  </select>
+                </div>
+
+                {/* Captura de Fondo con Pegar Ctrl+V */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-white/90 font-semibold flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-cyan-400" />
+                      <span>Captura de Portada</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePasteFromClipboardBtn(true)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 text-[11px] font-medium transition-colors"
+                      >
+                        <Clipboard className="w-3 h-3" />
+                        <span>Pegar captura (Ctrl+V)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => editCoverInputRef.current?.click()}
+                        className="text-[11px] text-[#8B949E] hover:text-white underline"
+                      >
+                        Subir archivo
+                      </button>
+                    </div>
+                    <input
+                      type="file"
+                      ref={editCoverInputRef}
+                      onChange={(e) => e.target.files?.[0] && handleUploadCoverBlob(e.target.files[0], true)}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
+
+                  <div className="relative h-28 w-full rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                    <img
+                      src={editForm.cover_url}
+                      alt="Vista previa de portada"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center pointer-events-none">
+                      <span className="text-[11px] bg-black/70 px-3 py-1 rounded-lg text-white/90 border border-white/10">
+                        {isEditUploadingCover ? 'Subiendo imagen pegada...' : 'Pulsa Ctrl+V aquí para pegar una nueva captura'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reemplazar Paquete .zip/.rar si se desea */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-white/80 font-medium flex items-center gap-1.5">
+                      <FileArchive className="w-4 h-4 text-cyan-400" />
+                      <span>Paquete del Citizen ({editForm.file_size_formatted})</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => editFileInputRef.current?.click()}
+                      className="text-[11px] text-cyan-400 hover:underline"
+                    >
+                      {isEditUploadingPackage ? 'Subiendo nuevo archivo...' : 'Reemplazar .zip/.rar'}
+                    </button>
+                    <input
+                      type="file"
+                      ref={editFileInputRef}
+                      onChange={handleEditPackageFileChange}
+                      accept=".zip,.rar,.7z"
+                      className="hidden"
+                    />
+                  </div>
+                  {editUploadedPackageName && (
+                    <span className="text-[11px] text-emerald-400 font-mono">
+                      ✓ Nuevo archivo cargado: {editUploadedPackageName}
+                    </span>
+                  )}
+                </div>
+
+                {/* Descripción */}
+                <div className="space-y-1">
+                  <label className="text-white/80 font-medium">Descripción</label>
+                  <textarea
+                    rows={2}
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:border-cyan-400 resize-none"
+                  />
+                </div>
+
+                {/* Switch de Publicación */}
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={editForm.is_published}
+                      onChange={(e) => setEditForm({ ...editForm, is_published: e.target.checked })}
+                      className="rounded bg-black/40 border-white/20 text-cyan-500 focus:ring-0 cursor-pointer"
+                    />
+                    <span className="text-white">Publicado y visible en el catálogo</span>
+                  </label>
+                </div>
+
+                {/* Botones de Envío */}
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-white transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isEditingSubmitting || isEditUploadingPackage || isEditUploadingCover}
+                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-xs font-bold transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isEditingSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Guardar Cambios</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
@@ -849,7 +1188,7 @@ export const CitizensManagerView: React.FC = () => {
                 <button
                   onClick={handleRestoreVanilla}
                   disabled={actionLoadingId === 'vanilla'}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold transition-all shadow-md shadow-emerald-500/20 flex items-center gap-1.5 cursor-pointer"
                 >
                   {actionLoadingId === 'vanilla' ? (
                     <>
@@ -907,7 +1246,7 @@ export const CitizensManagerView: React.FC = () => {
                 </button>
                 <button
                   onClick={handleForceCloseFiveMAndProceed}
-                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center gap-1.5 cursor-pointer"
                 >
                   <XCircle className="w-3.5 h-3.5" />
                   <span>Cerrar FiveM y Continuar</span>
@@ -1038,8 +1377,8 @@ export const CitizensManagerView: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={handlePasteFromClipboardBtn}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 text-[11px] font-medium transition-colors"
+                        onClick={() => handlePasteFromClipboardBtn(false)}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-400/30 text-cyan-300 text-[11px] font-medium transition-colors cursor-pointer"
                       >
                         <Clipboard className="w-3 h-3" />
                         <span>Pegar captura (Ctrl+V)</span>
@@ -1047,7 +1386,7 @@ export const CitizensManagerView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => coverInputRef.current?.click()}
-                        className="text-[11px] text-[#8B949E] hover:text-white underline"
+                        className="text-[11px] text-[#8B949E] hover:text-white underline cursor-pointer"
                       >
                         Subir archivo
                       </button>
@@ -1055,7 +1394,7 @@ export const CitizensManagerView: React.FC = () => {
                     <input
                       type="file"
                       ref={coverInputRef}
-                      onChange={handleCoverFileChange}
+                      onChange={(e) => e.target.files?.[0] && handleUploadCoverBlob(e.target.files[0], false)}
                       accept="image/*"
                       className="hidden"
                     />
@@ -1121,14 +1460,14 @@ export const CitizensManagerView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsUploadModalOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-white transition-colors"
+                    className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-xs font-medium text-white transition-colors cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting || isUploadingPackage}
-                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-xs font-bold transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+                    className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-black text-xs font-bold transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5 cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>

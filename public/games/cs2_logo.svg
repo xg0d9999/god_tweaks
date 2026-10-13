@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 90" fill="none">
+  <!-- CS2 Operative & Hexagon Badge -->
+  <g transform="translate(14, 8)">
+    <polygon points="36,4 66,20 66,54 36,70 6,54 6,20" fill="#EA580C" stroke="#F97316" stroke-width="2.5" />
+    <circle cx="36" cy="22" r="5" fill="#FFFFFF" />
+    <path d="M29 30 L43 30 L45 42 L52 40 L54 44 L44 48 L43 60 L37 62 L34 49 L30 62 L24 60 L28 41 L23 43 L25 38 Z" fill="#FFFFFF" />
+    <rect x="42" y="34" width="20" height="4" rx="1" fill="#FFFFFF" />
+  </g>
+  <!-- Typography -->
+  <text x="96" y="44" font-family="Impact, 'Arial Black', sans-serif" font-weight="900" font-size="22" fill="#E2E8F0" letter-spacing="1.5">COUNTER-STRIKE</text>
+  <text x="96" y="78" font-family="Impact, 'Arial Black', sans-serif" font-weight="900" font-size="36" fill="#EA580C" letter-spacing="2">CS2</text>
+  <rect x="174" y="58" width="10" height="20" fill="#F97316" transform="skewX(-15)" />
+</svg>

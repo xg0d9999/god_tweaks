@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 90" fill="none">
+  <!-- FiveM Iconic Orange Slash / Ribbon -->
+  <g transform="translate(15, 8)">
+    <path d="M10 50 L35 12 C36 10 39 9 41 11 L54 21 C56 23 56 26 54 28 L32 63 C30 66 26 66 24 64 L11 54 C9 52 9 50 10 50 Z" fill="#FF6B00" />
+    <path d="M34 65 L56 27 C58 24 61 24 63 26 L74 34 C76 36 76 39 74 42 L52 77 C50 80 46 80 44 78 L34 70 C32 68 32 65 34 65 Z" fill="#FFA31A" />
+    <path d="M42 22 L48 12 C49 10 52 10 54 11 L64 19 C66 21 66 24 64 26 L58 35" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+  </g>
+  <!-- Typography -->
+  <text x="105" y="55" font-family="Impact, 'Arial Black', sans-serif" font-size="46" font-weight="900" fill="#FFFFFF" letter-spacing="-0.5">Five<tspan fill="#FF8A00">M</tspan></text>
+  <text x="108" y="74" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="10" fill="#FFA726" letter-spacing="2.8">GTA V &amp; MULTIPLAYER</text>
+</svg>

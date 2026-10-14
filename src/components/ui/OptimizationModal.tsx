@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Loader2,
   Zap,
+  RotateCcw,
 } from "lucide-react";
 import { ActionButton } from "./ActionButton";
 
@@ -22,6 +23,7 @@ interface OptimizationModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   onClose: () => void;
+  isRevert?: boolean;
 }
 
 export const OptimizationModal: React.FC<OptimizationModalProps> = ({
@@ -33,6 +35,7 @@ export const OptimizationModal: React.FC<OptimizationModalProps> = ({
   onConfirm,
   onCancel,
   onClose,
+  isRevert = false,
 }) => {
   if (!isOpen) return null;
 
@@ -59,11 +62,15 @@ export const OptimizationModal: React.FC<OptimizationModalProps> = ({
             <div className="space-y-5">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-white/[0.04] text-white border border-white/[0.08]">
-                  <ShieldCheck className="w-5 h-5 text-white/90" />
+                  {isRevert ? (
+                    <RotateCcw className="w-5 h-5 text-white/90" />
+                  ) : (
+                    <ShieldCheck className="w-5 h-5 text-white/90" />
+                  )}
                 </div>
                 <div>
                   <h2 className="text-base font-semibold text-white tracking-tight">
-                    Confirmar Optimización
+                    {isRevert ? "Confirmar Restauración de Predeterminados" : "Confirmar Optimización"}
                   </h2>
                   <p className="text-xs text-[#828792]">
                     Seleccionado: <span className="text-white font-medium">{planTitle}</span>
@@ -81,13 +88,17 @@ export const OptimizationModal: React.FC<OptimizationModalProps> = ({
                 <div className="flex items-start gap-2 text-[#E1E4EA]">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                   <span>
-                    Se generará una copia de seguridad del registro (.reg) en tu carpeta local.
+                    {isRevert
+                      ? "Se restablecerá el plan de energía, temporizadores de kernel, MMCSS, GameDVR y red a valores de fábrica."
+                      : "Se generará una copia de seguridad del registro (.reg) en tu carpeta local."}
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-[#E1E4EA]">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
                   <span>
-                    Todas las optimizaciones son reversibles en cualquier momento.
+                    {isRevert
+                      ? "Se eliminará el plan activo y el sistema volverá al comportamiento estándar de Windows."
+                      : "Todas las optimizaciones son reversibles en cualquier momento."}
                   </span>
                 </div>
               </div>
@@ -100,9 +111,15 @@ export const OptimizationModal: React.FC<OptimizationModalProps> = ({
                   variant="primary"
                   size="md"
                   onClick={onConfirm}
-                  icon={<Zap className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
+                  icon={
+                    isRevert ? (
+                      <RotateCcw className="w-3.5 h-3.5 fill-none text-[#0A0C0E]" />
+                    ) : (
+                      <Zap className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />
+                    )
+                  }
                 >
-                  Confirmar y Optimizar
+                  {isRevert ? "Confirmar y Restaurar" : "Confirmar y Optimizar"}
                 </ActionButton>
               </div>
             </div>
@@ -118,10 +135,12 @@ export const OptimizationModal: React.FC<OptimizationModalProps> = ({
                   </div>
                   <div>
                     <h2 className="text-base font-semibold text-white tracking-tight">
-                      Optimizando Sistema...
+                      {isRevert ? "Restaurando Valores Predeterminados..." : "Optimizando Sistema..."}
                     </h2>
                     <p className="text-xs text-[#828792]">
-                      Por favor espera, no cierres esta ventana.
+                      {isRevert
+                        ? "Por favor espera, revirtiendo cambios en el kernel y servicios."
+                        : "Por favor espera, no cierres esta ventana."}
                     </p>
                   </div>
                 </div>
@@ -186,10 +205,12 @@ export const OptimizationModal: React.FC<OptimizationModalProps> = ({
 
               <div className="space-y-1">
                 <h2 className="text-base font-semibold text-white tracking-tight">
-                  ¡Optimización Completada con Éxito!
+                  {isRevert ? "¡Valores Predeterminados Restaurados!" : "¡Optimización Completada con Éxito!"}
                 </h2>
                 <p className="text-xs text-[#828792] max-w-sm mx-auto leading-relaxed">
-                  Se ha generado el punto de restauración y se aplicaron todas las optimizaciones de {planTitle}.
+                  {isRevert
+                    ? "Se han revertido todas las optimizaciones aplicadas y restaurado los parámetros originales de Windows."
+                    : `Se ha generado el punto de restauración y se aplicaron todas las optimizaciones de ${planTitle}.`}
                 </p>
               </div>
 

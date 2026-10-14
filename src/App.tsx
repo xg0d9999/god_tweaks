@@ -117,6 +117,7 @@ const AppContent: React.FC = () => {
   const [isGameModalOpen, setIsGameModalOpen] = useState(false);
   const [modalPhase, setModalPhase] = useState<"confirm" | "running" | "completed">("confirm");
   const [modalPlanTitle, setModalPlanTitle] = useState("g0d Mode eSports");
+  const [isModalRevert, setIsModalRevert] = useState(false);
   const [modalSteps, setModalSteps] = useState<ModalStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [activePipelineRunner, setActivePipelineRunner] = useState<(() => Promise<void>) | null>(null);
@@ -722,6 +723,7 @@ const AppContent: React.FC = () => {
     ];
 
     setModalPlanTitle("Plan Lite - Esencial");
+    setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
     setActivePipelineRunner(() => () => runStepsSequentially("lite", rawSteps));
@@ -763,6 +765,7 @@ const AppContent: React.FC = () => {
     ];
 
     setModalPlanTitle("Plan Premium - Competitivo");
+    setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
     setActivePipelineRunner(() => () => runStepsSequentially("premium", rawSteps));
@@ -894,6 +897,7 @@ const AppContent: React.FC = () => {
 
     const title = `Plan Adaptativo: ${gameNames[gameId]} (${cpuLabel} + ${gpuLabel})`;
     setModalPlanTitle(title);
+    setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
     setActivePipelineRunner(() => () => runStepsSequentially("ultra", rawSteps));
@@ -948,6 +952,119 @@ const AppContent: React.FC = () => {
     else if (preset === "premium") triggerPremiumPlan();
     else if (preset === "ultra") handleOpenGameSelector();
   };
+
+  // Revert / Restore System Defaults Pipeline
+  const triggerRevertDefaultsPlan = useCallback(() => {
+    if (!canUseTweaks) {
+      showToast("Acceso restringido: Permiso de optimizaciones deshabilitado.", "error");
+      return;
+    }
+
+    const rawSteps = [
+      {
+        label: "Crear Punto de Restauración del Sistema (VSS) de Seguridad",
+        action: () => safeInvoke("create_restore_point", { description: "g0d_tweaks_Restore_Defaults" }),
+      },
+      {
+        label: "Restaurar Plan de Energía Equilibrado (Windows Default)",
+        action: () => safeInvoke("restore_default_power_plan"),
+      },
+      {
+        label: "Restaurar Temporizadores de Kernel y HPET",
+        action: () => safeInvoke("set_hpet", { disable: false }),
+      },
+      {
+        label: "Restaurar Win32PrioritySeparation & CPU Throttling",
+        action: () => safeInvoke("set_extreme_gaming_optimizations", { enable: false }),
+      },
+      {
+        label: "Restaurar Planificador Multimedia MMCSS y Prioridad GPU",
+        action: () => safeInvoke("set_mmcss_and_priority", { enable: false }),
+      },
+      {
+        label: "Restaurar GameDVR y Servicios de Captura Xbox",
+        action: () => safeInvoke("set_gamedvr", { disable: false }),
+      },
+      {
+        label: "Restaurar Algoritmo de Red Nagle (TCP ACK Estándar)",
+        action: () => safeInvoke("set_nagle_algorithm", { disable: false }),
+      },
+      {
+        label: "Restaurar Límite de Reserva QoS y Throttling de Red",
+        action: () => Promise.all([
+          safeInvoke("set_network_throttling", { disable: false }),
+          safeInvoke("set_qos_limit", { disable: false }),
+        ]),
+      },
+      {
+        label: "Restaurar Compresión de Memoria RAM (MMAgent)",
+        action: () => safeInvoke("set_memory_compression", { disable: false }),
+      },
+      {
+        label: "Restaurar Efectos Visuales Predeterminados de Windows",
+        action: () => safeInvoke("set_visual_effects", { performance_mode: false }),
+      },
+      {
+        label: "Restablecer Prioridades IFEO de Juegos (FiveM, CS2, etc.)",
+        action: () => Promise.all([
+          safeInvoke("set_fivem_priority", { enable: false }),
+          safeInvoke("set_game_priority_profile", { gameId: "fivem", enable: false }),
+          safeInvoke("set_game_priority_profile", { gameId: "fortnite", enable: false }),
+          safeInvoke("set_game_priority_profile", { gameId: "valorant", enable: false }),
+          safeInvoke("set_game_priority_profile", { gameId: "cs2", enable: false }),
+        ]),
+      },
+      {
+        label: "Restaurar Telemetría y Servicios del Sistema",
+        action: () => Promise.all([
+          safeInvoke("set_telemetry", { disable: false }),
+          safeInvoke("set_cortana_and_search", { disable: false }),
+          safeInvoke("set_copilot", { disable: false }),
+        ]),
+      },
+    ];
+
+    setModalPlanTitle("Valores Predeterminados de Windows");
+    setIsModalRevert(true);
+    setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
+    setCurrentStepIndex(0);
+    setActivePipelineRunner(() => async () => {
+      setModalPhase("running");
+      for (let i = 0; i < rawSteps.length; i++) {
+        setCurrentStepIndex(i);
+        setModalSteps((prev) =>
+          prev.map((s, idx) =>
+            idx === i ? { ...s, status: "running" } : s
+          )
+        );
+        try {
+          await rawSteps[i].action();
+        } catch (err) {
+          console.warn(`Step revert error: ${err}`);
+        }
+        setModalSteps((prev) =>
+          prev.map((s, idx) =>
+            idx === i ? { ...s, status: "completed" } : s
+          )
+        );
+        await new Promise((r) => setTimeout(r, 380));
+      }
+      setModalPhase("completed");
+      setActivePlan(null);
+      try {
+        localStorage.removeItem("god_tweaks_active_plan");
+      } catch (e) {
+        console.warn("Error removing active plan:", e);
+      }
+      addLog("Valores predeterminados de Windows restaurados con éxito.", "success");
+      showToast("Valores predeterminados de Windows restaurados con éxito.", "success");
+      fetchStatuses();
+      fetchMetrics();
+      fetchBackups();
+    });
+    setModalPhase("confirm");
+    setIsModalOpen(true);
+  }, [canUseTweaks, showToast, addLog, fetchStatuses, fetchMetrics, fetchBackups]);
 
   // Toggle Mode Handler
   const handleToggleAppMode = (mode: AppMode) => {
@@ -1093,6 +1210,7 @@ const AppContent: React.FC = () => {
                 <PresetsView
                   onSelectPreset={handleSelectPreset}
                   onOpenGameSelector={handleOpenGameSelector}
+                  onRevertToDefaults={triggerRevertDefaultsPlan}
                   isRunning={isModalOpen && modalPhase === "running"}
                   activePlanId={activePlan?.id}
                   activePlanTitle={activePlan?.title}
@@ -1245,6 +1363,7 @@ const AppContent: React.FC = () => {
         planTitle={modalPlanTitle}
         currentStepIndex={currentStepIndex}
         steps={modalSteps}
+        isRevert={isModalRevert}
         onConfirm={() => {
           if (activePipelineRunner) {
             activePipelineRunner();

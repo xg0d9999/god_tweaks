@@ -102,6 +102,22 @@ pub fn enable_ultimate_performance() -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn restore_default_power_plan() -> Result<String, String> {
+    if !crate::utils::win32::is_elevated() {
+        return Err("Permisos insuficientes: La restauración del plan de energía requiere privilegios de Administrador.".to_string());
+    }
+
+    // Activar esquema Equilibrado por defecto de Windows (GUID: 381b4222-f694-41f0-9685-ff5bb260df2e)
+    let _ = run_hidden_cmd("powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e");
+    // Restaurar política de núcleos a estándar
+    let _ = run_hidden_cmd("powercfg -setacvalueindex scheme_current sub_processor CPMINCORES 10");
+    let _ = run_hidden_cmd("powercfg -setacvalueindex scheme_current sub_processor CPMAXCORES 100");
+    let _ = run_hidden_cmd("powercfg /setactive scheme_current");
+
+    Ok("Plan de energía restaurado a Equilibrado (Predeterminado de Windows).".to_string())
+}
+
+#[tauri::command]
 pub fn set_gamedvr(disable: bool) -> Result<String, String> {
     let val = if disable { 0 } else { 1 };
 

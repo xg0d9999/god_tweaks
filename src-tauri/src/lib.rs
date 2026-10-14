@@ -63,6 +63,7 @@ pub fn run() {
             get_gaming_status,
             set_hpet,
             enable_ultimate_performance,
+            restore_default_power_plan,
             set_gamedvr,
             set_mmcss_and_priority,
             set_extreme_gaming_optimizations,

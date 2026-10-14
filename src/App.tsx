@@ -50,6 +50,7 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading, user, userRecord, hardware } = useAuth();
   const canUseTweaks = userRecord?.can_use_tweaks !== false;
   const canUseSanciones = userRecord?.can_use_sanciones !== false;
+  const canUseCitizens = userRecord?.can_use_citizens === true;
   const isAdmin = userRecord?.is_admin === true;
   const [appMode, setAppMode] = useState<AppMode>("optimizer");
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
@@ -1455,7 +1456,16 @@ const AppContent: React.FC = () => {
                 />
               ))}
 
-            {activeTab === "citizens" && <CitizensManagerView />}
+            {activeTab === "citizens" &&
+              (!canUseCitizens ? (
+                <PermissionBlockedView
+                  moduleName="Gestor de Citizens"
+                  reason="El acceso al Gestor de Citizens está deshabilitado para tu cuenta. Contacta con un Administrador para habilitarlo."
+                  onBackToDashboard={() => setActiveTab("dashboard")}
+                />
+              ) : (
+                <CitizensManagerView />
+              ))}
 
             {activeTab === "advanced" &&
               (!canUseTweaks ? (

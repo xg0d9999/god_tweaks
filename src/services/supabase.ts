@@ -21,6 +21,7 @@ export interface AppUserRecord {
   created_at?: string;
   can_use_tweaks?: boolean;
   can_use_sanciones?: boolean;
+  can_use_citizens?: boolean;
   is_admin?: boolean;
 }
 
@@ -102,7 +103,12 @@ export async function fetchAllUsers(): Promise<AppUserRecord[]> {
  */
 export async function updateUserPermissions(
   discordId: string,
-  perms: { can_use_tweaks?: boolean; can_use_sanciones?: boolean; is_admin?: boolean }
+  perms: {
+    can_use_tweaks?: boolean;
+    can_use_sanciones?: boolean;
+    can_use_citizens?: boolean;
+    is_admin?: boolean;
+  }
 ): Promise<AppUserRecord> {
   const { data, error } = await supabase
     .from('app_users')

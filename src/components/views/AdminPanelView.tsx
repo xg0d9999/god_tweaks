@@ -89,9 +89,12 @@ export const AdminPanelView: React.FC = () => {
 
   const handleTogglePermission = async (
     targetUser: AppUserRecord,
-    permissionKey: 'can_use_tweaks' | 'can_use_sanciones'
+    permissionKey: 'can_use_tweaks' | 'can_use_sanciones' | 'can_use_citizens'
   ) => {
-    const currentVal = targetUser[permissionKey] ?? true;
+    const currentVal =
+      permissionKey === 'can_use_citizens'
+        ? targetUser.can_use_citizens === true
+        : (targetUser[permissionKey] ?? true);
     const newVal = !currentVal;
     setUpdatingId(targetUser.discord_id);
 
@@ -112,7 +115,12 @@ export const AdminPanelView: React.FC = () => {
         prev.map((u) => (u.discord_id === targetUser.discord_id ? updated : u))
       );
 
-      const permName = permissionKey === 'can_use_tweaks' ? 'Optimizaciones' : 'Sanciones';
+      const permName =
+        permissionKey === 'can_use_tweaks'
+          ? 'Optimizaciones'
+          : permissionKey === 'can_use_citizens'
+          ? 'Gestor de Citizens'
+          : 'Sanciones';
       setActionSuccessMsg(
         `Permiso de ${permName} ${newVal ? 'habilitado' : 'deshabilitado'} para ${targetUser.discord_username}`
       );
@@ -351,6 +359,7 @@ export const AdminPanelView: React.FC = () => {
           filteredUsers.map((u) => {
             const hasTweaks = u.can_use_tweaks !== false;
             const hasSanciones = u.can_use_sanciones !== false;
+            const hasCitizens = u.can_use_citizens === true;
             const isSelf = userRecord.discord_id === u.discord_id;
             const isUpdating = updatingId === u.discord_id;
             const isHwidExpanded = expandedHwidUser === u.discord_id;
@@ -497,6 +506,39 @@ export const AdminPanelView: React.FC = () => {
                           layout
                           className={`w-4 h-4 rounded-full bg-white shadow-sm ${
                             hasSanciones ? 'ml-auto' : 'mr-auto'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Toggle Gestor de Citizens */}
+                    <div className="flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.06]">
+                      <div className="flex flex-col text-right">
+                        <span className="text-[10px] text-[#8B949E] font-medium">Citizens</span>
+                        <span
+                          className={`text-[11px] font-semibold ${
+                            hasCitizens ? 'text-cyan-300' : 'text-rose-400'
+                          }`}
+                        >
+                          {hasCitizens ? 'Habilitado' : 'Bloqueado'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleTogglePermission(u, 'can_use_citizens')}
+                        disabled={isUpdating}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
+                          hasCitizens ? 'bg-cyan-600' : 'bg-zinc-800 border border-white/10'
+                        }`}
+                        title={
+                          hasCitizens
+                            ? 'Clic para denegar acceso al Gestor de Citizens'
+                            : 'Clic para autorizar acceso al Gestor de Citizens'
+                        }
+                      >
+                        <motion.div
+                          layout
+                          className={`w-4 h-4 rounded-full bg-white shadow-sm ${
+                            hasCitizens ? 'ml-auto' : 'mr-auto'
                           }`}
                         />
                       </button>

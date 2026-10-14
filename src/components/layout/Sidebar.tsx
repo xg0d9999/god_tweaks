@@ -41,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { user, userRecord, logout } = useAuth();
   const tweaksBlocked = userRecord?.can_use_tweaks === false;
+  const citizensBlocked = userRecord?.can_use_citizens !== true;
 
   const navItems: NavItem[] = [
     {
@@ -58,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "citizens",
       label: "Gestor de Citizens",
       icon: <Sparkles className="w-4 h-4 flex-shrink-0 text-cyan-400" />,
+      isBlocked: citizensBlocked,
     },
     {
       id: "advanced",

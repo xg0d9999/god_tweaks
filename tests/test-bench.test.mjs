@@ -83,3 +83,17 @@ test('g0d suite Test Bench - HispanLife Sanciones Payload Formatter', async (t) 
     assert.equal(payload.embeds[0].color, 0xe11d48);
   });
 });
+
+test('g0d suite Test Bench - Control de Permisos y Citizens Manager', async (t) => {
+  await t.test('Verificar que can_use_citizens está deshabilitado por defecto si no es true', () => {
+    const userWithoutField = { discord_id: '123', can_use_tweaks: true };
+    const canUseCitizensDefault = userWithoutField.can_use_citizens === true;
+    assert.equal(canUseCitizensDefault, false, 'can_use_citizens debe ser false por defecto');
+
+    const userExplicitlyEnabled = { discord_id: '123', can_use_citizens: true };
+    assert.equal(userExplicitlyEnabled.can_use_citizens === true, true, 'can_use_citizens habilitado');
+
+    const userExplicitlyDisabled = { discord_id: '123', can_use_citizens: false };
+    assert.equal(userExplicitlyDisabled.can_use_citizens === true, false, 'can_use_citizens deshabilitado');
+  });
+});

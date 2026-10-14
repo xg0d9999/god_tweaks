@@ -70,11 +70,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: "Restauración & Backup",
       icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />,
     },
-    {
-      id: "benchmark",
-      label: "Diagnóstico & Benchmark",
-      icon: <Cpu className="w-4 h-4 flex-shrink-0 text-emerald-400" />,
-    },
     ...(userRecord?.is_admin
       ? [
           {

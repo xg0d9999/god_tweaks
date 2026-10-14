@@ -1,5 +1,4 @@
-import React from "react";
-import { Zap, ShieldCheck, Flame, Cpu, ArrowRight, CheckCircle2, Gamepad2, Sparkles, HardDrive } from "lucide-react";
+import { Zap, ShieldCheck, Flame, Cpu, ArrowRight, CheckCircle2, Gamepad2, HardDrive } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { Badge } from "../ui/Badge";
 import { ActionButton } from "../ui/ActionButton";
@@ -22,9 +21,6 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
   activePlanTitle,
   hardware,
 }) => {
-  const isAmdCpu = hardware?.cpu.toLowerCase().includes("amd") || hardware?.cpu.toLowerCase().includes("ryzen");
-  const isIntelCpu = hardware?.cpu.toLowerCase().includes("intel") || hardware?.cpu.toLowerCase().includes("core");
-  const isNvidiaGpu = hardware?.gpu.toLowerCase().includes("nvidia") || hardware?.gpu.toLowerCase().includes("geforce") || hardware?.gpu.toLowerCase().includes("rtx");
   const ramGb = hardware?.ram_mb ? Math.round(hardware.ram_mb / 1024) : 16;
 
   return (
@@ -36,46 +32,26 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white/[0.06] border border-white/[0.1] text-white">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Optimización Inteligente por Hardware y Juego</span>
-            </div>
-
+          <div className="space-y-3">
             <h2 className="text-2xl font-extrabold tracking-tight text-white">
               Centro de Optimización de Sistema y Juegos
             </h2>
 
-            <p className="text-xs text-[#959DAA] leading-relaxed">
-              Detecta automáticamente las especificaciones de tu CPU, tarjeta gráfica y memoria RAM. Calibra de forma personalizada el sistema para **FiveM**, **Fortnite**, **Valorant**, **CS2** o **Modo General**.
-            </p>
-
             {/* Hardware Pills */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
+            <div className="flex flex-wrap items-center gap-2 pt-0.5 font-mono text-[11px]">
               <div className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/[0.08] text-[#D4DAE2] flex items-center gap-1.5">
                 <Cpu className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{hardware?.cpu || "CPU"}</span>
-                <span className="text-[10px] text-cyan-400/90 font-sans uppercase">
-                  ({isAmdCpu ? "Ryzen Zen" : isIntelCpu ? "Intel" : "CPU"})
-                </span>
               </div>
 
               <div className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/[0.08] text-[#D4DAE2] flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>{hardware?.gpu || "GPU Dedicada"}</span>
-                <span className="text-[10px] text-emerald-400/90 font-sans uppercase">
-                  ({isNvidiaGpu ? "NVIDIA" : "GPU"})
-                </span>
+                <span>{hardware?.gpu || "GPU"}</span>
               </div>
 
               <div className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/[0.08] text-[#D4DAE2] flex items-center gap-1.5">
                 <HardDrive className="w-3.5 h-3.5 text-purple-400" />
                 <span>{ramGb} GB RAM</span>
-                {ramGb >= 16 && (
-                  <span className="text-[10px] text-purple-400 font-sans">
-                    (Compresión Off)
-                  </span>
-                )}
               </div>
             </div>
           </div>

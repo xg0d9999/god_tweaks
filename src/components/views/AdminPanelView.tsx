@@ -11,12 +11,15 @@ import {
   CheckCircle2,
   Copy,
   Monitor,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchAllUsers, updateUserPermissions, AppUserRecord, supabase } from '../../services/supabase';
+import { BenchmarkView } from './BenchmarkView';
 
 export const AdminPanelView: React.FC = () => {
-  const { userRecord, refreshUserRecord, onlineUserIds } = useAuth();
+  const { userRecord, refreshUserRecord, onlineUserIds, hardware } = useAuth();
+  const [adminTab, setAdminTab] = useState<'users' | 'benchmark'>('users');
   const [users, setUsers] = useState<AppUserRecord[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
@@ -217,19 +220,55 @@ export const AdminPanelView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={loadUsers}
-            disabled={isRefreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] active:scale-95 text-xs text-[#9CA3AF] hover:text-white border border-white/[0.08] transition-all cursor-pointer disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-white' : ''}`} />
-            <span>Actualizar</span>
-          </button>
+          {adminTab === 'users' && (
+            <button
+              onClick={loadUsers}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] active:scale-95 text-xs text-[#9CA3AF] hover:text-white border border-white/[0.08] transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-white' : ''}`} />
+              <span>Actualizar</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {/* Admin Sub-Tabs */}
+      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-3">
+        <button
+          onClick={() => setAdminTab('users')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            adminTab === 'users'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm'
+              : 'text-[#8B949E] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Gestión de Usuarios ({stats.total})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('benchmark')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            adminTab === 'benchmark'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
+              : 'text-[#8B949E] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <Activity className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Benchmark Ultra & Auditoría</span>
+          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-bold">
+            ADMIN ONLY
+          </span>
+        </button>
+      </div>
+
+      {adminTab === 'benchmark' ? (
+        <BenchmarkView hardware={hardware} />
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
           <div className="flex items-center justify-between text-[#8B949E] text-xs mb-1">
             <span>Usuarios Totales</span>
@@ -530,6 +569,8 @@ export const AdminPanelView: React.FC = () => {
           })
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

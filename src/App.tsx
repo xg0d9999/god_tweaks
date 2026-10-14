@@ -1080,7 +1080,6 @@ const AppContent: React.FC = () => {
                 logs={logs}
                 activePlan={activePlan}
                 onNavigateToPresets={() => setActiveTab("presets")}
-                onNavigateToBenchmark={() => setActiveTab("benchmark")}
               />
             )}
 
@@ -1155,9 +1154,16 @@ const AppContent: React.FC = () => {
               />
             )}
 
-            {activeTab === "benchmark" && (
-              <BenchmarkView hardware={hardware} />
-            )}
+            {activeTab === "benchmark" &&
+              (isAdmin ? (
+                <BenchmarkView hardware={hardware} />
+              ) : (
+                <PermissionBlockedView
+                  moduleName="Auditoría & Benchmark"
+                  reason="Esta herramienta está restringida exclusivamente a administradores."
+                  onBackToDashboard={() => setActiveTab("dashboard")}
+                />
+              ))}
 
             {activeTab === "hispan" &&
               (!canUseSanciones ? (

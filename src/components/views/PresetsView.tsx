@@ -2,7 +2,7 @@ import { Zap, ShieldCheck, Flame, Cpu, ArrowRight, CheckCircle2, Gamepad2, HardD
 import { GlassCard } from "../ui/GlassCard";
 import { Badge } from "../ui/Badge";
 import { ActionButton } from "../ui/ActionButton";
-import { PresetType, HardwareProfile } from "../../types";
+import { PresetType, HardwareProfile, TargetGameId } from "../../types";
 
 interface PresetsViewProps {
   onSelectPreset: (preset: PresetType) => void;
@@ -11,6 +11,7 @@ interface PresetsViewProps {
   isRunning?: boolean;
   activePlanId?: PresetType | null;
   activePlanTitle?: string;
+  activeTargetGame?: TargetGameId | null;
   hardware?: HardwareProfile | null;
 }
 
@@ -21,14 +22,20 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
   isRunning = false,
   activePlanId,
   activePlanTitle,
+  activeTargetGame,
   hardware,
 }) => {
   const ramGb = hardware?.ram_mb ? Math.round(hardware.ram_mb / 1024) : 16;
+  const isGameActive = Boolean(activeTargetGame);
 
   return (
     <div className="space-y-6">
       {/* HERO UNIFICADO: CENTRO DE OPTIMIZACIÓN ADAPTATIVO */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#0F141C] via-[#0A0D12] to-[#07090C] p-6 shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
+      <div className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        activePlanTitle
+          ? "border-emerald-500/50 shadow-[0_0_40px_rgba(16,185,129,0.18)] bg-gradient-to-br from-[#0B1713] via-[#091114] to-[#07090C]"
+          : "border-white/[0.12] bg-gradient-to-br from-[#0F141C] via-[#0A0D12] to-[#07090C] shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
+      } p-6`}>
         {/* Ambient Glows */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -67,17 +74,21 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               type="button"
               disabled={isRunning}
               onClick={() => onOpenGameSelector ? onOpenGameSelector() : onSelectPreset("ultra")}
-              className="px-6 py-4 rounded-xl text-sm font-extrabold text-black bg-white hover:bg-white/95 shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.45)] transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
+              className={`px-6 py-4 rounded-xl text-sm font-extrabold transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 ${
+                isGameActive
+                  ? "bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-black shadow-[0_0_35px_rgba(52,211,153,0.45)] hover:shadow-[0_0_45px_rgba(52,211,153,0.6)]"
+                  : "bg-white hover:bg-white/95 text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.45)]"
+              }`}
             >
               <Gamepad2 className="w-5 h-5 text-black" />
-              <span>Optimizar Juegos</span>
+              <span>{isGameActive ? `Reaplicar Boost Pre-Juego (${activeTargetGame?.toUpperCase()})` : "Optimizar Juegos"}</span>
               <ArrowRight className="w-4 h-4 text-black" />
             </button>
 
             {activePlanTitle ? (
               <div className="flex items-center justify-center gap-2.5 text-[11px] font-mono">
-                <div className="text-emerald-400/90 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                <div className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Activo: {activePlanTitle}</span>
                 </div>
                 {onRevertToDefaults && (
@@ -102,7 +113,9 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* PLAN LITE */}
         <GlassCard className={`p-5 flex flex-col justify-between h-full relative overflow-hidden group transition-all ${
-          activePlanId === "lite" ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.12)] bg-[#0C1210]" : ""
+          activePlanId === "lite"
+            ? "border-emerald-500/70 shadow-[0_0_25px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500/50 bg-[#0A1411]"
+            : ""
         }`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -158,14 +171,16 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               icon={<ArrowRight className="w-3.5 h-3.5 text-white/70" />}
               className="w-full"
             >
-              {activePlanId === "lite" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Lite"}
+              {activePlanId === "lite" ? "Reaplicar Mantenimiento" : "Aplicar Plan Lite"}
             </ActionButton>
           </div>
         </GlassCard>
 
         {/* PLAN PREMIUM */}
         <GlassCard className={`p-5 flex flex-col justify-between h-full relative overflow-hidden group border-white/[0.12] bg-[#0E1013]/90 transition-all ${
-          activePlanId === "premium" ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.12)] bg-[#0C1210]" : ""
+          activePlanId === "premium"
+            ? "border-cyan-500/70 shadow-[0_0_25px_rgba(6,182,212,0.25)] ring-1 ring-cyan-500/50 bg-[#081216]"
+            : ""
         }`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -173,7 +188,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
                 <Zap className="w-5 h-5 text-white" />
               </div>
               {activePlanId === "premium" ? (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>ACTIVO</span>
                 </div>
@@ -221,14 +236,16 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               icon={<Zap className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
               className="w-full"
             >
-              {activePlanId === "premium" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Premium"}
+              {activePlanId === "premium" ? "Reaplicar Boost Pre-Sesión" : "Aplicar Plan Premium"}
             </ActionButton>
           </div>
         </GlassCard>
 
         {/* PLAN ULTRA */}
         <GlassCard className={`p-5 flex flex-col justify-between h-full relative overflow-hidden group border-white/[0.14] bg-[#0A0C0E] transition-all ${
-          activePlanId === "ultra" ? "border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.15)] bg-[#0C1210]" : ""
+          activePlanId === "ultra"
+            ? "border-amber-500/70 shadow-[0_0_25px_rgba(245,158,11,0.25)] ring-1 ring-amber-500/50 bg-[#140F0A]"
+            : ""
         }`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -236,7 +253,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
                 <Flame className="w-5 h-5 text-white" />
               </div>
               {activePlanId === "ultra" ? (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>ACTIVO</span>
                 </div>
@@ -284,7 +301,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               icon={<Flame className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
               className="w-full bg-white hover:bg-white/90 text-black shadow-[0_0_20px_rgba(255,255,255,0.15)]"
             >
-              {activePlanId === "ultra" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Ultra"}
+              {activePlanId === "ultra" ? "Reaplicar Boost Pre-Sesión" : "Aplicar Plan Ultra"}
             </ActionButton>
           </div>
         </GlassCard>

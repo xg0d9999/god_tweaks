@@ -186,6 +186,33 @@ const GameLogoHeader: React.FC<{ gameId: TargetGameId }> = ({ gameId }) => {
 export const GameSelectorStandaloneView: React.FC = () => {
   const [hoveredId, setHoveredId] = useState<TargetGameId | null>(null);
   const [hardware, setHardware] = useState<HardwareProfile | null>(null);
+  const [activeTargetGame, setActiveTargetGame] = useState<TargetGameId | null>(() => {
+    try {
+      const saved = localStorage.getItem("god_tweaks_active_plan");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.targetGame || null;
+      }
+    } catch {}
+    return null;
+  });
+
+  // Keep active target game synced across windows
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const saved = localStorage.getItem("god_tweaks_active_plan");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setActiveTargetGame(parsed.targetGame || null);
+        } else {
+          setActiveTargetGame(null);
+        }
+      } catch {}
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   // Fetch hardware specifications on startup
   useEffect(() => {
@@ -372,6 +399,7 @@ export const GameSelectorStandaloneView: React.FC = () => {
           {GAME_PANELS.map((game) => {
             const isHovered = hoveredId === game.id;
             const isAnyHovered = hoveredId !== null;
+            const isActiveGame = activeTargetGame === game.id;
 
             // Straight vertical lines flex styling:
             // Idle: equal 1 flex each
@@ -397,6 +425,10 @@ export const GameSelectorStandaloneView: React.FC = () => {
                     "flex 0.45s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease",
                 }}
                 className={`relative h-full flex flex-col justify-between overflow-hidden cursor-pointer group ${
+                  isActiveGame
+                    ? "ring-2 ring-emerald-400 border-x-2 border-emerald-400/90 shadow-[0_0_35px_rgba(16,185,129,0.35)] z-10"
+                    : ""
+                } ${
                   !isHovered && isAnyHovered ? "brightness-85 opacity-75" : "brightness-100 opacity-100"
                 }`}
               >
@@ -420,8 +452,16 @@ export const GameSelectorStandaloneView: React.FC = () => {
                 <div className="relative z-10 w-full h-full flex flex-col justify-between p-5 md:p-6 overflow-hidden">
                   {/* Top: Engine tag & Transparent logo */}
                   <div className="flex flex-col items-start gap-2 flex-shrink-0 z-20">
-                    <div className="px-2.5 py-1 rounded-md text-[9px] md:text-[10px] font-mono font-bold tracking-widest uppercase bg-black/60 text-white/90 border border-white/15 backdrop-blur-md shadow-md">
-                      {game.engineBadge}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="px-2.5 py-1 rounded-md text-[9px] md:text-[10px] font-mono font-bold tracking-widest uppercase bg-black/60 text-white/90 border border-white/15 backdrop-blur-md shadow-md">
+                        {game.engineBadge}
+                      </div>
+                      {isActiveGame && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] md:text-[10px] font-mono font-bold uppercase bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.35)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>JUEGO ACTIVO</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-1">
@@ -451,12 +491,23 @@ export const GameSelectorStandaloneView: React.FC = () => {
                   <div className="relative z-20 flex flex-col justify-end flex-shrink-0">
                     {/* Idle card label */}
                     {!isHovered && (
-                      <div className="p-3 rounded-xl bg-black/70 border border-white/10 backdrop-blur-md space-y-0.5 transition-all">
-                        <span className="text-xs font-bold text-white block truncate">
-                          {game.tagline}
-                        </span>
+                      <div className={`p-3 rounded-xl backdrop-blur-md space-y-0.5 transition-all ${
+                        isActiveGame
+                          ? "bg-emerald-950/80 border border-emerald-500/50 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                          : "bg-black/70 border border-white/10"
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white block truncate">
+                            {game.tagline}
+                          </span>
+                          {isActiveGame && (
+                            <span className="text-[10px] font-mono text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30">
+                              ACTIVO
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] text-[#A6ADB8] flex items-center gap-1 font-semibold">
-                          Pasa el ratón para enfocar <ArrowRight className="w-3 h-3" />
+                          {isActiveGame ? "Clic para reaplicar boost pre-juego" : "Pasa el ratón para enfocar"} <ArrowRight className="w-3 h-3" />
                         </span>
                       </div>
                     )}
@@ -523,13 +574,25 @@ export const GameSelectorStandaloneView: React.FC = () => {
                             e.stopPropagation();
                             void handleSelectGame(game.id);
                           }}
-                          className="w-full py-2.5 px-4 rounded-xl text-black font-black text-xs md:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
-                          style={{
-                            backgroundColor: game.accentHex,
-                            boxShadow: `0 0 25px ${game.glowColor}`,
-                          }}
+                          className={`w-full py-2.5 px-4 rounded-xl font-black text-xs md:text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${
+                            isActiveGame
+                              ? "bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-black shadow-[0_0_30px_rgba(52,211,153,0.5)]"
+                              : "text-black"
+                          }`}
+                          style={
+                            isActiveGame
+                              ? undefined
+                              : {
+                                  backgroundColor: game.accentHex,
+                                  boxShadow: `0 0 25px ${game.glowColor}`,
+                                }
+                          }
                         >
-                          <span>OPTIMIZAR PARA {game.id.toUpperCase()}</span>
+                          <span>
+                            {isActiveGame
+                              ? `REAPLICAR BOOST PRE-JUEGO (${game.id.toUpperCase()})`
+                              : `OPTIMIZAR PARA ${game.id.toUpperCase()}`}
+                          </span>
                           <ArrowRight className="w-4 h-4 stroke-[3]" />
                         </button>
                       </motion.div>

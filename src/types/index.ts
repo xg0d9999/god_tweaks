@@ -17,6 +17,8 @@ export interface ActivePlanData {
   id: PresetType;
   title: string;
   appliedAt: string;
+  targetGame?: TargetGameId;
+  isPreGameBoost?: boolean;
 }
 
 export interface SystemMetrics {

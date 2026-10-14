@@ -12,14 +12,8 @@ import {
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { ActionButton } from "../ui/ActionButton";
-import { SystemMetrics, LogEntry } from "../../types";
+import { SystemMetrics, LogEntry, ActivePlanData } from "../../types";
 import { useAuth } from "../../context/AuthContext";
-
-export interface ActivePlanData {
-  id: "lite" | "premium" | "ultra";
-  title: string;
-  appliedAt: string;
-}
 
 interface DashboardViewProps {
   metrics: SystemMetrics | null;

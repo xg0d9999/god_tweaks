@@ -643,7 +643,9 @@ const AppContent: React.FC = () => {
   // Execution engine with progress checklist step-by-step
   const runStepsSequentially = async (
     presetId: PresetType,
-    stepsList: { label: string; action: () => Promise<unknown> }[]
+    stepsList: { label: string; action: () => Promise<unknown> }[],
+    targetGame?: TargetGameId,
+    isPreGameBoost?: boolean
   ) => {
     setModalPhase("running");
     for (let i = 0; i < stepsList.length; i++) {
@@ -675,6 +677,8 @@ const AppContent: React.FC = () => {
         hour: "2-digit",
         minute: "2-digit",
       }),
+      targetGame,
+      isPreGameBoost,
     };
     setActivePlan(planData);
     try {
@@ -693,87 +697,168 @@ const AppContent: React.FC = () => {
     fetchBackups();
   };
 
-  // Preset Trigger: Lite (Sin purga de caché)
+  // Preset Trigger: Lite (Mantenimiento de sesión o incremental)
   const triggerLitePlan = () => {
-    const rawSteps = [
-      {
+    // Si ya está activo, reaplicar solo mantenimiento rápido de sesión
+    if (activePlan?.id === "lite") {
+      const quickSteps = [
+        {
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        },
+        {
+          label: "Compactar RAM Working Set",
+          action: () => safeInvoke("clean_ram_working_set"),
+        },
+      ];
+      setModalPlanTitle("Mantenimiento Rápido: Plan Lite");
+      setIsModalRevert(false);
+      setModalSteps(quickSteps.map((s) => ({ label: s.label, status: "pending" })));
+      setCurrentStepIndex(0);
+      setActivePipelineRunner(() => () => runStepsSequentially("lite", quickSteps, undefined, true));
+      setModalPhase("confirm");
+      setIsModalOpen(true);
+      return;
+    }
+
+    const rawSteps: { label: string; action: () => Promise<unknown> }[] = [];
+    const hasAnyPlanActive = Boolean(activePlan);
+
+    // Si no había ningún plan activo previo, crear respaldos de seguridad
+    if (!hasAnyPlanActive) {
+      rawSteps.push({
         label: "Crear Punto de Restauración del Sistema (VSS)",
         action: () => safeInvoke("create_restore_point", { description: "g0d_tweaks_Lite_Plan" }),
-      },
-      {
+      });
+      rawSteps.push({
         label: "Exportar Copia de Seguridad del Registro (.reg)",
         action: () => safeInvoke("export_registry_backup", { backup_name: "backup_lite" }),
-      },
-      {
+      });
+    }
+
+    if (!gamingStatus.gamedvr_disabled) {
+      rawSteps.push({
         label: "Desactivar GameDVR y Capturas Xbox",
         action: () => safeInvoke("set_gamedvr", { disable: true }),
-      },
-      {
-        label: "Vaciado de Caché DNS del Sistema",
-        action: () => safeInvoke("flush_dns"),
-      },
-      {
+      });
+    }
+
+    rawSteps.push({
+      label: "Vaciado de Caché DNS del Sistema",
+      action: () => safeInvoke("flush_dns"),
+    });
+
+    if (!debloatStatus.telemetry_disabled) {
+      rawSteps.push({
         label: "Desactivar Telemetría Básica de Windows",
         action: () => safeInvoke("set_telemetry", { disable: true }),
-      },
-      {
-        label: "Compactar RAM Working Set",
-        action: () => safeInvoke("clean_ram_working_set"),
-      },
-    ];
+      });
+    }
+
+    rawSteps.push({
+      label: "Compactar RAM Working Set",
+      action: () => safeInvoke("clean_ram_working_set"),
+    });
 
     setModalPlanTitle("Plan Lite - Esencial");
     setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
-    setActivePipelineRunner(() => () => runStepsSequentially("lite", rawSteps));
+    setActivePipelineRunner(() => () => runStepsSequentially("lite", rawSteps, undefined, false));
     setModalPhase("confirm");
     setIsModalOpen(true);
   };
 
-  // Preset Trigger: Premium (Sin purga de caché)
+  // Preset Trigger: Premium (Boost pre-sesión o incremental)
   const triggerPremiumPlan = () => {
-    const rawSteps = [
-      {
+    // Si ya está activo, reaplicar solo boost de sesión temporal
+    if (activePlan?.id === "premium") {
+      const quickSteps = [
+        {
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        },
+        {
+          label: "Verificar y Activar Esquema 'Ultimate Performance'",
+          action: () => safeInvoke("enable_ultimate_performance"),
+        },
+        {
+          label: "Compactar Memoria RAM de Procesos Activos",
+          action: () => safeInvoke("clean_ram_working_set"),
+        },
+      ];
+      setModalPlanTitle("Boost Pre-Sesión: Plan Premium");
+      setIsModalRevert(false);
+      setModalSteps(quickSteps.map((s) => ({ label: s.label, status: "pending" })));
+      setCurrentStepIndex(0);
+      setActivePipelineRunner(() => () => runStepsSequentially("premium", quickSteps, undefined, true));
+      setModalPhase("confirm");
+      setIsModalOpen(true);
+      return;
+    }
+
+    const rawSteps: { label: string; action: () => Promise<unknown> }[] = [];
+    const hasAnyPlanActive = Boolean(activePlan);
+
+    if (!hasAnyPlanActive) {
+      rawSteps.push({
         label: "Crear Punto de Restauración del Sistema (VSS)",
         action: () => safeInvoke("create_restore_point", { description: "g0d_tweaks_Premium_Plan" }),
-      },
-      {
+      });
+      rawSteps.push({
         label: "Exportar Copia de Seguridad del Registro (.reg)",
         action: () => safeInvoke("export_registry_backup", { backup_name: "backup_premium" }),
-      },
-      {
+      });
+    }
+
+    if (!gamingStatus.ultimate_power_active) {
+      rawSteps.push({
         label: "Inyectar Esquema de Energía 'Ultimate Performance'",
         action: () => safeInvoke("enable_ultimate_performance"),
-      },
-      {
+      });
+    }
+
+    if (!gamingStatus.mmcss_optimized) {
+      rawSteps.push({
         label: "Optimizar MMCSS y GPU Priority a 8",
         action: () => safeInvoke("set_mmcss_and_priority", { enable: true }),
-      },
-      {
+      });
+    }
+
+    if (!networkStatus.nagle_disabled) {
+      rawSteps.push({
         label: "Desactivar Algoritmo Nagle (TCPNoDelay = 1)",
         action: () => safeInvoke("set_nagle_algorithm", { disable: true }),
-      },
-      {
+      });
+    }
+
+    if (!networkStatus.network_throttling_disabled) {
+      rawSteps.push({
         label: "Anular Limitador Multimedia de Red",
         action: () => safeInvoke("set_network_throttling", { disable: true }),
-      },
-      {
-        label: "Compactar Memoria RAM de Procesos Activos",
-        action: () => safeInvoke("clean_ram_working_set"),
-      },
-    ];
+      });
+    }
+
+    rawSteps.push({
+      label: "Vaciado de Caché DNS del Sistema",
+      action: () => safeInvoke("flush_dns"),
+    });
+
+    rawSteps.push({
+      label: "Compactar Memoria RAM de Procesos Activos",
+      action: () => safeInvoke("clean_ram_working_set"),
+    });
 
     setModalPlanTitle("Plan Premium - Competitivo");
     setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
-    setActivePipelineRunner(() => () => runStepsSequentially("premium", rawSteps));
+    setActivePipelineRunner(() => () => runStepsSequentially("premium", rawSteps, undefined, false));
     setModalPhase("confirm");
     setIsModalOpen(true);
   };
 
-  // Preset Trigger: Adaptativo por Juego y Hardware
+  // Preset Trigger: Adaptativo por Juego y Hardware (Con Boost Pre-Juego e Incremental)
   const triggerAdaptiveGameOptimization = useCallback((gameId: TargetGameId) => {
     if (!canUseTweaks) {
       showToast("Acceso restringido: Permiso de optimizaciones deshabilitado.", "error");
@@ -797,35 +882,164 @@ const AppContent: React.FC = () => {
     const cpuLabel = isAmdCpu ? "AMD Ryzen" : isIntelCpu ? "Intel Core" : "CPU";
     const gpuLabel = isNvidiaGpu ? "NVIDIA" : "GPU";
 
-    const rawSteps: { label: string; action: () => Promise<unknown> }[] = [
-      {
+    // 1. REAPLICAR BOOST PRE-JUEGO (Si este juego o plan ya está activo, ejecuta solo optimizaciones de sesión)
+    const isSameTargetActive =
+      activePlan?.targetGame === gameId ||
+      (gameId === "general" && activePlan?.id === "ultra" && !activePlan?.targetGame);
+
+    if (isSameTargetActive) {
+      const rawSteps: { label: string; action: () => Promise<unknown> }[] = [];
+
+      if (gameId === "fivem") {
+        rawSteps.push({
+          label: "Purga Profunda de Server-Cache y Texturas NUI (FiveM)",
+          action: () => safeInvoke("clean_fivem_caches"),
+        });
+        rawSteps.push({
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        });
+        rawSteps.push({
+          label: "Verificar y Asegurar Esquema Ultimate Performance",
+          action: () => safeInvoke("enable_ultimate_performance"),
+        });
+        rawSteps.push({
+          label: "Compactar Memoria RAM de Procesos Activos (Working Set)",
+          action: () => safeInvoke("clean_ram_working_set"),
+        });
+      } else if (gameId === "fortnite") {
+        rawSteps.push({
+          label: "Reasegurar Prioridad IFEO (FortniteClient-Win64-Shipping)",
+          action: () => safeInvoke("set_game_priority_profile", { gameId: "fortnite", enable: true }),
+        });
+        rawSteps.push({
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        });
+        rawSteps.push({
+          label: "Verificar y Asegurar Esquema Ultimate Performance",
+          action: () => safeInvoke("enable_ultimate_performance"),
+        });
+        rawSteps.push({
+          label: "Compactar Memoria RAM de Procesos Activos (Working Set)",
+          action: () => safeInvoke("clean_ram_working_set"),
+        });
+      } else if (gameId === "cs2") {
+        rawSteps.push({
+          label: "Reasegurar Prioridad IFEO y Sub-Tick Sync (cs2.exe)",
+          action: () => safeInvoke("set_game_priority_profile", { gameId: "cs2", enable: true }),
+        });
+        rawSteps.push({
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        });
+        rawSteps.push({
+          label: "Verificar y Asegurar Esquema Ultimate Performance",
+          action: () => safeInvoke("enable_ultimate_performance"),
+        });
+        rawSteps.push({
+          label: "Compactar Memoria RAM de Procesos Activos (Working Set)",
+          action: () => safeInvoke("clean_ram_working_set"),
+        });
+      } else if (gameId === "valorant") {
+        rawSteps.push({
+          label: "Reasegurar Prioridad IFEO (VALORANT-Win64-Shipping)",
+          action: () => safeInvoke("set_game_priority_profile", { gameId: "valorant", enable: true }),
+        });
+        rawSteps.push({
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        });
+        rawSteps.push({
+          label: "Verificar y Asegurar Esquema Ultimate Performance",
+          action: () => safeInvoke("enable_ultimate_performance"),
+        });
+        rawSteps.push({
+          label: "Compactar Memoria RAM de Procesos Activos (Working Set)",
+          action: () => safeInvoke("clean_ram_working_set"),
+        });
+      } else {
+        // general
+        rawSteps.push({
+          label: "Vaciado de Caché DNS del Sistema",
+          action: () => safeInvoke("flush_dns"),
+        });
+        rawSteps.push({
+          label: "Verificar y Asegurar Esquema Ultimate Performance",
+          action: () => safeInvoke("enable_ultimate_performance"),
+        });
+        rawSteps.push({
+          label: "Compactar Memoria RAM de Procesos Activos (Working Set)",
+          action: () => safeInvoke("clean_ram_working_set"),
+        });
+      }
+
+      const title = gameId === "general"
+        ? "Boost Pre-Sesión: Plan Ultra (Mantenimiento)"
+        : `Boost Pre-Juego: ${gameNames[gameId]} (Sesión)`;
+
+      setModalPlanTitle(title);
+      setIsModalRevert(false);
+      setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
+      setCurrentStepIndex(0);
+      setActivePipelineRunner(() => () => runStepsSequentially("ultra", rawSteps, gameId, true));
+      setModalPhase("confirm");
+      setIsModalOpen(true);
+      return;
+    }
+
+    // 2. OPTIMIZACIÓN INCREMENTAL (Si ya había otro plan activo, ejecuta solo lo que falte)
+    const hasAnyPlanActive = Boolean(activePlan);
+    const rawSteps: { label: string; action: () => Promise<unknown> }[] = [];
+
+    // Respaldos solo si es la primera optimización del sistema
+    if (!hasAnyPlanActive) {
+      rawSteps.push({
         label: "Punto de Restauración del Sistema (VSS)",
         action: () => safeInvoke("create_restore_point", { description: `g0d_tweaks_${gameId}_Adaptive` }),
-      },
-      {
+      });
+      rawSteps.push({
         label: "Exportar Copia de Seguridad del Registro (.reg)",
         action: () => safeInvoke("export_registry_backup", { backup_name: `backup_${gameId}` }),
-      },
-      {
+      });
+    }
+
+    // Kernel & HPET
+    if (!gamingStatus.hpet_disabled) {
+      rawSteps.push({
         label: "Temporizadores de Kernel & HPET (bcdedit TSC)",
         action: () => safeInvoke("set_hpet", { disable: true }),
-      },
-      {
+      });
+    }
+
+    // Ultimate Performance
+    if (!gamingStatus.ultimate_power_active) {
+      rawSteps.push({
         label: "Plan 'Ultimate Performance' & CPU Core Unparking",
         action: () => safeInvoke("enable_ultimate_performance"),
-      },
-      {
-        label: "Efectos Visuales de Rendimiento Mínimo de Windows",
-        action: () => safeInvoke("set_visual_effects", { performance_mode: true }),
-      },
-      {
+      });
+    }
+
+    // Efectos visuales de rendimiento
+    rawSteps.push({
+      label: "Efectos Visuales de Rendimiento Mínimo de Windows",
+      action: () => safeInvoke("set_visual_effects", { performance_mode: true }),
+    });
+
+    // MMCSS & GameDVR
+    if (!gamingStatus.gamedvr_disabled || !gamingStatus.mmcss_optimized) {
+      rawSteps.push({
         label: "MMCSS, Prioridad de GPU a 8 y GameDVR Off",
         action: () => Promise.all([
           safeInvoke("set_gamedvr", { disable: true }),
           safeInvoke("set_mmcss_and_priority", { enable: true }),
         ]),
-      },
-      {
+      });
+    }
+
+    // Red TCP/IP y QoS
+    if (!networkStatus.nagle_disabled || !networkStatus.network_throttling_disabled) {
+      rawSteps.push({
         label: "Red TCP/IP: Nagle Off, Flush DNS y Reserva QoS al 0%",
         action: () => Promise.all([
           safeInvoke("set_nagle_algorithm", { disable: true }),
@@ -833,26 +1047,30 @@ const AppContent: React.FC = () => {
           safeInvoke("set_qos_limit", { disable: true }),
           safeInvoke("flush_dns"),
         ]),
-      },
-      {
+      });
+    }
+
+    // Calibración extrema de CPU / Win32PrioritySeparation
+    if (!gamingStatus.extreme_tweaks_active) {
+      rawSteps.push({
         label: isAmdCpu
           ? "Calibración AMD Ryzen (Win32PrioritySeparation=38, PowerThrottling Off & HAGS)"
           : isIntelCpu
           ? "Calibración Intel (Thread Director para P-Cores, PowerThrottling Off & HAGS)"
           : "Win32PrioritySeparation=38, PowerThrottling Off & HAGS",
         action: () => safeInvoke("set_extreme_gaming_optimizations", { enable: true }),
-      },
-    ];
+      });
+    }
 
-    // Hardware RAM Tweak (Precision Optimizer)
-    if (hasHighRam) {
+    // Desactivar compresión de RAM (MMAgent) si tiene alta RAM
+    if (hasHighRam && !memoryCompressionDisabled) {
       rawSteps.push({
         label: `Desactivar Compresión de RAM (MMAgent - Zero Stutters para ${ramGb}GB)`,
         action: () => safeInvoke("set_memory_compression", { disable: true }),
       });
     }
 
-    // Game-specific tweaks
+    // Optimizaciones específicas por juego
     if (gameId === "fivem") {
       rawSteps.push({
         label: "Prioridad Alta en FiveM.exe, GTA5.exe y Subprocesos (b2699..b3095)",
@@ -879,17 +1097,23 @@ const AppContent: React.FC = () => {
       });
     } else {
       // General
-      rawSteps.push({
-        label: "Debloat de Privacidad: Cortana, Copilot & Telemetría",
-        action: () => Promise.all([
-          safeInvoke("set_telemetry", { disable: true }),
-          safeInvoke("set_cortana_and_search", { disable: true }),
-          safeInvoke("set_copilot", { disable: true }),
-        ]),
-      });
+      if (!debloatStatus.telemetry_disabled) {
+        rawSteps.push({
+          label: "Debloat de Privacidad: Cortana, Copilot & Telemetría",
+          action: () => Promise.all([
+            safeInvoke("set_telemetry", { disable: true }),
+            safeInvoke("set_cortana_and_search", { disable: true }),
+            safeInvoke("set_copilot", { disable: true }),
+          ]),
+        });
+      }
     }
 
-    // Final RAM working set compact
+    // Limpieza final de sesión DNS y RAM
+    rawSteps.push({
+      label: "Vaciado de Caché DNS del Sistema",
+      action: () => safeInvoke("flush_dns"),
+    });
     rawSteps.push({
       label: "Compactar Memoria RAM de Procesos Activos",
       action: () => safeInvoke("clean_ram_working_set"),
@@ -898,14 +1122,24 @@ const AppContent: React.FC = () => {
     const title = gameId === "general"
       ? `Plan Ultra: PC Completo (${cpuLabel} + ${gpuLabel})`
       : `Plan Adaptativo: ${gameNames[gameId]} (${cpuLabel} + ${gpuLabel})`;
+
     setModalPlanTitle(title);
     setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
     setCurrentStepIndex(0);
-    setActivePipelineRunner(() => () => runStepsSequentially("ultra", rawSteps));
+    setActivePipelineRunner(() => () => runStepsSequentially("ultra", rawSteps, gameId, false));
     setModalPhase("confirm");
     setIsModalOpen(true);
-  }, [canUseTweaks, hardware, showToast]);
+  }, [
+    canUseTweaks,
+    hardware,
+    showToast,
+    activePlan,
+    gamingStatus,
+    networkStatus,
+    debloatStatus,
+    memoryCompressionDisabled,
+  ]);
 
   // Open Native Independent Game Selector Window (1350x850)
   const handleOpenGameSelector = useCallback(async () => {
@@ -1216,6 +1450,7 @@ const AppContent: React.FC = () => {
                   isRunning={isModalOpen && modalPhase === "running"}
                   activePlanId={activePlan?.id}
                   activePlanTitle={activePlan?.title}
+                  activeTargetGame={activePlan?.targetGame}
                   hardware={hardware}
                 />
               ))}
@@ -1356,6 +1591,7 @@ const AppContent: React.FC = () => {
         onClose={() => setIsGameModalOpen(false)}
         onSelectGame={triggerAdaptiveGameOptimization}
         hardware={hardware}
+        activeTargetGame={activePlan?.targetGame}
       />
 
       {/* Unclosable Full-Screen Loading & Confirmation Modal */}

@@ -895,7 +895,9 @@ const AppContent: React.FC = () => {
       action: () => safeInvoke("clean_ram_working_set"),
     });
 
-    const title = `Plan Adaptativo: ${gameNames[gameId]} (${cpuLabel} + ${gpuLabel})`;
+    const title = gameId === "general"
+      ? `Plan Ultra: PC Completo (${cpuLabel} + ${gpuLabel})`
+      : `Plan Adaptativo: ${gameNames[gameId]} (${cpuLabel} + ${gpuLabel})`;
     setModalPlanTitle(title);
     setIsModalRevert(false);
     setModalSteps(rawSteps.map((s) => ({ label: s.label, status: "pending" })));
@@ -950,7 +952,7 @@ const AppContent: React.FC = () => {
     }
     if (preset === "lite") triggerLitePlan();
     else if (preset === "premium") triggerPremiumPlan();
-    else if (preset === "ultra") handleOpenGameSelector();
+    else if (preset === "ultra") triggerAdaptiveGameOptimization("general");
   };
 
   // Revert / Restore System Defaults Pipeline

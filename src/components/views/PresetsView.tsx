@@ -34,10 +34,13 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3">
+          <div className="space-y-2">
             <h2 className="text-2xl font-extrabold tracking-tight text-white">
-              Centro de Optimización de Sistema y Juegos
+              Optimización de Juegos
             </h2>
+            <p className="text-xs text-[#828792]">
+              Calibración adaptativa por juego. Para optimizar el PC completo, selecciona uno de los planes inferiores.
+            </p>
 
             {/* Hardware Pills */}
             <div className="flex flex-wrap items-center gap-2 pt-0.5 font-mono text-[11px]">
@@ -67,7 +70,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               className="px-6 py-4 rounded-xl text-sm font-extrabold text-black bg-white hover:bg-white/95 shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.45)] transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
             >
               <Gamepad2 className="w-5 h-5 text-black" />
-              <span>Optimizar Sistema y Juegos</span>
+              <span>Optimizar Juegos</span>
               <ArrowRight className="w-4 h-4 text-black" />
             </button>
 
@@ -277,11 +280,11 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               variant="primary"
               size="md"
               disabled={isRunning}
-              onClick={() => onOpenGameSelector ? onOpenGameSelector() : onSelectPreset("ultra")}
+              onClick={() => onSelectPreset("ultra")}
               icon={<Flame className="w-3.5 h-3.5 fill-[#0A0C0E] text-[#0A0C0E]" />}
               className="w-full bg-white hover:bg-white/90 text-black shadow-[0_0_20px_rgba(255,255,255,0.15)]"
             >
-              {activePlanId === "ultra" ? "Personalizar Juegos" : "Calibrar con Juegos"}
+              {activePlanId === "ultra" ? "Plan Activo (Reaplicar)" : "Aplicar Plan Ultra"}
             </ActionButton>
           </div>
         </GlassCard>

@@ -10,7 +10,6 @@ import {
   Sparkles,
   Zap,
   Check,
-  Layers,
 } from "lucide-react";
 import { TargetGameId, HardwareProfile } from "../../types";
 
@@ -306,25 +305,12 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
             </div>
           </div>
 
-          {/* Modo General Quick Strip Banner */}
-          <div className="px-6 py-2 bg-gradient-to-r from-blue-950/40 via-cyan-950/20 to-transparent border-b border-white/[0.06] flex items-center justify-between text-xs flex-shrink-0">
-            <div className="flex items-center gap-2 text-cyan-200">
-              <Zap className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-              <span>
-                ¿No juegas a ninguno de estos títulos en concreto? Puedes optimizar todo tu PC de forma global.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                onSelectGame("general");
-                onClose();
-              }}
-              className="px-3 py-1 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-[11px] transition-all flex items-center gap-1.5"
-            >
-              <span>Aplicar Modo General (Todo el PC)</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
+          {/* Quick Info Strip Banner */}
+          <div className="px-6 py-2.5 bg-white/[0.02] border-b border-white/[0.06] flex items-center gap-2 text-xs text-[#8A919E] flex-shrink-0">
+            <Zap className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+            <span>
+              Selecciona tu juego competitivo para inyectar calibraciones adaptativas y prioridades de kernel.
+            </span>
           </div>
 
           {/* MAIN STAGE: CLEAN VERTICAL COLUMNS ACCORDION */}
@@ -524,18 +510,6 @@ export const GameSelectorModal: React.FC<GameSelectorModalProps> = ({
                 className="px-4 py-2 text-xs font-semibold text-[#8A919E] hover:text-white rounded-xl hover:bg-white/[0.06] transition-colors"
               >
                 Cerrar
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectGame("general");
-                  onClose();
-                }}
-                className="px-5 py-2 text-xs font-bold text-white bg-white/[0.08] hover:bg-white/[0.15] border border-white/20 rounded-xl flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Layers className="w-4 h-4 text-cyan-400" />
-                <span>Optimizar Modo General (Todo el PC)</span>
               </button>
             </div>
           </div>

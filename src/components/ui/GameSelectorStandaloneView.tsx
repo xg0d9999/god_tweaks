@@ -10,7 +10,6 @@ import {
   Sparkles,
   Zap,
   Check,
-  Layers,
 } from "lucide-react";
 import { TargetGameId, HardwareProfile } from "../../types";
 import { safeInvoke } from "../../utils/safeInvoke";
@@ -356,23 +355,12 @@ export const GameSelectorStandaloneView: React.FC = () => {
         </div>
       </header>
 
-      {/* 2. MODO GENERAL QUICK STRIP BANNER */}
-      <div className="px-6 py-2.5 bg-gradient-to-r from-blue-950/40 via-cyan-950/20 to-transparent border-b border-white/[0.06] flex items-center justify-between text-xs flex-shrink-0 z-20">
-        <div className="flex items-center gap-2 text-cyan-200">
-          <Zap className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-          <span>
-            Pasa el cursor por encima de tu juego para enfocarlo y descubrir sus calibraciones de baja latencia.
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => handleSelectGame("general")}
-          className="px-3.5 py-1.5 rounded-lg bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-cyan-300 font-bold text-[11px] transition-all flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Optimizar Modo General (Todo el PC)</span>
-          <ArrowRight className="w-3 h-3" />
-        </button>
+      {/* 2. QUICK STRIP BANNER */}
+      <div className="px-6 py-2.5 bg-white/[0.02] border-b border-white/[0.06] flex items-center gap-2 text-xs text-[#8A919E] flex-shrink-0 z-20">
+        <Zap className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+        <span>
+          Pasa el cursor por encima de tu juego para enfocarlo y calibrar su rendimiento de baja latencia.
+        </span>
       </div>
 
       {/* 3. MAIN ACCORDION STAGE: 4 STRAIGHT VERTICAL COLUMNS */}
@@ -570,15 +558,6 @@ export const GameSelectorStandaloneView: React.FC = () => {
             className="px-4 py-2 text-xs font-semibold text-[#8A919E] hover:text-white rounded-xl hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
             Cerrar (Esc)
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectGame("general")}
-            className="px-5 py-2 text-xs font-bold text-white bg-white/[0.08] hover:bg-white/[0.15] border border-white/20 rounded-xl flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-          >
-            <Layers className="w-4 h-4 text-cyan-400" />
-            <span>Optimizar Modo General (Todo el PC)</span>
           </button>
         </div>
       </footer>

@@ -26,6 +26,7 @@ interface DashboardViewProps {
   logs: LogEntry[];
   activePlan: ActivePlanData | null;
   onNavigateToPresets: () => void;
+  onNavigateToBenchmark?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
@@ -33,6 +34,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   logs,
   activePlan,
   onNavigateToPresets,
+  onNavigateToBenchmark,
 }) => {
   const { userRecord } = useAuth();
   const tweaksBlocked = userRecord?.can_use_tweaks === false;
@@ -206,6 +208,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             />
           </div>
         </GlassCard>
+      </div>
+
+      {/* Benchmark & Verification Callout */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-[#0E1117] to-indigo-950/30 border border-cyan-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 flex-shrink-0">
+            <Activity className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-white flex items-center gap-2">
+              <span>Auditoría de Rendimiento & Test Antes/Después</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-mono font-bold">
+                Exportable a PDF
+              </span>
+            </h4>
+            <p className="text-[11px] text-[#9CA3AF]">
+              Comprueba si tu sistema realmente optimiza con mediciones de latencia, timer y RAM en tiempo real.
+            </p>
+          </div>
+        </div>
+        {onNavigateToBenchmark && (
+          <button
+            onClick={onNavigateToBenchmark}
+            className="flex-shrink-0 px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-md shadow-cyan-500/20"
+          >
+            <span>Abrir Diagnóstico & Benchmark</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Terminal logs feed */}

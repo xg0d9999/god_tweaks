@@ -9,6 +9,7 @@ import { CitizensManagerView } from "./components/views/CitizensManagerView";
 import { AdvancedModeView } from "./components/views/AdvancedModeView";
 import { HispanSancionesView } from "./components/views/HispanSancionesView";
 import { BackupView } from "./components/views/BackupView";
+import { BenchmarkView } from "./components/views/BenchmarkView";
 import { AdminPanelView } from "./components/views/AdminPanelView";
 import { PermissionBlockedView } from "./components/views/PermissionBlockedView";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
@@ -1079,6 +1080,7 @@ const AppContent: React.FC = () => {
                 logs={logs}
                 activePlan={activePlan}
                 onNavigateToPresets={() => setActiveTab("presets")}
+                onNavigateToBenchmark={() => setActiveTab("benchmark")}
               />
             )}
 
@@ -1151,6 +1153,10 @@ const AppContent: React.FC = () => {
                 loadingKeys={loadingKeys}
                 lastBackupMsg={lastBackupMsg}
               />
+            )}
+
+            {activeTab === "benchmark" && (
+              <BenchmarkView hardware={hardware} />
             )}
 
             {activeTab === "hispan" &&

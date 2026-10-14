@@ -106,8 +106,10 @@ pub fn run() {
             set_window_always_on_top,
             send_command_to_fivem,
             send_report_to_discord,
-            // Test Bench
+            // Test Bench & Real Live Benchmark
             run_test_bench,
+            get_live_benchmark_snapshot,
+            get_default_unoptimized_baseline,
             // Global Shortcut Toggle
             get_toggle_hotkey,
             set_toggle_hotkey,

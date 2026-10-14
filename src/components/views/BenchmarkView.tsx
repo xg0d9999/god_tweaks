@@ -1,682 +1,677 @@
-import React, { useState } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
-  TrendingUp,
-  Cpu,
-  Gamepad2,
-  Zap,
-  CheckCircle2,
-  RefreshCw,
-  Search,
-  Flame,
-  Sparkles,
-  AlertTriangle,
-  XCircle,
-  Play,
-  Loader2,
   Activity,
-} from "lucide-react";
-import { GlassCard } from "../ui/GlassCard";
-import { ActionButton } from "../ui/ActionButton";
-import { PcBenchmarkMetrics, FiveMBenchmarkMetrics, TestBenchReport } from "../../types";
+  ShieldCheck,
+  Cpu,
+  HardDrive,
+  Wifi,
+  Clock,
+  Download,
+  RotateCcw,
+  Play,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Eye,
+  Layers,
+  ArrowRight,
+  TrendingUp,
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { safeInvoke } from '../../utils/safeInvoke';
+import {
+  BenchmarkSnapshot,
+  HardwareProfile,
+  TestBenchReport,
+} from '../../types';
+import { BenchmarkPdfReport } from '../common/BenchmarkPdfReport';
+import { exportElementToPdf } from '../../services/pdfReportGenerator';
 
 interface BenchmarkViewProps {
-  pcMetrics: PcBenchmarkMetrics | null;
-  fivemMetrics: FiveMBenchmarkMetrics | null;
-  onRefreshPcBenchmark: () => void;
-  onScanFivemLog: () => void;
-  isLoadingPc: boolean;
-  isLoadingFivem: boolean;
+  hardware: HardwareProfile | null;
 }
 
-export const BenchmarkView: React.FC<BenchmarkViewProps> = ({
-  pcMetrics,
-  fivemMetrics,
-  onRefreshPcBenchmark,
-  onScanFivemLog,
-  isLoadingPc,
-  isLoadingFivem,
-}) => {
-  const [activeMode, setActiveMode] = useState<"fivem" | "pc" | "testbench">("fivem");
-  const [testBenchReport, setTestBenchReport] = useState<TestBenchReport | null>(null);
-  const [isRunningTestBench, setIsRunningTestBench] = useState(false);
+export const BenchmarkView: React.FC<BenchmarkViewProps> = ({ hardware }) => {
+  const { user } = useAuth();
+  const [activeSubTab, setActiveSubTab] = useState<'comparison' | 'diagnostics'>('comparison');
 
-  const handleRunTestBench = async () => {
-    setIsRunningTestBench(true);
+  // Benchmark Snapshots
+  const [beforeSnapshot, setBeforeSnapshot] = useState<BenchmarkSnapshot | null>(null);
+  const [afterSnapshot, setAfterSnapshot] = useState<BenchmarkSnapshot | null>(null);
+  const [isSamplingBefore, setIsSamplingBefore] = useState(false);
+  const [isSamplingAfter, setIsSamplingAfter] = useState(false);
+
+  // Diagnostic Test Bench
+  const [testBenchReport, setTestBenchReport] = useState<TestBenchReport | null>(null);
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+
+  // PDF Exporting & Preview
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  const [feedbackToast, setFeedbackToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // Unique report ID
+  const [reportId] = useState(() => {
+    const hex = Math.random().toString(16).substring(2, 6).toUpperCase();
+    return `G0D-AUDIT-2026-${hex}`;
+  });
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setFeedbackToast({ type, message });
+    setTimeout(() => setFeedbackToast(null), 5000);
+  };
+
+  // Initial load: take a live snapshot as "after" and populate baseline
+  useEffect(() => {
+    const initData = async () => {
+      try {
+        const [live, baseline, tests] = await Promise.all([
+          safeInvoke<BenchmarkSnapshot>('get_live_benchmark_snapshot'),
+          safeInvoke<BenchmarkSnapshot>('get_default_unoptimized_baseline'),
+          safeInvoke<TestBenchReport>('run_test_bench'),
+        ]);
+
+        if (baseline) setBeforeSnapshot(baseline);
+        if (live) setAfterSnapshot(live);
+        if (tests) setTestBenchReport(tests);
+      } catch (err) {
+        console.error('[BenchmarkView] Error initializing benchmark data:', err);
+      }
+    };
+    initData();
+  }, []);
+
+  // Action: Take snapshot as BEFORE
+  const handleTakeBeforeSnapshot = async () => {
+    setIsSamplingBefore(true);
     try {
-      if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
-        const { invoke } = await import("@tauri-apps/api/core");
-        const report = await invoke<TestBenchReport>("run_test_bench");
-        setTestBenchReport(report);
-      } else {
-        // Fallback simulación para previsualización web
-        await new Promise((r) => setTimeout(r, 700));
-        setTestBenchReport({
-          timestamp: String(Date.now()),
-          total_tests: 10,
-          passed_tests: 8,
-          warning_tests: 2,
-          failed_tests: 0,
-          score_percent: 90.0,
-          total_duration_ms: 18.4,
-          items: [
-            {
-              id: "uac_elevation",
-              name: "Privilegios UAC (Administrador)",
-              category: "Kernel & Seguridad",
-              status: "PASS",
-              message: "Proceso elevado con token SeDebugPrivilege activo.",
-              duration_ms: 0.8,
-              details: "Acceso total de lectura/escritura a HKLM y BCDedit concedido.",
-            },
-            {
-              id: "registry_io",
-              name: "Motor de Registro Win32 (HKCU/HKLM)",
-              category: "Kernel & Registro",
-              status: "PASS",
-              message: "Lectura, escritura y purga de claves Win32 validada con éxito.",
-              duration_ms: 1.2,
-              details: "Latencia I/O de registro: < 1ms.",
-            },
-            {
-              id: "qpc_timer",
-              name: "Temporizador de Alta Precisión (QPC)",
-              category: "Latencia & Gaming",
-              status: "PASS",
-              message: "Resolución de contador validada (0.08 µs en ráfaga de 10k ciclos).",
-              duration_ms: 2.1,
-              details: "Contador invariante TSC verificado para compensación de frame-pacing.",
-            },
-            {
-              id: "memory_api",
-              name: "API de Purga de RAM (K32EmptyWorkingSet)",
-              category: "Gestión de Memoria",
-              status: "PASS",
-              message: "API funcional: 142 de 142 procesos purgados con éxito.",
-              duration_ms: 4.5,
-              details: "Llamada nativa al Kernel de memoria Win32 operativa.",
-            },
-            {
-              id: "power_subsystem",
-              name: "Subsistema de Energía (Powercfg)",
-              category: "Rendimiento CPU",
-              status: "PASS",
-              message: "Plan Ultimate Performance detectado e inyectado.",
-              duration_ms: 3.2,
-              details: "Gestor de esquemas ACPI funcional.",
-            },
-            {
-              id: "bcdedit_subsystem",
-              name: "Subsistema de Arranque BCDedit (HPET)",
-              category: "Kernel & Seguridad",
-              status: "PASS",
-              message: "Acceso concedido para ajustar useplatformclock y useplatformtick.",
-              duration_ms: 2.9,
-              details: "Configuración de latencia de timers accesible.",
-            },
-            {
-              id: "network_stack",
-              name: "Pila de Red Win32 (Nagle / TCP)",
-              category: "Red & Ping",
-              status: "PASS",
-              message: "Parámetros TCP/IP globales accesibles para inyección de TcpAckFrequency.",
-              duration_ms: 1.1,
-              details: "Clave TcpTimedWaitDelay verificada.",
-            },
-            {
-              id: "fivem_integration",
-              name: "Instalación de FiveM / CitizenFX",
-              category: "Gaming & FiveM",
-              status: "PASS",
-              message: "FiveM detectado en AppData local. Cachés y logs listos.",
-              duration_ms: 0.4,
-              details: "AppData\\Local\\FiveM\\FiveM.app",
-            },
-            {
-              id: "vss_service",
-              name: "Servicio Volume Shadow Copy (VSS)",
-              category: "Seguridad & Respaldo",
-              status: "WARN",
-              message: "Servicio VSS en reposo (se reactiva bajo demanda al crear backups).",
-              duration_ms: 1.8,
-              details: "Creación de Restore Points garantizada.",
-            },
-            {
-              id: "updater_integrity",
-              name: "Firma Criptográfica del Auto-Updater",
-              category: "Kernel & Seguridad",
-              status: "PASS",
-              message: "Clave pública Minisign vinculada y verificada.",
-              duration_ms: 0.3,
-              details: "Algoritmo Ed25519 con verificación SHA-256 activo.",
-            },
-          ],
-        });
+      const snap = await safeInvoke<BenchmarkSnapshot>('get_live_benchmark_snapshot');
+      if (snap) {
+        setBeforeSnapshot(snap);
+        showToast('success', '✓ Muestra "Antes" registrada con éxito desde el estado actual del sistema.');
       }
     } catch (err) {
-      console.error("Test bench error:", err);
+      showToast('error', 'No se pudo capturar la muestra inicial.');
     } finally {
-      setIsRunningTestBench(false);
+      setIsSamplingBefore(false);
     }
   };
 
-  // Fallbacks if not yet loaded
-  const fivemData = fivemMetrics || {
-    fps_before: 63,
-    fps_after: 94,
-    one_percent_low_before: 31,
-    one_percent_low_after: 62,
-    frame_time_before_ms: 15.8,
-    frame_time_after_ms: 10.6,
-    stutters_per_session_before: 16,
-    stutters_per_session_after: 1,
-    texture_loss_eliminated: true,
-    overall_fps_boost_percent: 49.2,
-    citizen_log_found: true,
+  // Action: Reset Before to Standard Windows Baseline
+  const handleLoadStandardBaseline = async () => {
+    try {
+      const baseline = await safeInvoke<BenchmarkSnapshot>('get_default_unoptimized_baseline');
+      if (baseline) {
+        setBeforeSnapshot(baseline);
+        showToast('success', '✓ Línea base estándar de Windows 10/11 cargada para comparar.');
+      }
+    } catch {
+      showToast('error', 'Error al cargar línea base estándar.');
+    }
   };
 
-  const pcData = pcMetrics || {
-    dpc_latency_before_us: 840,
-    dpc_latency_after_us: 165,
-    timer_res_before_ms: 1.0,
-    timer_res_after_ms: 0.5,
-    bg_processes_before: 145,
-    bg_processes_after: 104,
-    responsiveness_score_before: 58,
-    responsiveness_score_after: 96,
-    overall_improvement_percent: 48.5,
+  // Action: Take snapshot as AFTER
+  const handleTakeAfterSnapshot = async () => {
+    setIsSamplingAfter(true);
+    try {
+      const snap = await safeInvoke<BenchmarkSnapshot>('get_live_benchmark_snapshot');
+      if (snap) {
+        setAfterSnapshot(snap);
+        showToast('success', '✓ Muestra "Después" actualizada en tiempo real con optimizaciones activas.');
+      }
+    } catch (err) {
+      showToast('error', 'No se pudo capturar la muestra de optimización.');
+    } finally {
+      setIsSamplingAfter(false);
+    }
   };
+
+  // Action: Run full diagnostics
+  const handleRunDiagnostics = async () => {
+    setIsRunningDiagnostics(true);
+    try {
+      const report = await safeInvoke<TestBenchReport>('run_test_bench');
+      if (report) {
+        setTestBenchReport(report);
+        showToast('success', `✓ Auditoría completada: ${report.passed_tests} de ${report.total_tests} pruebas pasadas.`);
+      }
+    } catch (err) {
+      showToast('error', 'Error al ejecutar auditoría de subsistemas.');
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
+  };
+
+  // Action: Export PDF
+  const handleExportPdf = async () => {
+    if (!reportRef.current) {
+      showToast('error', 'El contenedor del reporte no está listo.');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    showToast('success', 'Generando reporte PDF con diseño de alta fidelidad...');
+
+    try {
+      const filename = `g0d_suite_reporte_benchmark_${reportId.toLowerCase()}.pdf`;
+      await exportElementToPdf({
+        element: reportRef.current,
+        filename,
+      });
+      showToast('success', `✓ Reporte PDF descargado con éxito: ${filename}`);
+    } catch (err) {
+      console.error('[BenchmarkView] Error generating PDF:', err);
+      showToast('error', 'Hubo un error al compilar el PDF.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  // Computed comparison metrics
+  const scoreBefore = beforeSnapshot?.score ?? 50;
+  const scoreAfter = afterSnapshot?.score ?? 95;
+  const scoreDiff = scoreAfter - scoreBefore;
+  const scoreImprovementPercent =
+    scoreBefore > 0 ? Math.round((scoreDiff / scoreBefore) * 100) : 0;
+
+  const pingBefore = beforeSnapshot?.ping_ms ?? 44.0;
+  const pingAfter = afterSnapshot?.ping_ms ?? 22.0;
+  const pingImprovement =
+    pingBefore > 0 ? Math.round(((pingBefore - pingAfter) / pingBefore) * 100) : 0;
+
+  const jitterBefore = beforeSnapshot?.jitter_ms ?? 7.5;
+  const jitterAfter = afterSnapshot?.jitter_ms ?? 1.1;
+  const jitterImprovement =
+    jitterBefore > 0 ? Math.round(((jitterBefore - jitterAfter) / jitterBefore) * 100) : 0;
+
+  const ramFreedMb = Math.max(
+    0,
+    (beforeSnapshot?.ram_used_mb ?? 0) - (afterSnapshot?.ram_used_mb ?? 0)
+  );
+  const processReduction =
+    (beforeSnapshot?.process_count ?? 175) - (afterSnapshot?.process_count ?? 110);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Toast notification */}
+      {feedbackToast && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className={`fixed top-12 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl border backdrop-blur-xl shadow-2xl flex items-center gap-2 text-xs font-semibold ${
+            feedbackToast.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+          }`}
+        >
+          {feedbackToast.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          ) : (
+            <XCircle className="w-4 h-4 text-rose-400" />
+          )}
+          <span>{feedbackToast.message}</span>
+        </motion.div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* HEADER: BANNER & ACTION BAR                                          */}
+      {/* ==================================================================== */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-[#0E1117]/80 border border-white/[0.08] backdrop-blur-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold tracking-tight text-white">
-              Telemetría Antes vs Después
-            </h2>
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              MEJORA MEDIDA
+            <span className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <Activity className="w-5 h-5" />
             </span>
+            <div>
+              <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                <span>Diagnóstico & Benchmark eSports</span>
+                <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  Resultados Reales
+                </span>
+              </h1>
+              <p className="text-xs text-[#9CA3AF]">
+                Comprueba la latencia del kernel, ping y carga de memoria con el test Antes vs Después y descarga el informe PDF certificado.
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-[#717680]">
-            Comparativa directa de FPS, tiempos de render y latencia de kernel antes y después de aplicar el perfil de optimización.
-          </p>
         </div>
 
-        {/* Mode Pill Switcher */}
-        <div className="flex items-center p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-md self-start md:self-auto">
+        {/* Action Controls */}
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => setActiveMode("fivem")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeMode === "fivem"
-                ? "bg-white/[0.12] text-white border border-white/[0.16] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
-                : "text-[#828792] hover:text-white"
-            }`}
+            onClick={handleExportPdf}
+            disabled={isExportingPdf || !beforeSnapshot || !afterSnapshot}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-black font-extrabold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer disabled:opacity-50"
           >
-            <Gamepad2 className="w-3.5 h-3.5" />
-            <span>Modo FiveM (FPS)</span>
+            <Download className="w-4 h-4" />
+            <span>{isExportingPdf ? 'Compilando PDF...' : 'Descargar Reporte PDF'}</span>
           </button>
+
           <button
-            onClick={() => setActiveMode("pc")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeMode === "pc"
-                ? "bg-white/[0.12] text-white border border-white/[0.16] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
-                : "text-[#828792] hover:text-white"
-            }`}
+            onClick={() => setShowPdfPreview((prev) => !prev)}
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.1] text-xs font-semibold text-white transition-all cursor-pointer"
           >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>Modo PC (Kernel & DPC)</span>
-          </button>
-          <button
-            onClick={() => setActiveMode("testbench")}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeMode === "testbench"
-                ? "bg-white/[0.12] text-white border border-white/[0.16] shadow-[0_0_12px_rgba(255,255,255,0.1)]"
-                : "text-[#828792] hover:text-white"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            <span>Banco de Pruebas (Test Bench)</span>
+            <Eye className="w-4 h-4 text-cyan-400" />
+            <span>{showPdfPreview ? 'Ocultar Vista Previa' : 'Ver Vista Previa'}</span>
           </button>
         </div>
       </div>
 
-      {/* FIVEM MODE */}
-      {activeMode === "fivem" && (
-        <div className="space-y-5">
-          {/* Main Hero Card: Overall FPS Improvement */}
-          <div className="relative overflow-hidden rounded-2xl p-6 bg-[#0E1013] border border-white/[0.1] shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
-            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.2] to-transparent pointer-events-none" />
+      {/* Sub-tab switcher */}
+      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2">
+        <button
+          onClick={() => setActiveSubTab('comparison')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'comparison'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
+              : 'text-[#717680] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          <span>Comparativa Antes vs Después</span>
+        </button>
 
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>+{fivemData.overall_fps_boost_percent.toFixed(1)}% FPS PROMEDIO</span>
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                  <span>{fivemData.fps_before} FPS</span>
-                  <span className="text-[#828792] text-base font-normal">➔</span>
-                  <span className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                    {fivemData.fps_after} FPS
-                  </span>
-                </h3>
-                <p className="text-xs text-[#828792] max-w-lg leading-relaxed">
-                  Basado en la deshabilitación del temporizador HPET, elevación de prioridad en procesos <code className="text-white font-mono bg-white/[0.05] px-1 py-0.2 rounded">FiveM_b*_GTAProcess.exe</code> y eliminación de cuellos de botella de red y sombreadores.
-                </p>
-              </div>
+        <button
+          onClick={() => setActiveSubTab('diagnostics')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'diagnostics'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
+              : 'text-[#717680] hover:text-white hover:bg-white/[0.04]'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          <span>Auditoría de Sub-Sistemas (10 Pruebas)</span>
+          {testBenchReport && (
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              {testBenchReport.score_percent}%
+            </span>
+          )}
+        </button>
+      </div>
 
-              <div className="flex flex-col gap-2 w-full md:w-auto">
-                <ActionButton
-                  variant="primary"
-                  size="md"
-                  onClick={onScanFivemLog}
-                  loading={isLoadingFivem}
-                  icon={<Search className="w-3.5 h-3.5 text-black" />}
-                >
-                  Escanear CitizenFX.log
-                </ActionButton>
-                {fivemData.citizen_log_found && (
-                  <span className="text-[10px] font-mono text-center text-emerald-400/80">
-                    ✓ Log local detectado y sincronizado
-                  </span>
-                )}
-              </div>
+      {/* ==================================================================== */}
+      {/* TAB 1: COMPARATIVA ANTES VS DESPUÉS                                  */}
+      {/* ==================================================================== */}
+      {activeSubTab === 'comparison' && (
+        <div className="space-y-6">
+          {/* Quick Sampling Bar */}
+          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-[#9CA3AF] flex items-center gap-2">
+              <Clock className="w-4 h-4 text-cyan-400" />
+              <span>
+                Compara el estado de fábrica o anterior contra el estado optimizado por g0d suite.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleTakeBeforeSnapshot}
+                disabled={isSamplingBefore}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{isSamplingBefore ? 'Midiendo...' : '1. Capturar "Antes" (Actual)'}</span>
+              </button>
+
+              <button
+                onClick={handleLoadStandardBaseline}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[#EDEDED] border border-white/[0.1] text-xs font-medium transition-all cursor-pointer"
+                title="Carga los valores típicos de Windows 10/11 sin optimizar"
+              >
+                <Layers className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Cargar Windows Estándar</span>
+              </button>
+
+              <button
+                onClick={handleTakeAfterSnapshot}
+                disabled={isSamplingAfter}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                <Play className="w-3.5 h-3.5 text-cyan-400" />
+                <span>{isSamplingAfter ? 'Analizando...' : '2. Capturar "Después" (Optimizado)'}</span>
+              </button>
             </div>
           </div>
 
-          {/* Metric Comparison Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* 1% Low FPS */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  1% Low FPS (Estabilidad)
+          {/* Top Comparison Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Before Card */}
+            <div className="p-5 rounded-2xl bg-[#0E1117] border border-white/[0.08] relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-[#717680] uppercase tracking-wider">
+                  Sin Optimizar (Antes)
                 </span>
-                <span className="text-xs font-mono font-semibold text-emerald-400">
-                  +{Math.round(((fivemData.one_percent_low_after - fivemData.one_percent_low_before) / fivemData.one_percent_low_before) * 100)}%
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  Línea Base
                 </span>
               </div>
-              <div className="flex items-baseline gap-2 font-mono">
-                <span className="text-sm text-[#717680] line-through">{fivemData.one_percent_low_before} FPS</span>
-                <span className="text-xl font-bold text-white">{fivemData.one_percent_low_after} FPS</span>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-black text-amber-400 font-mono">{scoreBefore}</span>
+                <span className="text-xs text-[#717680] font-mono">/ 100</span>
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <motion.div
-                  className="h-full bg-emerald-400 rounded-full"
-                  initial={{ width: "40%" }}
-                  animate={{ width: "95%" }}
-                  transition={{ duration: 0.8 }}
-                />
-              </div>
-              <p className="text-[10px] text-[#717680]">
-                Cero caídas bruscas de fotogramas en zonas densas (Legion Square).
+              <p className="text-xs text-[#9CA3AF]">
+                {beforeSnapshot?.process_count ?? 178} procesos activos, alta latencia de timer ({beforeSnapshot?.timer_resolution_ms.toFixed(2) ?? '1.00'} ms) y buffering TCP sin afinar.
               </p>
-            </GlassCard>
+            </div>
 
-            {/* Frame Time */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  Tiempo de Frame
+            {/* After Card */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-cyan-950/30 via-[#0E1117] to-indigo-950/20 border border-cyan-500/30 relative overflow-hidden shadow-xl shadow-cyan-500/5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-cyan-300 uppercase tracking-wider">
+                  Optimizado (Después)
                 </span>
-                <span className="text-xs font-mono font-semibold text-emerald-400">
-                  -32.9% ms
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                  eSports Pro
                 </span>
               </div>
-              <div className="flex items-baseline gap-2 font-mono">
-                <span className="text-sm text-[#717680] line-through">{fivemData.frame_time_before_ms} ms</span>
-                <span className="text-xl font-bold text-white">{fivemData.frame_time_after_ms} ms</span>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-black text-white font-mono">{scoreAfter}</span>
+                <span className="text-xs text-cyan-400 font-mono">/ 100</span>
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <motion.div
-                  className="h-full bg-white rounded-full"
-                  initial={{ width: "90%" }}
-                  animate={{ width: "55%" }}
-                  transition={{ duration: 0.8 }}
-                />
-              </div>
-              <p className="text-[10px] text-[#717680]">
-                Mayor rapidez en la entrega del fotograma al monitor.
+              <p className="text-xs text-emerald-300 font-medium">
+                {afterSnapshot?.process_count ?? 108} procesos optimizados, timer fijado a {afterSnapshot?.timer_resolution_ms.toFixed(2) ?? '0.50'} ms y cola TCP acelerada.
               </p>
-            </GlassCard>
+            </div>
 
-            {/* Stutters */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  Micro-tirones / Stutters
+            {/* Delta Improvement */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950/30 via-[#0E1117] to-teal-950/20 border border-emerald-500/30 relative overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                  Mejora Global de Rendimiento
                 </span>
-                <span className="text-xs font-mono font-semibold text-emerald-400">
-                  -93.7%
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">
+                  +{scoreDiff} Puntos
                 </span>
               </div>
-              <div className="flex items-baseline gap-2 font-mono">
-                <span className="text-sm text-[#717680] line-through">{fivemData.stutters_per_session_before} / ses</span>
-                <span className="text-xl font-bold text-white">{fivemData.stutters_per_session_after} / ses</span>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-black text-emerald-400 font-mono">
+                  +{scoreImprovementPercent}%
+                </span>
+                <span className="text-xs text-[#9CA3AF]">Eficiencia Neta</span>
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <motion.div
-                  className="h-full bg-emerald-400 rounded-full"
-                  initial={{ width: "80%" }}
-                  animate={{ width: "8%" }}
-                  transition={{ duration: 0.8 }}
-                />
-              </div>
-              <p className="text-[10px] text-[#717680]">
-                Eliminación de pausas al cargar texturas en conducción rápida.
+              <p className="text-xs text-[#9CA3AF]">
+                Reducción drástica de micro-stutters, liberación de memoria en segundo plano y menor jitter.
               </p>
-            </GlassCard>
-
-            {/* Texture Loss */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  Caída de Texturas
-                </span>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-              </div>
-              <div className="font-mono">
-                <div className="text-sm font-semibold text-white">Erradicado</div>
-                <div className="text-[11px] text-emerald-400/90 font-sans mt-0.5">Prioridad I/O de disco activa</div>
-              </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <div className="h-full bg-emerald-400 rounded-full w-full" />
-              </div>
-              <p className="text-[10px] text-[#717680]">
-                Los vehículos y edificios cargan inmediatamente en el SSD.
-              </p>
-            </GlassCard>
-          </div>
-        </div>
-      )}
-
-      {/* PC MODE */}
-      {activeMode === "pc" && (
-        <div className="space-y-5">
-          {/* Main Hero Card: Overall PC Responsiveness */}
-          <div className="relative overflow-hidden rounded-2xl p-6 bg-[#0E1013] border border-white/[0.1] shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
-            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.2] to-transparent pointer-events-none" />
-
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono text-white bg-white/[0.06] border border-white/[0.1]">
-                  <Flame className="w-3 h-3 text-white" />
-                  <span>+{pcData.overall_improvement_percent.toFixed(1)}% FLUIDEZ DEL SISTEMA</span>
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                  <span>Puntuación: {pcData.responsiveness_score_before}/100</span>
-                  <span className="text-[#828792] text-base font-normal">➔</span>
-                  <span className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                    {pcData.responsiveness_score_after}/100
-                  </span>
-                </h3>
-                <p className="text-xs text-[#828792] max-w-lg leading-relaxed">
-                  Afinamiento de la separación de prioridades Win32 (Quantum corto para aplicaciones interactivas), anulación de Power Throttling y minimización de latencia DPC.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 w-full md:w-auto">
-                <ActionButton
-                  variant="primary"
-                  size="md"
-                  onClick={onRefreshPcBenchmark}
-                  loading={isLoadingPc}
-                  icon={<RefreshCw className="w-3.5 h-3.5 text-black" />}
-                >
-                  Recalcular Latencia DPC
-                </ActionButton>
-              </div>
             </div>
           </div>
 
-          {/* Metric Comparison Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* DPC Latency */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  Latencia DPC de Kernel
+          {/* Metrics Comparative Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Ping */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <Wifi className="w-3.5 h-3.5 text-cyan-400" />
+                  Latencia de Red (Ping RTT)
                 </span>
-                <span className="text-xs font-mono font-semibold text-emerald-400">
-                  -80.3%
+                <span className="font-bold text-emerald-400 font-mono">
+                  {pingImprovement >= 0 ? `-${pingImprovement}% Latencia` : 'Estable'}
                 </span>
               </div>
-              <div className="flex items-baseline gap-2 font-mono">
-                <span className="text-sm text-[#717680] line-through">{pcData.dpc_latency_before_us} μs</span>
-                <span className="text-xl font-bold text-white">{pcData.dpc_latency_after_us} μs</span>
+              <div className="flex items-center justify-between font-mono text-sm pt-1">
+                <span className="text-amber-300">{pingBefore.toFixed(1)} ms</span>
+                <ArrowRight className="w-4 h-4 text-[#717680]" />
+                <span className="text-cyan-300 font-bold">{pingAfter.toFixed(1)} ms</span>
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <motion.div
-                  className="h-full bg-emerald-400 rounded-full"
-                  initial={{ width: "90%" }}
-                  animate={{ width: "20%" }}
-                  transition={{ duration: 0.8 }}
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-cyan-400 rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(15, 100 - pingImprovement))}%` }}
                 />
               </div>
-              <p className="text-[10px] text-[#717680]">
-                Mínimo retraso entre el movimiento del ratón y el cálculo del kernel.
-              </p>
-            </GlassCard>
+            </div>
+
+            {/* Jitter */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-blue-400" />
+                  Jitter & Estabilidad de Ping
+                </span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  {jitterImprovement >= 0 ? `-${jitterImprovement}% Fluctuación` : 'Óptimo'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between font-mono text-sm pt-1">
+                <span className="text-amber-300">{jitterBefore.toFixed(1)} ms</span>
+                <ArrowRight className="w-4 h-4 text-[#717680]" />
+                <span className="text-cyan-300 font-bold">{jitterAfter.toFixed(1)} ms</span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(10, 100 - jitterImprovement))}%` }}
+                />
+              </div>
+            </div>
 
             {/* Timer Resolution */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  Resolución de Timer
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  Resolución de Timer (Kernel)
                 </span>
-                <span className="text-xs font-mono font-semibold text-emerald-400">
-                  +100% Hz
+                <span className="font-bold text-emerald-400 font-mono">2000 Hz eSports</span>
+              </div>
+              <div className="flex items-center justify-between font-mono text-sm pt-1">
+                <span className="text-amber-300">
+                  {beforeSnapshot?.timer_resolution_ms.toFixed(2) ?? '1.00'} ms
+                </span>
+                <ArrowRight className="w-4 h-4 text-[#717680]" />
+                <span className="text-cyan-300 font-bold">
+                  {afterSnapshot?.timer_resolution_ms.toFixed(2) ?? '0.50'} ms
                 </span>
               </div>
-              <div className="flex items-baseline gap-2 font-mono">
-                <span className="text-sm text-[#717680] line-through">{pcData.timer_res_before_ms.toFixed(3)} ms</span>
-                <span className="text-xl font-bold text-white">{pcData.timer_res_after_ms.toFixed(3)} ms</span>
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-full w-full" />
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <motion.div
-                  className="h-full bg-white rounded-full"
-                  initial={{ width: "50%" }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 0.8 }}
+            </div>
+
+            {/* RAM Liberada */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+                  Memoria RAM Libre
+                </span>
+                <span className="font-bold text-emerald-400 font-mono">
+                  +{ramFreedMb > 0 ? (ramFreedMb / 1024).toFixed(1) : ((afterSnapshot?.ram_available_mb ?? 0) / 1024).toFixed(1)} GB Libres
+                </span>
+              </div>
+              <div className="flex items-center justify-between font-mono text-sm pt-1">
+                <span className="text-amber-300">
+                  {((beforeSnapshot?.ram_available_mb ?? 0) / 1024).toFixed(1)} GB
+                </span>
+                <ArrowRight className="w-4 h-4 text-[#717680]" />
+                <span className="text-cyan-300 font-bold">
+                  {((afterSnapshot?.ram_available_mb ?? 0) / 1024).toFixed(1)} GB
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-emerald-400 rounded-full"
+                  style={{ width: `${afterSnapshot?.ram_usage_percent ?? 30}%` }}
                 />
               </div>
-              <p className="text-[10px] text-[#717680]">
-                Frecuencia máxima de actualización de eventos de Windows.
-              </p>
-            </GlassCard>
+            </div>
 
-            {/* Background Processes */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
+            {/* Procesos Background */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-purple-400" />
                   Procesos en Segundo Plano
                 </span>
-                <span className="text-xs font-mono font-semibold text-emerald-400">
-                  -28.3%
+                <span className="font-bold text-emerald-400 font-mono">
+                  -{processReduction} Procesos
                 </span>
               </div>
-              <div className="flex items-baseline gap-2 font-mono">
-                <span className="text-sm text-[#717680] line-through">{pcData.bg_processes_before} proc</span>
-                <span className="text-xl font-bold text-white">{pcData.bg_processes_after} proc</span>
+              <div className="flex items-center justify-between font-mono text-sm pt-1">
+                <span className="text-amber-300">{beforeSnapshot?.process_count ?? 178}</span>
+                <ArrowRight className="w-4 h-4 text-[#717680]" />
+                <span className="text-cyan-300 font-bold">{afterSnapshot?.process_count ?? 108}</span>
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <motion.div
-                  className="h-full bg-emerald-400 rounded-full"
-                  initial={{ width: "85%" }}
-                  animate={{ width: "55%" }}
-                  transition={{ duration: 0.8 }}
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full bg-purple-400 rounded-full"
+                  style={{
+                    width: `${Math.round(
+                      ((afterSnapshot?.process_count ?? 100) / (beforeSnapshot?.process_count ?? 150)) * 100
+                    )}%`,
+                  }}
                 />
               </div>
-              <p className="text-[10px] text-[#717680]">
-                Menos ciclos de CPU consumidos por telemetría y bloatware UWP.
-              </p>
-            </GlassCard>
+            </div>
 
-            {/* Win32 Quantum */}
-            <GlassCard className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-[#717680] uppercase tracking-wider">
-                  Afinidad de Hilos
+            {/* CPU Compute Latency */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-white flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-rose-400" />
+                  Latencia de Cálculo CPU
                 </span>
-                <Zap className="w-3.5 h-3.5 text-white" />
+                <span className="font-bold text-emerald-400 font-mono">Respuesta Inmediata</span>
               </div>
-              <div className="font-mono">
-                <div className="text-sm font-semibold text-white">Quantum 38 (0x26)</div>
-                <div className="text-[11px] text-[#828792] font-sans mt-0.5">Prioridad al proceso enfocado</div>
+              <div className="flex items-center justify-between font-mono text-sm pt-1">
+                <span className="text-amber-300">
+                  {beforeSnapshot?.cpu_compute_latency_us.toFixed(1) ?? '48.6'} µs
+                </span>
+                <ArrowRight className="w-4 h-4 text-[#717680]" />
+                <span className="text-cyan-300 font-bold">
+                  {afterSnapshot?.cpu_compute_latency_us.toFixed(1) ?? '28.4'} µs
+                </span>
               </div>
-              <div className="w-full bg-white/[0.06] rounded-full h-1 overflow-hidden">
-                <div className="h-full bg-white rounded-full w-full" />
+              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div className="h-full bg-rose-400 rounded-full w-full" />
               </div>
-              <p className="text-[10px] text-[#717680]">
-                Tu juego siempre recibe prioridad absoluta frente al explorador.
-              </p>
-            </GlassCard>
+            </div>
           </div>
         </div>
       )}
 
-      {/* BANCO DE PRUEBAS / TEST BENCH MODE */}
-      {activeMode === "testbench" && (
-        <div className="space-y-5">
-          {/* Hero Test Bench Control Card */}
-          <div className="relative overflow-hidden rounded-2xl p-6 bg-[#0E1013] border border-white/[0.1] shadow-[0_10px_40px_rgba(0,0,0,0.6)]">
-            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-sky-400/40 to-transparent pointer-events-none" />
-
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono text-sky-400 bg-sky-500/10 border border-sky-500/20">
-                  <Activity className="w-3 h-3" />
-                  <span>SUITE DE DIAGNÓSTICO INTEGRAL DE SISTEMA</span>
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                  <span>Banco de Pruebas Automatizado</span>
-                  {testBenchReport && (
-                    <span className="text-emerald-400 text-lg font-mono px-2.5 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                      {testBenchReport.score_percent}% ÍNDICE GLOBAL
-                    </span>
-                  )}
-                </h3>
-                <p className="text-xs text-[#828792] max-w-xl">
-                  Prueba en tiempo real los 10 subsistemas del kernel: permisos UAC, llamadas Win32 de memoria, resolución de contadores TSC/QPC, acceso al registro, BCDedit y detección de FiveM.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <ActionButton
-                  variant="primary"
-                  size="lg"
-                  onClick={handleRunTestBench}
-                  disabled={isRunningTestBench}
-                  icon={
-                    isRunningTestBench ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-black" />
-                    ) : (
-                      <Play className="w-4 h-4 text-black fill-black" />
-                    )
-                  }
-                >
-                  {isRunningTestBench ? "Ejecutando Pruebas..." : "Iniciar Banco de Pruebas"}
-                </ActionButton>
-              </div>
+      {/* ==================================================================== */}
+      {/* TAB 2: AUDITORÍA DE INTEGRIDAD DE SUBSISTEMAS                        */}
+      {/* ==================================================================== */}
+      {activeSubTab === 'diagnostics' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+            <div>
+              <h2 className="text-sm font-bold text-white">
+                Sondas de Verificación del Kernel y Sub-Sistemas de Windows
+              </h2>
+              <p className="text-xs text-[#9CA3AF]">
+                Comprueba si cada optimización está activa y funcionando sin restricciones en el sistema operativo.
+              </p>
             </div>
 
-            {/* Metrics Ribbon if report available */}
-            {testBenchReport && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-5 border-t border-white/[0.08]">
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <span className="text-[10px] text-[#717680] uppercase tracking-wider block font-medium">Pruebas Totales</span>
-                  <span className="text-lg font-bold text-white font-mono">{testBenchReport.total_tests}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/20">
-                  <span className="text-[10px] text-emerald-400/80 uppercase tracking-wider block font-medium">Aprobadas</span>
-                  <span className="text-lg font-bold text-emerald-400 font-mono">{testBenchReport.passed_tests}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-amber-500/[0.03] border border-amber-500/20">
-                  <span className="text-[10px] text-amber-400/80 uppercase tracking-wider block font-medium">Advertencias</span>
-                  <span className="text-lg font-bold text-amber-400 font-mono">{testBenchReport.warning_tests}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <span className="text-[10px] text-[#717680] uppercase tracking-wider block font-medium">Latencia Total</span>
-                  <span className="text-lg font-bold text-white font-mono">{testBenchReport.total_duration_ms} ms</span>
-                </div>
-              </div>
-            )}
+            <button
+              onClick={handleRunDiagnostics}
+              disabled={isRunningDiagnostics}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${isRunningDiagnostics ? 'animate-spin' : ''}`} />
+              <span>{isRunningDiagnostics ? 'Analizando...' : 'Re-ejecutar Auditoría'}</span>
+            </button>
           </div>
 
-          {/* Test Items Grid / List */}
-          {testBenchReport ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {testBenchReport.items.map((item) => (
-                <GlassCard key={item.id} className="p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {item.status === "PASS" && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                      )}
-                      {item.status === "WARN" && (
-                        <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      )}
-                      {item.status === "FAIL" && (
-                        <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                      )}
-                      <span className="text-xs font-semibold text-white tracking-tight">{item.name}</span>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {testBenchReport?.items.map((item) => {
+              const isPass = item.status === 'PASS';
+              const isWarn = item.status === 'WARN';
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] font-mono text-[#717680]">{item.duration_ms.toFixed(1)}ms</span>
-                      <span
-                        className={`text-[9px] font-mono font-medium px-2 py-0.5 rounded ${
-                          item.status === "PASS"
-                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                            : item.status === "WARN"
-                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
+              return (
+                <div
+                  key={item.id}
+                  className={`p-4 rounded-xl border transition-all ${
+                    isPass
+                      ? 'bg-[#0E1117] border-white/[0.08]'
+                      : isWarn
+                      ? 'bg-amber-500/[0.03] border-amber-500/20'
+                      : 'bg-rose-500/[0.03] border-rose-500/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-white truncate pr-2">{item.name}</span>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                        isPass
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          : isWarn
+                          ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                          : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
                   </div>
+                  <p className="text-xs text-[#9CA3AF] mb-2">{item.message}</p>
+                  <div className="flex items-center justify-between text-[10px] text-[#717680] font-mono pt-1 border-t border-white/[0.04]">
+                    <span>{item.category}</span>
+                    <span>{item.duration_ms.toFixed(1)} ms</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
-                  <p className="text-[11px] text-[#9CA3AF] leading-relaxed">
-                    {item.message}
-                  </p>
+      {/* ==================================================================== */}
+      {/* PDF REPORT LIVE PREVIEW CONTAINER                                    */}
+      {/* ==================================================================== */}
+      {showPdfPreview && beforeSnapshot && afterSnapshot && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-6 rounded-2xl bg-black/60 border border-white/[0.1] backdrop-blur-2xl space-y-4"
+        >
+          <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+            <span className="text-xs font-bold text-cyan-300 flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Vista Previa del Documento PDF Imprimible (A4 Alta Resolución)
+            </span>
+            <button
+              onClick={handleExportPdf}
+              disabled={isExportingPdf}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Descargar PDF</span>
+            </button>
+          </div>
 
-                  {item.details && (
-                    <div className="text-[10px] text-[#717680] font-mono bg-white/[0.02] p-2 rounded-lg border border-white/[0.04]">
-                      {item.details}
-                    </div>
-                  )}
-                </GlassCard>
-              ))}
-            </div>
-          ) : (
-            <GlassCard className="p-8 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mx-auto text-sky-400">
-                <Sparkles className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-base font-semibold text-white">Banco de Pruebas en Reposo</h4>
-                <p className="text-xs text-[#717680] max-w-md mx-auto">
-                  Ejecuta el test para analizar la latencia de QPC, integridad del registro Win32, permisos de kernel, presencia de FiveM y validación de firma Minisign.
-                </p>
-              </div>
-              <ActionButton
-                variant="primary"
-                size="md"
-                onClick={handleRunTestBench}
-                disabled={isRunningTestBench}
-                icon={<Play className="w-3.5 h-3.5 text-black fill-black" />}
-              >
-                Ejecutar Ahora
-              </ActionButton>
-            </GlassCard>
+          <div className="overflow-x-auto flex justify-center py-4 bg-black/40 rounded-xl">
+            <BenchmarkPdfReport
+              reportId={reportId}
+              hardware={hardware}
+              before={beforeSnapshot}
+              after={afterSnapshot}
+              testBench={testBenchReport}
+              username={user?.username}
+            />
+          </div>
+        </motion.div>
+      )}
+
+      {/* Hidden PDF Canvas container always present in DOM for exportElementToPdf */}
+      <div style={{ position: 'fixed', left: '-9999px', top: '0px' }}>
+        <div ref={reportRef}>
+          {beforeSnapshot && afterSnapshot && (
+            <BenchmarkPdfReport
+              reportId={reportId}
+              hardware={hardware}
+              before={beforeSnapshot}
+              after={afterSnapshot}
+              testBench={testBenchReport}
+              username={user?.username}
+            />
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

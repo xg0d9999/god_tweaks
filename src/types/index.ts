@@ -1,10 +1,10 @@
 export type TabType =
   | "dashboard"
   | "presets"
-  | "fivem"
   | "citizens"
   | "advanced"
   | "backup"
+  | "benchmark"
   | "hispan"
   | "admin";
 
@@ -158,4 +158,26 @@ export interface TestBenchReport {
   score_percent: number;
   total_duration_ms: number;
   items: TestBenchItem[];
+}
+
+export interface BenchmarkSnapshot {
+  timestamp: string;
+  ping_ms: number;
+  jitter_ms: number;
+  timer_resolution_ms: number;
+  ram_total_mb: number;
+  ram_used_mb: number;
+  ram_available_mb: number;
+  ram_usage_percent: number;
+  process_count: number;
+  thread_count: number;
+  cpu_compute_latency_us: number;
+  score: number;
+  hpet_disabled: boolean;
+  ultimate_power: boolean;
+  gamedvr_disabled: boolean;
+  mmcss_optimized: boolean;
+  nagle_disabled: boolean;
+  memory_compression_disabled: boolean;
+  network_throttling_disabled: boolean;
 }

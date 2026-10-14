@@ -4,9 +4,25 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const LoginView: React.FC = () => {
-  const { startDiscordOAuth } = useAuth();
+  const { startDiscordOAuth, loginWithDiscord } = useAuth();
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+  const handlePreviewLogin = async () => {
+    try {
+      setIsAuthorizing(true);
+      await loginWithDiscord({
+        id: '1103581405096710226',
+        username: 'g0d ☁ (macOS Preview)',
+        avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
+      });
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error al iniciar modo vista previa');
+    } finally {
+      setIsAuthorizing(false);
+    }
+  };
 
   const handleLoginClick = async () => {
     setErrorMessage(null);
@@ -72,6 +88,18 @@ export const LoginView: React.FC = () => {
             </>
           )}
         </button>
+
+        {/* Acceso de Demostración para Navegador / Mac en Red Local */}
+        {!isTauri && (
+          <button
+            type="button"
+            onClick={handlePreviewLogin}
+            disabled={isAuthorizing}
+            className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl font-medium text-xs text-white/80 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer disabled:opacity-50"
+          >
+            <span>Modo Vista Previa (macOS / Navegador)</span>
+          </button>
+        )}
 
         {errorMessage && (
           <motion.div

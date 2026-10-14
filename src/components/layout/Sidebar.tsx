@@ -162,6 +162,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {item.icon}
                 </span>
 
+                {isCollapsed && item.isBlocked && (
+                  <span
+                    className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center"
+                    title="Bloqueado"
+                  >
+                    <Lock className="w-2 h-2" />
+                  </span>
+                )}
+
                 {!isCollapsed && (
                   <span className="tracking-tight text-xs truncate">
                     {item.label}
@@ -170,9 +179,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               {!isCollapsed && item.isBlocked && (
-                <span className="relative z-10 px-1.5 py-0.5 rounded text-[9px] font-mono font-medium bg-rose-500/10 text-rose-300 border border-rose-500/20 flex-shrink-0 flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" />
-                  <span>Bloqueado</span>
+                <span
+                  className="relative z-10 p-1 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/20 flex-shrink-0 flex items-center justify-center shadow-sm"
+                  title="Bloqueado por Administración"
+                >
+                  <Lock className="w-3 h-3 text-rose-400" />
                 </span>
               )}
 

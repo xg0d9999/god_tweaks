@@ -33,6 +33,16 @@ export async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>)
             is_installed: true,
             priority_active: false,
           } as unknown as T);
+        } else if (cmd === "get_fivem_citizen_info") {
+          resolve({
+            fivem_installed: true,
+            fivem_app_data_path: "C:\\Users\\ismae\\AppData\\Local\\FiveM\\FiveM.app",
+            current_citizen_type: "custom",
+            current_citizen_title: "Citizen PvP Ultra FPS",
+            is_vanilla: false,
+            backup_available: true,
+            is_running: false,
+          } as unknown as T);
         } else if (cmd === "get_hispan_config") {
           resolve({
             staff_att: "Admin_Isma",

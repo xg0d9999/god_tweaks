@@ -12,6 +12,7 @@ import {
   LogIn,
   Clock,
   Shield,
+  Trash2,
 } from 'lucide-react';
 import { StaffAccount, StaffAuditLog } from '../types';
 import { getAuditLogs } from '../services/supabase';
@@ -91,6 +92,12 @@ export const AuditLogsTab: React.FC<AuditLogsTabProps> = ({ currentStaff }) => {
         return (
           <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold inline-flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3 text-emerald-400" /> STAFF REACTIVADO
+          </span>
+        );
+      case 'delete_staff':
+        return (
+          <span className="px-2.5 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300 font-mono text-[10px] font-bold inline-flex items-center gap-1">
+            <Trash2 className="w-3 h-3 text-rose-400" /> STAFF ELIMINADO (BD)
           </span>
         );
       default:

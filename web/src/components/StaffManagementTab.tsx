@@ -12,6 +12,7 @@ import {
   X,
   Link,
   ShieldAlert,
+  Trash2,
 } from 'lucide-react';
 import { StaffAccount } from '../types';
 import {
@@ -19,6 +20,7 @@ import {
   createStaffAccount,
   changeStaffPassword,
   toggleStaffActiveStatus,
+  deleteStaffAccount,
 } from '../services/supabase';
 
 interface StaffManagementTabProps {
@@ -42,6 +44,9 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({ currentS
   const [passwordModalTarget, setPasswordModalTarget] = useState<StaffAccount | null>(null);
   const [changePasswordInput, setChangePasswordInput] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const [deleteModalTarget, setDeleteModalTarget] = useState<StaffAccount | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isOwner = currentStaff.role === 'owner';
 
@@ -144,6 +149,30 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({ currentS
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al cambiar estado de cuenta.';
       showNotification(msg, true);
+    }
+  };
+
+  // Handle Delete Staff Account permanently from database
+  const handleDeleteStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deleteModalTarget) return;
+
+    if (deleteModalTarget.role === 'owner') {
+      showNotification('¡Acción bloqueada! La cuenta del Dueño no puede ser eliminada.', true);
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteStaffAccount(deleteModalTarget.id, currentStaff);
+      setStaffList((prev) => prev.filter((s) => s.id !== deleteModalTarget.id));
+      showNotification(`Cuenta de staff "${deleteModalTarget.display_name}" eliminada de la base de datos.`);
+      setDeleteModalTarget(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al eliminar cuenta staff de la base de datos.';
+      showNotification(msg, true);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -355,6 +384,7 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({ currentS
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
+                            type="button"
                             onClick={() => {
                               setPasswordModalTarget(staff);
                               setChangePasswordInput('');
@@ -363,8 +393,20 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({ currentS
                             title="Cambiar contraseña a tu antojo"
                           >
                             <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Cambiar Contraseña</span>
+                            <span>Contraseña</span>
                           </button>
+
+                          {!isStaffOwner && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteModalTarget(staff)}
+                              className="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 text-rose-300 hover:text-rose-200 font-semibold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition-all"
+                              title={`Eliminar permanentemente a ${staff.display_name} de la base de datos`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                              <span>Borrar</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -551,6 +593,65 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({ currentS
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-lg disabled:opacity-50"
                 >
                   {isChangingPassword ? <span>Guardando...</span> : <span>Actualizar Contraseña</span>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: Eliminar Cuenta de Staff de la Base de Datos */}
+      {deleteModalTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[#0D0F14] border border-rose-500/30 shadow-2xl relative">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Eliminar de la Base de Datos</h3>
+                  <span className="text-xs text-[#8B949E]">
+                    Confirmación de borrado definitivo
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteModalTarget(null)}
+                className="p-1 rounded-lg text-[#8B949E] hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleDeleteStaffSubmit} className="space-y-4">
+              <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-200 leading-relaxed space-y-2">
+                <p>
+                  ¿Estás seguro de que deseas eliminar permanentemente de la base de datos a{' '}
+                  <strong className="text-white font-bold">{deleteModalTarget.display_name}</strong>{' '}
+                  (<span className="font-mono text-purple-300">@{deleteModalTarget.username}</span>)?
+                </p>
+                <p className="text-[11px] text-rose-300/80">
+                  ⚠️ Esta cuenta será purgada de forma irreversible de la base de datos. El usuario perderá el acceso al panel de staff de manera inmediata.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModalTarget(null)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-[#8B949E] hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(225,29,72,0.3)] disabled:opacity-50 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isDeleting ? <span>Eliminando...</span> : <span>Confirmar y Borrar</span>}
                 </button>
               </div>
             </form>

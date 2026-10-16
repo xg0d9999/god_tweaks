@@ -89,7 +89,7 @@
 - `web/src/components/LoginView.tsx`: Pantalla de inicio de sesión de Staff en `/panel` con verificación criptográfica SHA-256 y retorno a la landing.
 - `web/src/components/Navbar.tsx`: Barra de navegación del panel con pestañas, perfil con rango, modal de vinculación con Discord y conmutador hacia la web principal.
 - `web/src/components/UsersManagementTab.tsx`: Gestión granular de accesos por switches con actualización optimista inmediata (0ms), concurrencia independiente por slider y supresión de acciones rápidas conflictivas.
-- `web/src/components/StaffManagementTab.tsx`: Creación de cuentas Staff/Admin con contraseña arbitraria y cambio de contraseña a voluntad por el Dueño.
+- `web/src/components/StaffManagementTab.tsx`: Creación de cuentas Staff/Admin con contraseña arbitraria, cambio de contraseña a voluntad, suspensión y eliminación permanente de la base de datos por el Dueño.
 - `web/src/components/AuditLogsTab.tsx`: Tabla de auditoría en tiempo real con badges de colores para todas las operaciones críticas de staff.
 - `web/src/services/supabase.ts`: Capa de datos con Supabase, hash Web Crypto SHA-256, políticas de protección del Dueño y auditoría.
 - `web/vercel.json`: Reglas de reescritura SPA para despliegue en Vercel (`https://godsuite.vercel.app` para landing y `https://hispansanciones.vercel.app` para panel staff).

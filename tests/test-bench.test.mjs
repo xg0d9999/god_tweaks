@@ -204,6 +204,47 @@ test('g0d suite Test Bench - Control de Permisos y Citizens Manager', async (t) 
     const drawer = renderHardwareDrawerFields(user);
     assert.equal(drawer.ip, '46.35.120.171', 'Al expandir Ver Detalles Hardware se muestra la IP del usuario');
   });
+
+  await t.test('Verificar eliminación de staff de la base de datos (Protección absoluta al Dueño y rol Owner)', () => {
+    const ownerAccount = { id: 'owner_1', username: 'xg0d9999', role: 'owner' };
+    const adminAccount = { id: 'admin_1', username: 'superadmin_test', role: 'admin' };
+    const staffAccount = { id: 'staff_1', username: 'moderator_test', role: 'staff' };
+
+    let staffRoster = [ownerAccount, adminAccount, staffAccount];
+
+    const deleteStaffMock = (targetId, operator) => {
+      if (operator.role !== 'owner') {
+        throw new Error('Solo el Dueño (SuperAdmin) tiene autorización para eliminar cuentas de staff.');
+      }
+      const target = staffRoster.find((s) => s.id === targetId);
+      if (!target) throw new Error('Cuenta de staff no encontrada.');
+      if (target.role === 'owner') {
+        throw new Error('¡Acción denegada! La cuenta del Dueño nunca puede ser eliminada.');
+      }
+      staffRoster = staffRoster.filter((s) => s.id !== targetId);
+      return true;
+    };
+
+    // 1. Un staff o admin intenta eliminar a otro -> DENEGADO
+    assert.throws(
+      () => deleteStaffMock('staff_1', adminAccount),
+      /Solo el Dueño/,
+      'Un admin no puede eliminar staffs de la base de datos'
+    );
+
+    // 2. Alguien intenta eliminar al Owner -> DENEGADO ABSOLUTAMENTE
+    assert.throws(
+      () => deleteStaffMock('owner_1', ownerAccount),
+      /La cuenta del Dueño nunca puede ser eliminada/,
+      'La cuenta del dueño está blindada contra eliminación'
+    );
+
+    // 3. El Owner elimina un staff válido -> PERMITIDO Y ELIMINADO
+    const result = deleteStaffMock('staff_1', ownerAccount);
+    assert.equal(result, true, 'El Dueño puede eliminar una cuenta de staff');
+    assert.equal(staffRoster.some((s) => s.id === 'staff_1'), false, 'El staff ya no existe en el roster');
+    assert.equal(staffRoster.length, 2, 'El roster se reduce exactamente en 1');
+  });
 });
 
 test('g0d suite Test Bench - Sistema de Conteo Manual de Tickets & Plantilla Discord', async (t) => {

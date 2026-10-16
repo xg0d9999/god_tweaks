@@ -195,6 +195,52 @@ export async function toggleStaffActiveStatus(
   );
 }
 
+// Eliminar permanentemente cuenta de staff de la base de datos (Solo Owner / SuperAdmin)
+export async function deleteStaffAccount(
+  targetStaffId: string,
+  operator: StaffAccount
+): Promise<void> {
+  if (operator.role !== 'owner') {
+    throw new Error('Solo el Dueño (SuperAdmin) tiene autorización para eliminar cuentas de staff.');
+  }
+
+  const { data: target, error: fetchErr } = await supabase
+    .from('staff_accounts')
+    .select('*')
+    .eq('id', targetStaffId)
+    .single();
+
+  if (fetchErr || !target) {
+    throw new Error('Cuenta de staff no encontrada.');
+  }
+
+  // REGLA ABSOLUTA: Nadie puede eliminar al Owner ni a sí mismo
+  if (target.role === 'owner') {
+    throw new Error('¡Acción denegada! La cuenta del Dueño (SuperAdmin) nunca puede ser eliminada.');
+  }
+
+  if (target.id === operator.id) {
+    throw new Error('¡Acción denegada! No puedes eliminar tu propia cuenta de Dueño.');
+  }
+
+  const { error: deleteErr } = await supabase
+    .from('staff_accounts')
+    .delete()
+    .eq('id', targetStaffId);
+
+  if (deleteErr) {
+    throw new Error(`Error al eliminar de la base de datos: ${deleteErr.message}`);
+  }
+
+  // Registrar en auditoría de forma asíncrona sin bloquear
+  logStaffAction(
+    'delete_staff',
+    operator.username,
+    target.username,
+    `Cuenta de staff "${target.display_name}" (@${target.username}, rol: ${target.role}) eliminada permanentemente de la base de datos.`
+  ).catch((e) => console.error('Error logging delete staff action:', e));
+}
+
 // Vincular cuenta de staff con Discord
 export async function linkStaffDiscord(
   staffId: string,

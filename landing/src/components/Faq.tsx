@@ -19,7 +19,7 @@ export const Faq: React.FC = () => {
     },
     {
       q: "¿Cómo se actualiza la aplicación cuando sale una nueva versión?",
-      a: "Incorpora un sistema nativo de auto-actualización firmado con Minisign (criptografía asimétrica Ed25519). Cuando se publica una nueva release oficial en GitHub, la aplicación te notifica y se actualiza sola en segundos."
+      a: "Incorpora un sistema nativo de auto-actualización firmado con Minisign (criptografía asimétrica Ed25519). Cuando se publica una nueva actualización oficial, la aplicación te notifica y se actualiza sola en segundos."
     },
     {
       q: "¿Funciona en Windows 11 24H2 y Windows 10?",

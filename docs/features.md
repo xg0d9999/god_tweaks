@@ -65,14 +65,16 @@
   - **Vaciado y Limpieza Nativa Win32**: Motor en Rust con supresión de papelera de reciclaje y confirmación sonora de éxito.
 - **Ubicación**: `src/components/views/DiskCleanerView.tsx`, `src/components/views/AdvancedModeView.tsx`, `src-tauri/src/commands/disk.rs`, `src/types/index.ts`.
 
-### 13. Portal Web de Gestión de Staff & Control de Accesos (Vercel)
-- **Descripción**: Plataforma web en la nube desplegada en producción (`https://hispansanciones.vercel.app`) para la administración de usuarios, equipo de moderación y permisos de la suite:
+### 13. Portal Web Unificado: Landing Pública en `/` y Panel Staff en `/panel` (Vercel)
+- **Descripción**: Plataforma web en la nube desplegada en producción (`https://hispansanciones.vercel.app`) que resuelve cualquier conflicto entre la landing de marketing y la intranet de moderación mediante enrutamiento por rutas:
+  - **Landing Page en `/`**: Presentación pública corporativa de la suite con selector de planes, métricas de rendimiento y **descarga directa exclusiva del instalador `.exe` (sin enlaces a GitHub ni notas de release)**, más botón de acceso para staff.
+  - **Panel de Staff en `/panel`**: Intranet protegida con login SHA-256 para la administración de usuarios, equipo de moderación y permisos de la suite.
   - **1-Click Master Access & Toggles Granulares**: Botón de acción rápida para conceder o revocar acceso total a todos los módulos de golpe, con conmutadores individuales en tiempo real para Sanciones, Tweaks, Citizens y Conteo de Tickets.
   - **Protección Inquebrantable del Dueño**: Regla de seguridad absoluta tanto en la base de datos Supabase como en la interfaz web: ningún miembro del staff puede deshabilitar al Dueño ni retirarle permisos bajo ninguna circunstancia (indicador visual de Corona Dorada y blindaje total).
   - **Gestión de Cuentas Staff y Contraseñas a Voluntad**: El Dueño puede crear cuentas de Staff y Administrador asignando la contraseña que desee para cada usuario, y modificar la contraseña de cualquier usuario o staff a su antojo en cualquier momento mediante hashing nativo SHA-256 en Web Crypto.
   - **Vinculación con Discord**: Asociación de ID de usuario y nombre de usuario de Discord.
   - **Auditoría & Logs de Staff**: Registro exhaustivo y consulta en tiempo real de todas las acciones operativas (inicios de sesión, altas de personal, cambios de contraseña, suspensiones y concesión/bloqueo de accesos).
-- **Ubicación**: Directorio `web/`, publicado y activo en `https://hispansanciones.vercel.app`.
+- **Ubicación**: Directorio `web/`, publicado y activo en `https://hispansanciones.vercel.app` (Landing) y `https://hispansanciones.vercel.app/panel` (Staff).
 
 ### 14. Bot de Discord de Tickets 24/7 (Soporte & Errores con Brand Kit Oficial)
 - **Descripción**: Sistema autónomo de tickets para el servidor de Discord (`g0d hub`), preparado para ejecución desatendida 24/7 mediante scripts `.bat`:

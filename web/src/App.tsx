@@ -5,11 +5,37 @@ import { Navbar } from './components/Navbar';
 import { UsersManagementTab } from './components/UsersManagementTab';
 import { StaffManagementTab } from './components/StaffManagementTab';
 import { AuditLogsTab } from './components/AuditLogsTab';
+import { LandingView } from './components/landing/LandingView';
 
 export const App: React.FC = () => {
   const [currentStaff, setCurrentStaff] = useState<StaffAccount | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'staff' | 'logs'>('users');
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Path-based routing: '/' is Landing, '/panel' is Staff Panel
+  const [route, setRoute] = useState<'landing' | 'panel'>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname.startsWith('/panel') ? 'panel' : 'landing';
+    }
+    return 'landing';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setRoute(window.location.pathname.startsWith('/panel') ? 'panel' : 'landing');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (target: 'landing' | 'panel') => {
+    setRoute(target);
+    const targetPath = target === 'panel' ? '/panel' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Restore session from localStorage on load
   useEffect(() => {
@@ -42,6 +68,12 @@ export const App: React.FC = () => {
     localStorage.setItem('hispanlife_staff_session', JSON.stringify(updated));
   };
 
+  // Render Landing Page at '/'
+  if (route === 'landing') {
+    return <LandingView onNavigateToPanel={() => navigateTo('panel')} />;
+  }
+
+  // Loading state for Panel
   if (isInitializing) {
     return (
       <div className="min-h-screen w-full bg-[#07080A] flex items-center justify-center">
@@ -50,10 +82,17 @@ export const App: React.FC = () => {
     );
   }
 
+  // Not logged in -> Show Panel Login View
   if (!currentStaff) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginView
+        onLoginSuccess={handleLoginSuccess}
+        onNavigateToHome={() => navigateTo('landing')}
+      />
+    );
   }
 
+  // Logged in -> Show Staff Management Panel
   return (
     <div className="min-h-screen bg-[#07080A] text-white flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
       {/* Top Navbar */}
@@ -68,6 +107,7 @@ export const App: React.FC = () => {
         currentStaff={currentStaff}
         onLogout={handleLogout}
         onStaffUpdated={handleStaffUpdated}
+        onNavigateToHome={() => navigateTo('landing')}
       />
 
       {/* Main Content Area */}
@@ -80,10 +120,19 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="w-full border-t border-white/[0.06] py-4 text-center text-xs text-[#8B949E]">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>HispanLife Sanciones & Suite — Panel Oficial de Staff</span>
-          <span className="font-mono text-[11px] text-[#8B949E]/70">
-            Seguridad Win32 & RLS Activa
-          </span>
+          <span>HispanLife Sanciones & Suite — Panel Oficial de Staff (/panel)</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigateTo('landing')}
+              className="text-[#8B949E] hover:text-white transition-colors cursor-pointer text-[11px]"
+            >
+              Ir a la Web Principal
+            </button>
+            <span className="text-white/20">•</span>
+            <span className="font-mono text-[11px] text-[#8B949E]/70">
+              Seguridad Win32 & RLS Activa
+            </span>
+          </div>
         </div>
       </footer>
     </div>

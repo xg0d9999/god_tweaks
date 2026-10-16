@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { Download, Github, Shield, Sparkles, Menu, X, ExternalLink } from 'lucide-react';
+import { Download, Menu, X, Lock } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.0.7/g0d.suite_1.0.7_x64-setup.exe";
-  const githubUrl = "https://github.com/xg0d9999/god_tweaks";
-  const releaseUrl = "https://github.com/xg0d9999/god_tweaks/releases/tag/v1.0.7";
+  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.12.2/g0d.suite_1.12.2_x64-setup.exe";
 
   return (
     <header className="relative z-50 w-full">
@@ -18,16 +16,8 @@ export const Navbar: React.FC = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-semibold text-zinc-300">v1.0.7 Lanzamiento Oficial:</span>
+            <span className="font-semibold text-zinc-300">v1.12.2 Lanzamiento Oficial:</span>
             <span className="text-zinc-400 hidden sm:inline">Optimizador FiveM con actualizador firmado & panel HispanLife</span>
-            <a
-              href={releaseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-gold hover:underline inline-flex items-center gap-1 font-medium ml-1"
-            >
-              Ver notas <ExternalLink className="w-3 h-3" />
-            </a>
           </div>
           <div className="hidden sm:flex items-center gap-4 text-zinc-400">
             <span>Windows 10 / 11 64-bit</span>
@@ -51,7 +41,7 @@ export const Navbar: React.FC = () => {
                   g0d suite
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-gold/10 text-brand-gold border border-brand-gold/20">
-                  v1.0.7
+                  v1.12.2
                 </span>
               </div>
               <span className="text-[11px] text-zinc-500 tracking-wide">ULTRA LOW-LATENCY</span>
@@ -70,13 +60,12 @@ export const Navbar: React.FC = () => {
           {/* Desktop Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
             <a
-              href={githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 transition-all hover:border-white/20"
+              href="/panel"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 transition-all hover:border-white/20"
+              title="Acceso exclusivo para Staff y Moderación"
             >
-              <Github className="w-4 h-4" />
-              <span>GitHub</span>
+              <Lock className="w-3.5 h-3.5 text-brand-gold" />
+              <span>Acceso Staff</span>
             </a>
 
             <a
@@ -89,7 +78,15 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center gap-2">
+            <a
+              href="/panel"
+              className="p-2 rounded-lg text-xs font-semibold text-zinc-300 bg-zinc-900 border border-white/10 flex items-center gap-1.5"
+            >
+              <Lock className="w-3.5 h-3.5 text-brand-gold" />
+              <span>Staff</span>
+            </a>
+
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 border border-white/5"
@@ -112,15 +109,15 @@ export const Navbar: React.FC = () => {
                 href={downloadUrl}
                 className="w-full text-center py-3 rounded-lg text-xs font-bold text-black bg-brand-gold"
               >
-                Descargar v1.0.7 (.exe)
+                Descargar v1.12.2 (.exe)
               </a>
               <a
-                href={githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full text-center py-2.5 rounded-lg text-xs font-medium text-zinc-300 bg-zinc-900 border border-white/10"
+                href="/panel"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2.5 rounded-lg text-xs font-medium text-zinc-300 bg-zinc-900 border border-white/10 flex items-center justify-center gap-2"
               >
-                Ver en GitHub
+                <Lock className="w-3.5 h-3.5 text-brand-gold" />
+                <span>Panel de Staff (/panel)</span>
               </a>
             </div>
           </div>

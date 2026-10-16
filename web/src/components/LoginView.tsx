@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Shield, KeyRound, User, Lock, AlertCircle } from 'lucide-react';
+import { Shield, KeyRound, User, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { loginStaffAccount } from '../services/supabase';
 import { StaffAccount } from '../types';
 
 interface LoginViewProps {
   onLoginSuccess: (staff: StaffAccount) => void;
+  onNavigateToHome?: () => void;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onNavigateToHome }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const handleBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onNavigateToHome) {
+      onNavigateToHome();
+    } else {
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#07080A] relative overflow-hidden select-none">
       {/* Background neon glows */}
@@ -43,6 +53,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[300px] bg-purple-500/10 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
+        {/* Back to Home Button */}
+        <div className="mb-4 flex items-center justify-start">
+          <a
+            href="/"
+            onClick={handleBack}
+            className="inline-flex items-center gap-1.5 text-xs text-[#8B949E] hover:text-white px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Volver a la Web Principal</span>
+          </a>
+        </div>
+
         {/* Header Icon & Title */}
         <div className="text-center mb-8">
           <div className="inline-flex p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-4 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
@@ -52,53 +74,51 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             HispanLife Sanciones
           </h1>
           <p className="text-xs text-[#8B949E] mt-1.5">
-            Portal Oficial de Gestión de Staff & Control de Accesos
+            Portal Oficial de Gestión de Staff & Control de Accesos (/panel)
           </p>
         </div>
 
         {/* Login Box */}
         <div className="p-6 sm:p-8 rounded-3xl bg-[#0D0F14]/80 border border-white/10 backdrop-blur-2xl shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {errorMessage && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
+          {errorMessage && (
+            <div className="mb-6 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-center gap-3 text-rose-300 text-xs">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[#8B949E] uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-[#8B949E] uppercase tracking-wider mb-2">
                 Usuario de Staff
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8B949E]">
-                  <User className="w-4 h-4" />
-                </div>
+                <User className="w-4 h-4 text-[#8B949E] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="admin"
-                  autoCapitalize="none"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-[#8B949E]/50 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                  placeholder="ej: xg0d o tu_usuario"
+                  required
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/60 focus:bg-white/[0.06] transition-all placeholder:text-[#8B949E]/50"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#8B949E] uppercase tracking-wider mb-1.5">
-                Contraseña Asignada
+              <label className="block text-xs font-semibold text-[#8B949E] uppercase tracking-wider mb-2">
+                Contraseña
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8B949E]">
-                  <Lock className="w-4 h-4" />
-                </div>
+                <Lock className="w-4 h-4 text-[#8B949E] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder-[#8B949E]/50 text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
+                  placeholder="••••••••••••"
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-emerald-500/60 focus:bg-white/[0.06] transition-all placeholder:text-[#8B949E]/50"
                 />
               </div>
             </div>
@@ -106,7 +126,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.99] text-black font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_0_25px_rgba(16,185,129,0.35)] disabled:opacity-50"
+              className="w-full mt-2 py-3 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-black hover:brightness-110 active:scale-[0.99] transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
             >
               {isLoading ? (
                 <>

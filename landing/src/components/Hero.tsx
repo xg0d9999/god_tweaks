@@ -1,8 +1,8 @@
 import React from 'react';
-import { Download, ShieldCheck, Zap, Gauge, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Download, ShieldCheck, Zap, Gauge, ArrowRight } from 'lucide-react';
 
 export const Hero: React.FC = () => {
-  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.0.7/g0d.suite_1.0.7_x64-setup.exe";
+  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.12.2/g0d.suite_1.12.2_x64-setup.exe";
 
   return (
     <section className="relative pt-12 pb-20 md:pt-20 md:pb-32 overflow-hidden">
@@ -14,7 +14,7 @@ export const Hero: React.FC = () => {
         {/* Shimmer Pill Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-zinc-900/90 border border-white/10 text-zinc-300 shadow-inner mb-8">
           <span className="flex h-2 w-2 rounded-full bg-brand-gold animate-pulse"></span>
-          <span className="tracking-wide">SUITE OFICIAL v1.0.7</span>
+          <span className="tracking-wide">SUITE OFICIAL v1.12.2</span>
           <span className="text-zinc-600">|</span>
           <span className="text-zinc-400 font-normal">Arquitectura Rust & Cero Inyección DLL</span>
         </div>
@@ -40,7 +40,7 @@ export const Hero: React.FC = () => {
             className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-brand-gold via-yellow-300 to-brand-gold hover:brightness-110 shadow-glow-gold transition-all transform hover:-translate-y-0.5"
           >
             <Download className="w-5 h-5 text-black stroke-[2.5]" />
-            <span>Descargar g0d suite v1.0.7 (.exe)</span>
+            <span>Descargar g0d suite v1.12.2 (.exe)</span>
           </a>
 
           <a
@@ -56,7 +56,7 @@ export const Hero: React.FC = () => {
         <div className="mt-4 text-xs text-zinc-500 flex items-center justify-center gap-3 flex-wrap">
           <span>✓ Instalador oficial para Windows 10 & 11 (64-bit)</span>
           <span>•</span>
-          <span>✓ ~14 MB de descarga directa</span>
+          <span>✓ Descarga directa de alta velocidad</span>
           <span>•</span>
           <span className="text-emerald-400">✓ 100% Gratis para amigos</span>
         </div>

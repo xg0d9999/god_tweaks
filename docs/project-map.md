@@ -85,13 +85,14 @@
 - `scripts/publish.mjs`: Pipeline de empaquetado, firmado y release en GitHub.
 
 ## 5. Portal Web Cloud (`web/`)
-- `web/src/components/LoginView.tsx`: Pantalla de inicio de sesión de Staff con verificación criptográfica SHA-256.
-- `web/src/components/Navbar.tsx`: Barra de navegación con pestañas, perfil con rango, y modal de vinculación con Discord.
+- `web/src/components/landing/`: Landing page corporativa servida en la raíz (`/`) con descarga directa de instalador oficial (.exe), sin enlaces a GitHub y con acceso directo a `/panel`.
+- `web/src/components/LoginView.tsx`: Pantalla de inicio de sesión de Staff en `/panel` con verificación criptográfica SHA-256 y retorno a la landing.
+- `web/src/components/Navbar.tsx`: Barra de navegación del panel con pestañas, perfil con rango, modal de vinculación con Discord y conmutador hacia la web principal.
 - `web/src/components/UsersManagementTab.tsx`: Gestión y conmutación de accesos de usuarios de la suite con botón de "Acceso Total" y switches granulares protegidos.
 - `web/src/components/StaffManagementTab.tsx`: Creación de cuentas Staff/Admin con contraseña arbitraria y cambio de contraseña a voluntad por el Dueño.
 - `web/src/components/AuditLogsTab.tsx`: Tabla de auditoría en tiempo real con badges de colores para todas las operaciones críticas de staff.
 - `web/src/services/supabase.ts`: Capa de datos con Supabase, hash Web Crypto SHA-256, políticas de protección del Dueño y auditoría.
-- `web/vercel.json`: Reglas de reescritura SPA para despliegue en Vercel (`https://hispansanciones.vercel.app`).
+- `web/vercel.json`: Reglas de reescritura SPA para despliegue en Vercel (`https://hispansanciones.vercel.app` para landing y `/panel` para staff).
 
 ## 6. Bot de Discord 24/7 (`discord-bot/`)
 - `discord-bot/setup-tickets.js`: Script de despliegue único para crear categoría `🎫・SOPORTE & TICKETS`, canal `🎫・tickets`, permisos exclusivos para el ID `1103581405096710226` y envío del panel con Brand Kit blanco y menú desplegable (`Soporte` / `Errores`).

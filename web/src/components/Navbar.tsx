@@ -9,6 +9,7 @@ import {
   Crown,
   Check,
   X,
+  Globe,
 } from 'lucide-react';
 import { StaffAccount } from '../types';
 import { linkStaffDiscord } from '../services/supabase';
@@ -19,6 +20,7 @@ interface NavbarProps {
   currentStaff: StaffAccount;
   onLogout: () => void;
   onStaffUpdated: (updated: StaffAccount) => void;
+  onNavigateToHome?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -27,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentStaff,
   onLogout,
   onStaffUpdated,
+  onNavigateToHome,
 }) => {
   const isOwner = currentStaff.role === 'owner';
   const [isDiscordModalOpen, setIsDiscordModalOpen] = useState(false);
@@ -90,6 +93,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Gestión Web de Accesos
               </span>
             </div>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                if (onNavigateToHome) onNavigateToHome();
+                else window.location.href = '/';
+              }}
+              className="hidden lg:inline-flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-lg text-[11px] font-medium text-[#8B949E] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition-all"
+              title="Volver a la landing page pública"
+            >
+              <Globe className="w-3 h-3 text-brand-gold" />
+              <span>Ver Web Principal</span>
+            </a>
           </div>
 
           {/* Navigation Tabs */}

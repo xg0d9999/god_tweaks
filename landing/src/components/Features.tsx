@@ -76,7 +76,7 @@ export const Features: React.FC = () => {
               </div>
               <h3 className="text-lg font-bold text-white">Actualizador Firmado con Minisign</h3>
               <p className="mt-2 text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                Cada nueva versión se publica en GitHub Releases con firma criptográfica. La aplicación detecta actualizaciones en segundo plano, las descarga de forma segura y las aplica con un solo clic.
+                Cada nueva versión se publica con firma criptográfica oficial. La aplicación detecta actualizaciones en segundo plano, las descarga de forma segura y las aplica con un solo clic.
               </p>
             </div>
             <div className="mt-6 pt-4 border-t border-white/5 text-[11px] text-brand-cyan font-medium">

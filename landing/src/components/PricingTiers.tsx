@@ -4,7 +4,7 @@ import { Check, Download, Zap, Shield, Sparkles, Flame, CheckCircle2 } from 'luc
 export const PricingTiers: React.FC = () => {
   const [billingMode, setBillingMode] = useState<'gamer' | 'staff'>('gamer');
 
-  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.0.7/g0d.suite_1.0.7_x64-setup.exe";
+  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.12.2/g0d.suite_1.12.2_x64-setup.exe";
 
   return (
     <section id="planes" className="relative py-20 md:py-32">

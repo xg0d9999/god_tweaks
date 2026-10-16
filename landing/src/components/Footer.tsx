@@ -1,10 +1,8 @@
 import React from 'react';
-import { Download, Github, Heart, Shield, Terminal } from 'lucide-react';
+import { Download, Heart, Lock } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.0.7/g0d.suite_1.0.7_x64-setup.exe";
-  const githubUrl = "https://github.com/xg0d9999/god_tweaks";
-  const releaseUrl = "https://github.com/xg0d9999/god_tweaks/releases/tag/v1.0.7";
+  const downloadUrl = "https://github.com/xg0d9999/god_tweaks/releases/download/v1.12.2/g0d.suite_1.12.2_x64-setup.exe";
 
   return (
     <footer className="relative bg-[#050709] border-t border-white/5 pt-16 pb-12 overflow-hidden">
@@ -20,7 +18,7 @@ export const Footer: React.FC = () => {
             ¿Listo para jugar con cero input lag?
           </h3>
           <p className="mt-3 text-sm sm:text-base text-zinc-400 max-w-xl mx-auto">
-            Descarga g0d suite v1.0.7 hoy mismo. Instalación limpia en menos de 10 segundos. 100% Gratuito.
+            Descarga g0d suite v1.12.2 hoy mismo. Instalación limpia en menos de 10 segundos. 100% Gratuito.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -29,17 +27,7 @@ export const Footer: React.FC = () => {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-xs font-bold text-black bg-gradient-to-r from-brand-gold via-yellow-300 to-brand-gold hover:brightness-110 shadow-glow-gold transition-all"
             >
               <Download className="w-4 h-4 stroke-[2.5]" />
-              <span>Descargar v1.0.7 (.exe)</span>
-            </a>
-
-            <a
-              href={githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-4 rounded-xl text-xs font-semibold text-zinc-300 bg-zinc-900 hover:bg-zinc-800 border border-white/10 transition-all"
-            >
-              <Github className="w-4 h-4" />
-              <span>Ver Repositorio</span>
+              <span>Descarga Directa v1.12.2 (.exe)</span>
             </a>
           </div>
         </div>
@@ -52,7 +40,7 @@ export const Footer: React.FC = () => {
             </div>
             <span className="font-semibold text-zinc-300">g0d suite</span>
             <span>•</span>
-            <span>v1.0.7 Official Build</span>
+            <span>v1.12.2 Official Build</span>
           </div>
 
           <div className="flex items-center gap-6 flex-wrap justify-center text-zinc-400">
@@ -60,8 +48,10 @@ export const Footer: React.FC = () => {
             <a href="#planes" className="hover:text-white transition-colors">Planes</a>
             <a href="#hispanlife" className="hover:text-white transition-colors">HispanLife</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
-            <a href={releaseUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Notas de Versión</a>
-            <a href={githubUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a>
+            <a href="/panel" className="hover:text-brand-gold transition-colors inline-flex items-center gap-1 text-zinc-300">
+              <Lock className="w-3 h-3 text-brand-gold" />
+              <span>Panel de Staff</span>
+            </a>
           </div>
 
           <div className="flex items-center gap-1.5 text-zinc-500">

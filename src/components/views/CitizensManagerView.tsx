@@ -554,7 +554,7 @@ export const CitizensManagerView: React.FC = () => {
       <div className="p-5 rounded-2xl bg-[#0e1117]/80 backdrop-blur-xl border border-white/[0.08] shadow-glass flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/80">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>

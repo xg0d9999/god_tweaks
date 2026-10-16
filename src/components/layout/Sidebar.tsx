@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -11,9 +12,13 @@ import {
   ShieldCheck,
   Lock,
   Sparkles,
+  HelpCircle,
+  Ticket,
+  Shield,
 } from "lucide-react";
 import { TabType } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { HelpFaqModal } from "../ui/HelpFaqModal";
 
 interface SidebarProps {
   activeTab: TabType;
@@ -40,8 +45,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
 }) => {
   const { user, userRecord, logout } = useAuth();
-  const tweaksBlocked = userRecord?.can_use_tweaks === false;
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
+  const tweaksBlocked = userRecord?.can_use_tweaks !== true;
+  const sancionesBlocked = userRecord?.can_use_sanciones !== true;
   const citizensBlocked = userRecord?.can_use_citizens !== true;
+  const ticketsBlocked = userRecord?.can_use_tickets !== true;
 
   const navItems: NavItem[] = [
     {
@@ -58,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: "citizens",
       label: "Gestor de Citizens",
-      icon: <Sparkles className="w-4 h-4 flex-shrink-0 text-cyan-400" />,
+      icon: <Sparkles className="w-4 h-4 flex-shrink-0" />,
       isBlocked: citizensBlocked,
     },
     {
@@ -71,6 +79,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: "backup",
       label: "Restauración & Backup",
       icon: <RotateCcw className="w-4 h-4 flex-shrink-0" />,
+    },
+    {
+      id: "tickets",
+      label: "Conteo Tickets",
+      icon: <Ticket className="w-4 h-4 flex-shrink-0" />,
+      isBlocked: ticketsBlocked,
+    },
+    {
+      id: "hispan",
+      label: "Sanciones HispanLife",
+      icon: <Shield className="w-4 h-4 flex-shrink-0 text-sky-400" />,
+      isBlocked: sancionesBlocked,
     },
     ...(userRecord?.is_admin
       ? [
@@ -85,8 +105,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <motion.aside
-      initial={false}
+    <>
+      <motion.aside
+        initial={false}
       animate={{ width: isCollapsed ? 68 : 240 }}
       transition={{ type: "spring", stiffness: 450, damping: 35 }}
       className="flex flex-col h-full p-2.5 bg-[#0E1013]/70 backdrop-blur-2xl border-r border-white/[0.08] select-none flex-shrink-0 overflow-hidden"
@@ -199,6 +220,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Area: Always firmly anchored at the bottom, never clipped */}
       <div className="flex-shrink-0 pt-2 space-y-2 border-t border-white/[0.06]">
+        {/* Help & FAQ Button: Above active optimizations and user profile */}
+        {!isCollapsed ? (
+          <button
+            onClick={() => setIsFaqOpen(true)}
+            className="w-full flex items-center justify-between p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/15 border border-cyan-500/25 text-cyan-300 hover:text-cyan-200 transition-all group shadow-sm shadow-cyan-950/20"
+            title="Guía de uso y Preguntas Frecuentes (FAQ)"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="p-1 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 group-hover:scale-105 transition-transform flex-shrink-0">
+                <HelpCircle className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col text-left truncate">
+                <span className="text-[11px] font-semibold tracking-tight text-white/90 group-hover:text-white truncate">
+                  Guía y Ayuda (FAQ)
+                </span>
+                <span className="text-[9px] text-cyan-400/80 truncate">
+                  ¿Cómo usar la suite?
+                </span>
+              </div>
+            </div>
+            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase bg-cyan-400/15 text-cyan-300 border border-cyan-400/30 flex-shrink-0">
+              AYUDA
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setIsFaqOpen(true)}
+            className="w-full flex items-center justify-center p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/25 text-cyan-300 transition-all shadow-sm"
+            title="Guía y Ayuda (FAQ)"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Bottom status widget */}
         <div className="p-2 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
           {!isCollapsed ? (
@@ -292,5 +347,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : null}
       </div>
     </motion.aside>
-  );
+
+    <HelpFaqModal isOpen={isFaqOpen} onClose={() => setIsFaqOpen(false)} />
+  </>
+);
 };

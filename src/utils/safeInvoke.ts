@@ -187,6 +187,185 @@ export async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>)
           } as unknown as T);
         } else if (cmd === "force_exit_app") {
           resolve(undefined as unknown as T);
+        } else if (cmd === "capture_active_discord_ticket") {
+          resolve({
+            channel_name: "ticket-soporte-042",
+            transcript: `[UsuarioAfectado]: Buenas, se me ha bugueado el coche en el garaje y no me deja sacarlo.\n[Staff_Carlos]: ¡Buenas! ¿Tienes una captura del error que te da al pulsar E en el menú?\n[Staff_Perez]: Hola\n[Staff_Carlos]: Vale, veo que la matrícula no tiene dueño asignado. Ejecuto el fix en la base de datos y reloguea ahora, por favor.\n[Staff_Perez]: jaja\n[UsuarioAfectado]: ¡Muchas gracias Carlos, ya me sale en el garaje!`,
+            source: "selection",
+            timestamp: new Date().toLocaleTimeString(),
+          } as unknown as T);
+        } else if (cmd === "get_disk_drives") {
+          resolve([
+            {
+              name: "Disco Local (C:)",
+              mount_point: "C:\\",
+              total_bytes: 1024 * 1024 * 1024 * 1000,
+              available_bytes: 1024 * 1024 * 1024 * 340,
+              used_bytes: 1024 * 1024 * 1024 * 660,
+              usage_percentage: 66.0,
+              file_system: "NTFS",
+              is_removable: false,
+              disk_type: "SSD",
+            },
+            {
+              name: "Juegos & Media (D:)",
+              mount_point: "D:\\",
+              total_bytes: 1024 * 1024 * 1024 * 2000,
+              available_bytes: 1024 * 1024 * 1024 * 850,
+              used_bytes: 1024 * 1024 * 1024 * 1150,
+              usage_percentage: 57.5,
+              file_system: "NTFS",
+              is_removable: false,
+              disk_type: "SSD",
+            },
+          ] as unknown as T);
+        } else if (cmd === "scan_disk_junk") {
+          resolve({
+            categories: [
+              {
+                id: "temp_files",
+                name: "Archivos Temporales de Windows",
+                description: "Restos temporales de instaladores y aplicaciones cerradas (%TEMP% y C:\\Windows\\Temp).",
+                category_type: "system",
+                bytes: 3650722283,
+                formatted_size: "3.40 GB",
+                file_count: 1420,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "windows_update",
+                name: "Descargas de Windows Update",
+                description: "Paquetes de instalación de parches ya aplicados que Windows no borra automáticamente.",
+                category_type: "system",
+                bytes: 7730941132,
+                formatted_size: "7.20 GB",
+                file_count: 89,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "gpu_shaders",
+                name: "Caché de Shaders GPU (DirectX / NVIDIA / AMD)",
+                description: "Sombreadores compilados antiguos (DXCache, GLCache). Su limpieza resuelve micro-stutters en juegos.",
+                category_type: "gaming",
+                bytes: 1932735283,
+                formatted_size: "1.80 GB",
+                file_count: 2450,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "discord_cache",
+                name: "Caché Multimedia de Discord",
+                description: "Imágenes, vídeos y archivos multimedia que Discord almacena indefinidamente en disco.",
+                category_type: "app",
+                bytes: 2254857830,
+                formatted_size: "2.10 GB",
+                file_count: 3890,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "browser_cache",
+                name: "Caché de Navegadores (Chrome / Edge / Brave)",
+                description: "Archivos y elementos estáticos cacheados. No borra contraseñas, cookies ni sesiones.",
+                category_type: "app",
+                bytes: 1503238553,
+                formatted_size: "1.40 GB",
+                file_count: 1940,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "fivem_cache",
+                name: "Caché de Servidores FiveM",
+                description: "Mapas, skins y assets descargados de servidores pasados de FiveM.",
+                category_type: "gaming",
+                bytes: 4939212390,
+                formatted_size: "4.60 GB",
+                file_count: 5120,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "crash_dumps",
+                name: "Volcados de Fallo y Crash Dumps (.dmp)",
+                description: "Registros gigantes generados por errores de aplicaciones y pantallazos antiguos.",
+                category_type: "system",
+                bytes: 891289600,
+                formatted_size: "850.0 MB",
+                file_count: 14,
+                is_safe: true,
+                recommended: true,
+              },
+              {
+                id: "thumbnails",
+                name: "Miniaturas del Explorador de Windows",
+                description: "Caché de previsualización de imágenes y vídeos que se reconstruye automáticamente.",
+                category_type: "system",
+                bytes: 450887680,
+                formatted_size: "430.0 MB",
+                file_count: 320,
+                is_safe: true,
+                recommended: false,
+              },
+            ],
+            total_bytes: 23353884751,
+            formatted_total: "21.78 GB",
+            total_files: 17243,
+          } as unknown as T);
+        } else if (cmd === "clean_disk_junk") {
+          resolve({
+            bytes_freed: 21780000000,
+            formatted_freed: "21.78 GB",
+            files_deleted: 17243,
+            categories_cleaned: ["temp_files", "windows_update", "gpu_shaders", "discord_cache", "browser_cache", "fivem_cache", "crash_dumps"],
+            errors_count: 0,
+            message: "Limpieza completada: 21.78 GB liberados (17243 archivos eliminados de 7 categorías).",
+          } as unknown as T);
+        } else if (cmd === "get_disk_consumption_breakdown") {
+          resolve([
+            {
+              name: "Juegos, Steam & Apps",
+              path: "C:\\Program Files",
+              bytes: 380 * 1024 * 1024 * 1024,
+              formatted_size: "380.00 GB",
+              percentage: 54.2,
+            },
+            {
+              name: "Usuarios & Descargas (AppData / Users)",
+              path: "C:\\Users",
+              bytes: 160 * 1024 * 1024 * 1024,
+              formatted_size: "160.00 GB",
+              percentage: 22.8,
+            },
+            {
+              name: "Sistema Windows",
+              path: "C:\\Windows",
+              bytes: 52 * 1024 * 1024 * 1024,
+              formatted_size: "52.00 GB",
+              percentage: 7.4,
+            },
+            {
+              name: "Datos de Programas (ProgramData)",
+              path: "C:\\ProgramData",
+              bytes: 28 * 1024 * 1024 * 1024,
+              formatted_size: "28.00 GB",
+              percentage: 4.0,
+            },
+            {
+              name: "Archivos de Programa (x86)",
+              path: "C:\\Program Files (x86)",
+              bytes: 22 * 1024 * 1024 * 1024,
+              formatted_size: "22.00 GB",
+              percentage: 3.1,
+            },
+          ] as unknown as T);
+        } else if (cmd === "get_ticket_hotkey") {
+          resolve("Win+Y" as unknown as T);
+        } else if (cmd === "set_ticket_hotkey") {
+          resolve("Atajo de tickets actualizado a: Win+Y" as unknown as T);
         } else {
           resolve(`Success: ${cmd} executed.` as unknown as T);
         }

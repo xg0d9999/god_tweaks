@@ -33,7 +33,7 @@ export const PermissionBlockedView: React.FC<PermissionBlockedViewProps> = ({
           </h2>
           <p className="text-xs text-[#9CA3AF] leading-relaxed">
             {reason ||
-              `La administración de g0d suite ha deshabilitado el acceso a este módulo para tu cuenta.`}
+              `Este módulo se encuentra restringido para tu cuenta. Para activar tus accesos, debes abrir un ticket privado en nuestro Discord oficial.`}
           </p>
         </div>
 
@@ -51,9 +51,11 @@ export const PermissionBlockedView: React.FC<PermissionBlockedViewProps> = ({
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-[11px] text-[#717680] bg-white/[0.02] px-3 py-2 rounded-xl border border-white/[0.04] w-full text-left">
+        <div className="flex items-center gap-2.5 text-[11px] text-[#9CA3AF] bg-amber-500/10 px-3.5 py-2.5 rounded-xl border border-amber-500/25 w-full text-left">
           <ShieldAlert className="w-4 h-4 text-amber-400 flex-shrink-0" />
-          <span>Si crees que se trata de un error, solicita la activación a un Administrador en Discord.</span>
+          <span>
+            Para solicitar la activación de tus permisos, abre un <strong>ticket privado</strong> en nuestro Discord y un Administrador te habilitará el acceso.
+          </span>
         </div>
 
         <div className="pt-2 w-full">

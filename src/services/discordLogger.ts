@@ -204,6 +204,39 @@ export async function logHispanSanction(data: {
   });
 }
 
+/**
+ * Log de Acciones y Auditoría en Conteo de Tickets HispanLife
+ */
+export async function logTicketAction(data: {
+  action: string;
+  details: string;
+  user?: string;
+  shift?: string;
+  extraInfo?: string;
+}) {
+  const fields: DiscordEmbedField[] = [
+    { name: 'Acción', value: `**${data.action}**`, inline: true },
+    { name: 'Operador / Staff', value: data.user ? `**${data.user}**` : '`Staff Local`', inline: true },
+  ];
+
+  if (data.shift) {
+    fields.push({ name: 'Turno', value: `\`${data.shift}\``, inline: true });
+  }
+
+  fields.push({ name: 'Detalle', value: data.details, inline: false });
+
+  if (data.extraInfo) {
+    fields.push({ name: 'Info Adicional', value: data.extraInfo, inline: false });
+  }
+
+  return sendDiscordLog({
+    title: 'Auditoría Tickets HispanLifeRP',
+    color: EMBED_COLOR_WHITE,
+    fields,
+    footer: { text: 'g0d suite • Ticket Logger' },
+  });
+}
+
 let lastErrorTimestamp = 0;
 let lastErrorMessage = '';
 

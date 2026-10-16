@@ -272,11 +272,211 @@ mod win_native {
         std::thread::sleep(std::time::Duration::from_millis(60));
     }
 
-    pub fn find_discord_window() -> Option<HWND> {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum DiscordFlavor {
+        Canary,
+        PTB,
+        Stable,
+    }
+
+    impl DiscordFlavor {
+        pub fn display_name(&self) -> &'static str {
+            match self {
+                DiscordFlavor::Canary => "Discord Canary",
+                DiscordFlavor::PTB => "Discord PTB",
+                DiscordFlavor::Stable => "Discord",
+            }
+        }
+
+        pub fn folder_name(&self) -> &'static str {
+            match self {
+                DiscordFlavor::Canary => "DiscordCanary",
+                DiscordFlavor::PTB => "DiscordPTB",
+                DiscordFlavor::Stable => "Discord",
+            }
+        }
+
+        pub fn exe_name(&self) -> &'static str {
+            match self {
+                DiscordFlavor::Canary => "DiscordCanary.exe",
+                DiscordFlavor::PTB => "DiscordPTB.exe",
+                DiscordFlavor::Stable => "Discord.exe",
+            }
+        }
+
+        pub fn matches_proc(&self, proc_name: &str) -> bool {
+            let p = proc_name.to_lowercase();
+            match self {
+                DiscordFlavor::Canary => p == "discordcanary.exe" || p == "discordcanary",
+                DiscordFlavor::PTB => p == "discordptb.exe" || p == "discordptb",
+                DiscordFlavor::Stable => p == "discord.exe" || p == "discord",
+            }
+        }
+    }
+
+    pub fn get_discord_executable_path(flavor: DiscordFlavor) -> Option<std::path::PathBuf> {
+        let local = std::env::var("LOCALAPPDATA").ok()?;
+        let dir = std::path::PathBuf::from(&local).join(flavor.folder_name());
+
+        // 1. Ejecutable directo en la raíz de la carpeta
+        let root_exe = dir.join(flavor.exe_name());
+        if root_exe.exists() {
+            return Some(root_exe);
+        }
+
+        // 2. Ejecutable dentro de la versión más reciente app-1.0.xxxx
+        if let Ok(entries) = std::fs::read_dir(&dir) {
+            let mut app_dirs: Vec<std::path::PathBuf> = entries
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.is_dir() && p.file_name().map_or(false, |n| n.to_string_lossy().starts_with("app-")))
+                .collect();
+            app_dirs.sort();
+            if let Some(latest) = app_dirs.last() {
+                let app_exe = latest.join(flavor.exe_name());
+                if app_exe.exists() {
+                    return Some(app_exe);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn detect_target_discord() -> DiscordFlavor {
+        let mut canary_running = false;
+        let mut ptb_running = false;
+        let mut stable_running = false;
+
+        unsafe {
+            if let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
+                let mut pe = PROCESSENTRY32W {
+                    dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+                    ..Default::default()
+                };
+                if Process32FirstW(snap, &mut pe).is_ok() {
+                    loop {
+                        let len = pe.szExeFile.iter().position(|&c| c == 0).unwrap_or(pe.szExeFile.len());
+                        let proc_name = String::from_utf16_lossy(&pe.szExeFile[..len]).to_lowercase();
+                        if proc_name == "discordcanary.exe" || proc_name == "discordcanary" {
+                            canary_running = true;
+                        } else if proc_name == "discordptb.exe" || proc_name == "discordptb" {
+                            ptb_running = true;
+                        } else if proc_name == "discord.exe" || proc_name == "discord" {
+                            stable_running = true;
+                        }
+                        if Process32NextW(snap, &mut pe).is_err() {
+                            break;
+                        }
+                    }
+                }
+                let _ = CloseHandle(snap);
+            }
+        }
+
+        // Si Canary tiene una ventana visible activa, prioridad absoluta a Canary
+        if canary_running && find_discord_window_for_flavor(DiscordFlavor::Canary).is_some() {
+            return DiscordFlavor::Canary;
+        }
+        if ptb_running && find_discord_window_for_flavor(DiscordFlavor::PTB).is_some() {
+            return DiscordFlavor::PTB;
+        }
+        if stable_running && find_discord_window_for_flavor(DiscordFlavor::Stable).is_some() {
+            return DiscordFlavor::Stable;
+        }
+
+        // Si uno de los clientes está en ejecución
+        if canary_running && !stable_running {
+            return DiscordFlavor::Canary;
+        }
+        if ptb_running && !stable_running {
+            return DiscordFlavor::PTB;
+        }
+        if stable_running && !canary_running {
+            return DiscordFlavor::Stable;
+        }
+        if canary_running {
+            return DiscordFlavor::Canary;
+        }
+
+        // Si ninguno está en ejecución, verificar cuál está instalado en disco
+        let local = std::env::var("LOCALAPPDATA").unwrap_or_default();
+        if !local.is_empty() {
+            let canary_exe = std::path::PathBuf::from(&local).join("DiscordCanary").join("DiscordCanary.exe");
+            let stable_exe = std::path::PathBuf::from(&local).join("Discord").join("Discord.exe");
+            if canary_exe.exists() && !stable_exe.exists() {
+                return DiscordFlavor::Canary;
+            }
+            if stable_exe.exists() && !canary_exe.exists() {
+                return DiscordFlavor::Stable;
+            }
+            if canary_exe.exists() {
+                return DiscordFlavor::Canary;
+            }
+        }
+
+        DiscordFlavor::Stable
+    }
+
+    pub fn open_discord_channel(flavor: DiscordFlavor, guild_id: &str, channel_id: &str) {
+        use std::os::windows::process::CommandExt;
+
+        let deep_link = format!("discord:///channels/{guild_id}/{channel_id}");
+
+        match flavor {
+            DiscordFlavor::Canary => {
+                // IMPORTANTE: NO invocar 'start discord://' porque Windows asocia discord:// a Discord.exe (Stable).
+                // En su lugar, ejecutamos DiscordCanary.exe directamente con '--url'.
+                // Si Canary ya está abierto, Electron captura el segundo argumento mediante single-instance y navega de inmediato.
+                if let Some(exe) = get_discord_executable_path(DiscordFlavor::Canary) {
+                    let _ = std::process::Command::new(&exe)
+                        .args(["--url", "--", &deep_link])
+                        .creation_flags(0x08000000)
+                        .spawn();
+                } else {
+                    let canary_uri = format!("discordcanary:///channels/{guild_id}/{channel_id}");
+                    let _ = std::process::Command::new("cmd")
+                        .args(["/C", "start", "", &canary_uri])
+                        .creation_flags(0x08000000)
+                        .spawn();
+                }
+            }
+            DiscordFlavor::PTB => {
+                if let Some(exe) = get_discord_executable_path(DiscordFlavor::PTB) {
+                    let _ = std::process::Command::new(&exe)
+                        .args(["--url", "--", &deep_link])
+                        .creation_flags(0x08000000)
+                        .spawn();
+                } else {
+                    let ptb_uri = format!("discordptb:///channels/{guild_id}/{channel_id}");
+                    let _ = std::process::Command::new("cmd")
+                        .args(["/C", "start", "", &ptb_uri])
+                        .creation_flags(0x08000000)
+                        .spawn();
+                }
+            }
+            DiscordFlavor::Stable => {
+                if let Some(exe) = get_discord_executable_path(DiscordFlavor::Stable) {
+                    let _ = std::process::Command::new(&exe)
+                        .args(["--url", "--", &deep_link])
+                        .creation_flags(0x08000000)
+                        .spawn();
+                } else {
+                    let _ = std::process::Command::new("cmd")
+                        .args(["/C", "start", "", &deep_link])
+                        .creation_flags(0x08000000)
+                        .spawn();
+                }
+            }
+        }
+    }
+
+    pub fn find_discord_window_for_flavor(flavor: DiscordFlavor) -> Option<HWND> {
         unsafe {
             struct DiscordFinder {
                 best_hwnd: Option<HWND>,
                 max_area: i32,
+                flavor: DiscordFlavor,
             }
             unsafe extern "system" fn enum_discord(hwnd: HWND, lparam: LPARAM) -> BOOL {
                 let finder = &mut *(lparam.0 as *mut DiscordFinder);
@@ -298,14 +498,16 @@ mod win_native {
                         loop {
                             if pe.th32ProcessID == pid {
                                 let len = pe.szExeFile.iter().position(|&c| c == 0).unwrap_or(pe.szExeFile.len());
-                                let proc_name = String::from_utf16_lossy(&pe.szExeFile[..len]).to_lowercase();
-                                if proc_name.contains("discord") {
+                                let proc_name = String::from_utf16_lossy(&pe.szExeFile[..len]);
+                                
+                                // Emparejamiento estricto: solo coincide con el proceso del flavor deseado
+                                if finder.flavor.matches_proc(&proc_name) {
                                     let mut rect = RECT::default();
                                     if GetWindowRect(hwnd, &mut rect).is_ok() {
                                         let width = rect.right - rect.left;
                                         let height = rect.bottom - rect.top;
                                         let area = width * height;
-                                        // Pick the primary visible window (largest area, width > 300)
+                                        // Ventana primaria real: width > 300, height > 200 y mayor área
                                         if width > 300 && height > 200 && area > finder.max_area {
                                             finder.max_area = area;
                                             finder.best_hwnd = Some(hwnd);
@@ -324,7 +526,7 @@ mod win_native {
                 BOOL(1)
             }
 
-            let mut finder = DiscordFinder { best_hwnd: None, max_area: 0 };
+            let mut finder = DiscordFinder { best_hwnd: None, max_area: 0, flavor };
             let _ = EnumWindows(Some(enum_discord), LPARAM(&mut finder as *mut _ as isize));
             finder.best_hwnd
         }
@@ -386,44 +588,47 @@ pub fn send_report_to_discord(guild_id: String, channel_id: String, report_text:
     #[cfg(windows)]
     {
         use win_native::*;
-        use std::os::windows::process::CommandExt;
 
-        // 1. Colocar el reporte completo en el portapapeles
+        // 1. Detectar qué variante de Discord (Canary, PTB o Stable) está en uso
+        let target_flavor = detect_target_discord();
+
+        // 2. Colocar el reporte completo en el portapapeles de Windows
         set_clipboard(&report_text);
 
-        // 2. Si se proporcionaron guild y canal, activar la navegación de Discord por URI nativo
+        // 3. Navegar específicamente el cliente detectado hacia el canal correspondiente
         let g = guild_id.trim();
         let c = channel_id.trim();
         if !g.is_empty() && !c.is_empty() {
-            let discord_uri = format!("discord:///channels/{g}/{c}");
-            let _ = std::process::Command::new("cmd")
-                .args(["/C", "start", "", &discord_uri])
-                .creation_flags(0x08000000)
-                .spawn();
+            open_discord_channel(target_flavor, g, c);
         }
 
-        // 3. Pausa para permitir que Discord cargue el canal en pantalla
-        std::thread::sleep(std::time::Duration::from_millis(850));
+        // 4. Pausa prudencial para permitir que Discord renderice el canal en el DOM
+        std::thread::sleep(std::time::Duration::from_millis(900));
 
-        // 4. Buscar ventana de Discord (intentar 2 veces con breve espera)
-        let discord_hwnd = find_discord_window().or_else(|| {
-            std::thread::sleep(std::time::Duration::from_millis(400));
-            find_discord_window()
-        });
+        // 5. Buscar estrictamente la ventana del Discord objetivo (hasta 3 intentos)
+        let mut discord_hwnd = find_discord_window_for_flavor(target_flavor);
+        if discord_hwnd.is_none() {
+            std::thread::sleep(std::time::Duration::from_millis(450));
+            discord_hwnd = find_discord_window_for_flavor(target_flavor);
+        }
+        if discord_hwnd.is_none() {
+            std::thread::sleep(std::time::Duration::from_millis(600));
+            discord_hwnd = find_discord_window_for_flavor(target_flavor);
+        }
 
         if let Some(hwnd) = discord_hwnd {
             force_foreground(hwnd);
-            std::thread::sleep(std::time::Duration::from_millis(300));
+            std::thread::sleep(std::time::Duration::from_millis(350));
             unsafe {
-                // Pegar plantilla con Ctrl+V
+                // Pegar plantilla con Ctrl+V en la caja de texto del canal
                 send_ctrl_v();
                 std::thread::sleep(std::time::Duration::from_millis(150));
-                // Pulsar Enter para enviar el mensaje al canal de Discord
+                // Pulsar Enter para enviar el mensaje
                 send_key_tap(0x0D, 0x1C);
             }
-            Ok("Plantilla de sanción enviada correctamente al canal de Discord.".to_string())
+            Ok(format!("Plantilla de sanción enviada correctamente a {} en el canal de sanciones.", target_flavor.display_name()))
         } else {
-            Ok("Plantilla copiada al portapapeles y canal de Discord abierto. Pégala con Ctrl+V si no se envió automáticamente.".to_string())
+            Ok(format!("Plantilla copiada al portapapeles y canal abierto en {}. Pégala con Ctrl+V si no se envió automáticamente.", target_flavor.display_name()))
         }
     }
     #[cfg(not(windows))]

@@ -12,9 +12,17 @@ import {
   Copy,
   Monitor,
   Activity,
+  Ticket,
+  Unlink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchAllUsers, updateUserPermissions, AppUserRecord, supabase } from '../../services/supabase';
+import {
+  fetchAllUsers,
+  updateUserPermissions,
+  resetUserHwid,
+  AppUserRecord,
+  supabase,
+} from '../../services/supabase';
 import { BenchmarkView } from './BenchmarkView';
 
 export const AdminPanelView: React.FC = () => {
@@ -89,11 +97,11 @@ export const AdminPanelView: React.FC = () => {
 
   const handleTogglePermission = async (
     targetUser: AppUserRecord,
-    permissionKey: 'can_use_tweaks' | 'can_use_sanciones' | 'can_use_citizens'
+    permissionKey: 'can_use_tweaks' | 'can_use_sanciones' | 'can_use_citizens' | 'can_use_tickets'
   ) => {
     const currentVal =
-      permissionKey === 'can_use_citizens'
-        ? targetUser.can_use_citizens === true
+      permissionKey === 'can_use_citizens' || permissionKey === 'can_use_tickets'
+        ? targetUser[permissionKey] === true
         : (targetUser[permissionKey] ?? true);
     const newVal = !currentVal;
     setUpdatingId(targetUser.discord_id);
@@ -120,6 +128,8 @@ export const AdminPanelView: React.FC = () => {
           ? 'Optimizaciones'
           : permissionKey === 'can_use_citizens'
           ? 'Gestor de Citizens'
+          : permissionKey === 'can_use_tickets'
+          ? 'Conteo de Tickets'
           : 'Sanciones';
       setActionSuccessMsg(
         `Permiso de ${permName} ${newVal ? 'habilitado' : 'deshabilitado'} para ${targetUser.discord_username}`
@@ -139,6 +149,34 @@ export const AdminPanelView: React.FC = () => {
         )
       );
       setActionSuccessMsg(`Error al actualizar permiso.`);
+      setTimeout(() => setActionSuccessMsg(null), 3000);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleResetHwid = async (targetUser: AppUserRecord) => {
+    if (
+      !confirm(
+        `¿Deseas desvincular el HWID del equipo para ${targetUser.discord_username}?\nEsto liberará su PC para vincular otra cuenta o le permitirá conectar un equipo nuevo.`
+      )
+    ) {
+      return;
+    }
+    setUpdatingId(targetUser.discord_id);
+    try {
+      const updated = await resetUserHwid(targetUser.discord_id);
+      setUsers((prev) =>
+        prev.map((u) => (u.discord_id === targetUser.discord_id ? updated : u))
+      );
+      setActionSuccessMsg(`HWID desvinculado con éxito para ${targetUser.discord_username}`);
+      setTimeout(() => setActionSuccessMsg(null), 3000);
+      if (userRecord && userRecord.discord_id === targetUser.discord_id) {
+        refreshUserRecord();
+      }
+    } catch (err) {
+      console.error('[AdminPanel] Error al resetear HWID:', err);
+      setActionSuccessMsg('Error al desvincular HWID.');
       setTimeout(() => setActionSuccessMsg(null), 3000);
     } finally {
       setUpdatingId(null);
@@ -171,8 +209,9 @@ export const AdminPanelView: React.FC = () => {
     }).length;
     const tweaksActive = users.filter((u) => u.can_use_tweaks !== false).length;
     const sancionesActive = users.filter((u) => u.can_use_sanciones !== false).length;
+    const ticketsActive = users.filter((u) => u.can_use_tickets === true).length;
     const admins = users.filter((u) => u.is_admin === true).length;
-    return { total, online, tweaksActive, sancionesActive, admins };
+    return { total, online, tweaksActive, sancionesActive, ticketsActive, admins };
   }, [users, onlineUserIds, userRecord?.discord_id]);
 
   // Seguridad: si el usuario no es admin
@@ -276,7 +315,7 @@ export const AdminPanelView: React.FC = () => {
       ) : (
         <>
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
           <div className="flex items-center justify-between text-[#8B949E] text-xs mb-1">
             <span>Usuarios Totales</span>
@@ -312,6 +351,16 @@ export const AdminPanelView: React.FC = () => {
           </div>
           <div className="text-xl font-bold font-mono text-emerald-300">
             {stats.sancionesActive} <span className="text-xs text-[#717680] font-sans">/ {stats.total}</span>
+          </div>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
+          <div className="flex items-center justify-between text-[#8B949E] text-xs mb-1">
+            <span>Permiso Conteos</span>
+            <Ticket className="w-4 h-4 text-purple-400/80" />
+          </div>
+          <div className="text-xl font-bold font-mono text-purple-300">
+            {stats.ticketsActive} <span className="text-xs text-[#717680] font-sans">/ {stats.total}</span>
           </div>
         </div>
 
@@ -360,6 +409,7 @@ export const AdminPanelView: React.FC = () => {
             const hasTweaks = u.can_use_tweaks !== false;
             const hasSanciones = u.can_use_sanciones !== false;
             const hasCitizens = u.can_use_citizens === true;
+            const hasTickets = u.can_use_tickets === true;
             const isSelf = userRecord.discord_id === u.discord_id;
             const isUpdating = updatingId === u.discord_id;
             const isHwidExpanded = expandedHwidUser === u.discord_id;
@@ -543,19 +593,47 @@ export const AdminPanelView: React.FC = () => {
                         />
                       </button>
                     </div>
+
+                    {/* Toggle Conteo de Tickets */}
+                    <div className="flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.06]">
+                      <div className="flex flex-col text-right">
+                        <span className="text-[10px] text-[#8B949E] font-medium">Conteos</span>
+                        <span
+                          className={`text-[11px] font-semibold ${
+                            hasTickets ? 'text-purple-300' : 'text-rose-400'
+                          }`}
+                        >
+                          {hasTickets ? 'Habilitado' : 'Bloqueado'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleTogglePermission(u, 'can_use_tickets')}
+                        disabled={isUpdating}
+                        className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
+                          hasTickets ? 'bg-purple-600' : 'bg-zinc-800 border border-white/10'
+                        }`}
+                        title={
+                          hasTickets
+                            ? 'Clic para denegar acceso al Conteo de Tickets'
+                            : 'Clic para autorizar acceso al Conteo de Tickets'
+                        }
+                      >
+                        <motion.div
+                          layout
+                          className={`w-4 h-4 rounded-full bg-white shadow-sm ${
+                            hasTickets ? 'ml-auto' : 'mr-auto'
+                          }`}
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Bottom Row: IP & Hardware Telemetry Snippet */}
+                {/* Bottom Row: Hardware & Telemetry Snippet */}
                 <div className="pt-2 border-t border-white/[0.04] flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-[#8B949E] gap-2">
                   <div className="flex items-center gap-4 flex-wrap font-mono">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                      IP: <strong className="text-white/80">{u.ip_address || '127.0.0.1'}</strong>
-                    </span>
-
                     <span className="truncate max-w-[260px]" title={u.hwid || 'N/A'}>
-                      HWID: <strong className="text-white/80">{u.hwid ? `${u.hwid.slice(0, 16)}...` : 'N/A'}</strong>
+                      HWID: <strong className="text-white/80">{u.hwid ? `${u.hwid.slice(0, 16)}...` : 'Sin vincular'}</strong>
                     </span>
 
                     {u.last_login_at && (
@@ -565,18 +643,32 @@ export const AdminPanelView: React.FC = () => {
                     )}
                   </div>
 
-                  <button
-                    onClick={() =>
-                      setExpandedHwidUser(isHwidExpanded ? null : u.discord_id)
-                    }
-                    className="flex items-center gap-1 text-[11px] text-white/70 hover:text-white cursor-pointer ml-auto sm:ml-0"
-                  >
-                    <Monitor className="w-3.5 h-3.5 text-white/60" />
-                    <span>{isHwidExpanded ? 'Ocultar Hardware' : 'Ver Detalles Hardware'}</span>
-                  </button>
+                  <div className="flex items-center gap-2 ml-auto sm:ml-0">
+                    {u.hwid && (
+                      <button
+                        onClick={() => handleResetHwid(u)}
+                        disabled={isUpdating}
+                        className="flex items-center gap-1 text-[11px] text-amber-400/80 hover:text-amber-300 transition-colors cursor-pointer disabled:opacity-50"
+                        title="Desvincular este PC de la cuenta para permitir 1 cuenta nueva o cambio de equipo"
+                      >
+                        <Unlink className="w-3.5 h-3.5" />
+                        <span>Desvincular HWID</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() =>
+                        setExpandedHwidUser(isHwidExpanded ? null : u.discord_id)
+                      }
+                      className="flex items-center gap-1 text-[11px] text-white/70 hover:text-white cursor-pointer"
+                    >
+                      <Monitor className="w-3.5 h-3.5 text-white/60" />
+                      <span>{isHwidExpanded ? 'Ocultar Hardware' : 'Ver Detalles Hardware'}</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Expanded Hardware Telemetry Drawer */}
+                {/* Expanded Hardware & Network Telemetry Drawer */}
                 <AnimatePresence>
                   {isHwidExpanded && (
                     <motion.div
@@ -585,7 +677,26 @@ export const AdminPanelView: React.FC = () => {
                       exit={{ opacity: 0, height: 0 }}
                       className="pt-2 text-xs overflow-hidden"
                     >
-                      <div className="p-3 rounded-lg bg-black/40 border border-white/[0.06] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                      <div className="p-3.5 rounded-xl bg-black/40 border border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-[11px]">
+                        <div>
+                          <span className="text-[#717680] block text-[10px] flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            Dirección IP
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-white font-mono font-medium">{u.ip_address || '127.0.0.1'}</span>
+                            <button
+                              onClick={() => handleCopy(u.ip_address || '127.0.0.1', `ip_${u.discord_id}`)}
+                              className="text-[#717680] hover:text-white cursor-pointer"
+                              title="Copiar IP"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                            {copiedId === `ip_${u.discord_id}` && (
+                              <span className="text-emerald-400 text-[10px]">Copiado</span>
+                            )}
+                          </div>
+                        </div>
                         <div>
                           <span className="text-[#717680] block text-[10px]">Procesador (CPU)</span>
                           <span className="text-white font-mono">{u.cpu_info || 'No reportado'}</span>

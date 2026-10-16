@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node bot.js",
+    "daemon": "node daemon.js",
+    "setup-tickets": "node setup-tickets.js",
     "register": "node register-commands.js"
   },
   "dependencies": {

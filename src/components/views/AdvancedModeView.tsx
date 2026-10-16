@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Gamepad2, Ghost, Radio, Sparkles, Sliders, AlertTriangle, Crosshair } from "lucide-react";
+import { Gamepad2, Ghost, Radio, Sparkles, Sliders, AlertTriangle, Crosshair, HardDrive } from "lucide-react";
 import { GamingView } from "./GamingView";
 import { DebloatView } from "./DebloatView";
 import { NetworkView } from "./NetworkView";
 import { MemoryView } from "./MemoryView";
 import { FiveMView } from "./FiveMView";
+import { DiskCleanerView } from "./DiskCleanerView";
+import { ErrorBoundary } from "../common/ErrorBoundary";
 import {
   GamingStatus,
   DebloatStatus,
@@ -47,7 +49,7 @@ export interface AdvancedModeViewProps {
   loadingKeys: Record<string, boolean>;
 }
 
-type AdvancedSubTab = "gaming" | "fivem" | "debloat" | "network" | "memory";
+type AdvancedSubTab = "gaming" | "fivem" | "debloat" | "network" | "memory" | "disk";
 
 export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
   gamingStatus,
@@ -102,8 +104,13 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
     },
     {
       id: "memory" as AdvancedSubTab,
-      label: "Limpieza Profunda",
+      label: "Memoria & Cachés",
       icon: <Sparkles className="w-3.5 h-3.5" />,
+    },
+    {
+      id: "disk" as AdvancedSubTab,
+      label: "Disco & Almacenamiento",
+      icon: <HardDrive className="w-3.5 h-3.5" />,
     },
   ];
 
@@ -233,6 +240,12 @@ export const AdvancedModeView: React.FC<AdvancedModeViewProps> = ({
                 lastRamCleanResult={lastRamCleanResult}
                 lastCacheCleanResult={lastCacheCleanResult}
               />
+            )}
+
+            {activeSubTab === "disk" && (
+              <ErrorBoundary>
+                <DiskCleanerView />
+              </ErrorBoundary>
             )}
           </motion.div>
       </div>

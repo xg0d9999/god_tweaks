@@ -1,6 +1,6 @@
 [package]
 name = "god_tweaks"
-version = "1.0.9"
+version = "1.12.2"
 description = "g0d suite - Extreme Gaming & Latency Optimization Suite for Windows"
 authors = ["g0d suite team"]
 edition = "2021"
@@ -37,5 +37,7 @@ windows = { version = "0.58", features = [
     "Win32_System_Diagnostics_ToolHelp",
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Input_KeyboardAndMouse",
-    "Win32_System_DataExchange"
+    "Win32_System_DataExchange",
+    "Win32_UI_Accessibility",
+    "Win32_System_Com"
 ] }

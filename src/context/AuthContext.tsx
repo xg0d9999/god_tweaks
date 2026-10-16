@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { upsertAppUser, fetchCurrentUserRecord, AppUserRecord, supabase } from '../services/supabase';
+import {
+  upsertAppUser,
+  fetchCurrentUserRecord,
+  checkHwidBinding,
+  AppUserRecord,
+  supabase,
+} from '../services/supabase';
 import { logUserLogin, setGlobalLoggerSession } from '../services/discordLogger';
 
 export interface DiscordUser {
@@ -238,6 +244,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (raw) {
           const saved = JSON.parse(raw) as { user: DiscordUser; ip?: string };
+
+          // Verificación de seguridad: Solo 1 cuenta de Discord por PC (HWID único)
+          if (saved.user && hw?.hwid) {
+            const binding = await checkHwidBinding(hw.hwid, saved.user.id);
+            if (binding.bound) {
+              console.warn('[Auth] Equipo ya vinculado a otra cuenta de Discord:', binding.linkedUser);
+              localStorage.removeItem(STORAGE_KEY);
+              localStorage.removeItem(RECORD_STORAGE_KEY);
+              setUser(null);
+              setUserRecord(null);
+              setIsLoading(false);
+              return;
+            }
+          }
+
           setUser(saved.user);
 
           // Sincronizar en segundo plano con Supabase para mantener el last_login_at fresco y obtener permisos

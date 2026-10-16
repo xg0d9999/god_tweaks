@@ -6,7 +6,8 @@ export type TabType =
   | "backup"
   | "benchmark"
   | "hispan"
-  | "admin";
+  | "admin"
+  | "tickets";
 
 export type AppMode = "optimizer" | "hispan";
 
@@ -183,3 +184,153 @@ export interface BenchmarkSnapshot {
   memory_compression_disabled: boolean;
   network_throttling_disabled: boolean;
 }
+
+export interface StaffIntervention {
+  discord_id: string;
+  username: string;
+  avatar_url?: string;
+  interventions_count: number;
+  last_intervention_at: string;
+  recent_tickets: string[];
+}
+
+export interface TicketAuditRecord {
+  id: string;
+  channel_id: string;
+  channel_name: string;
+  audited_at: string;
+  summary: string;
+  rewarded_staff: {
+    discord_id: string;
+    username: string;
+    contribution: string;
+  }[];
+  ignored_staff: {
+    username: string;
+    reason: string;
+  }[];
+}
+
+export interface TicketSession {
+  id: string;
+  name: string;
+  started_at: string;
+  ended_at?: string;
+  is_active: boolean;
+  total_tickets: number;
+  staff_stats: Record<string, StaffIntervention>;
+  audit_history: TicketAuditRecord[];
+}
+
+export type TokenMode = "zero_token" | "user" | "bot";
+
+export interface CapturedDiscordTicket {
+  channel_name: string;
+  transcript: string;
+  source: string;
+  timestamp: string;
+}
+
+export interface TicketBotConfig {
+  token_mode: TokenMode;
+  token?: string;
+  deepseek_api_key: string;
+  ticket_hotkey?: string;
+  guild_id?: string;
+  ticket_category_id?: string;
+  custom_prompt?: string;
+  bot_token?: string;
+  notify_toast?: boolean;
+}
+
+export interface StaffRankItem {
+  id: string;
+  name: string;
+  is_support: boolean;
+  is_high_staff: boolean;
+  order: number;
+}
+
+export interface StaffMemberItem {
+  id: string;
+  name: string;
+  rank_id: string;
+  count: number;
+}
+
+export interface ManualTicketSession {
+  id: string;
+  date: string;
+  code: string;
+  total_tickets: number;
+  staff_members: StaffMemberItem[];
+  created_at: string;
+}
+
+export type TicketActivityType =
+  | 'add_staff'
+  | 'remove_staff'
+  | 'change_rank'
+  | 'copy_template'
+  | 'reset_counts'
+  | 'restore_roster'
+  | 'change_shift';
+
+export interface TicketActivityLog {
+  id: string;
+  type: TicketActivityType;
+  title: string;
+  details: string;
+  timestamp: string;
+  date: string;
+  operator?: string;
+}
+
+export interface DiskDriveInfo {
+  name: string;
+  mount_point: string;
+  total_bytes: number;
+  available_bytes: number;
+  used_bytes: number;
+  usage_percentage: number;
+  file_system: string;
+  is_removable: boolean;
+  disk_type: string;
+}
+
+export interface DiskJunkCategory {
+  id: string;
+  name: string;
+  description: string;
+  category_type: "system" | "gaming" | "app" | string;
+  bytes: number;
+  formatted_size: string;
+  file_count: number;
+  is_safe: boolean;
+  recommended: boolean;
+}
+
+export interface DiskJunkScanResult {
+  categories: DiskJunkCategory[];
+  total_bytes: number;
+  formatted_total: string;
+  total_files: number;
+}
+
+export interface DiskCleanResult {
+  bytes_freed: number;
+  formatted_freed: string;
+  files_deleted: number;
+  categories_cleaned: string[];
+  errors_count: number;
+  message: string;
+}
+
+export interface FolderConsumptionItem {
+  name: string;
+  path: string;
+  bytes: number;
+  formatted_size: string;
+  percentage: number;
+}
+

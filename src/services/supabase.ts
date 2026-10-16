@@ -22,6 +22,7 @@ export interface AppUserRecord {
   can_use_tweaks?: boolean;
   can_use_sanciones?: boolean;
   can_use_citizens?: boolean;
+  can_use_tickets?: boolean;
   is_admin?: boolean;
 }
 
@@ -35,9 +36,79 @@ export interface AppUpdateRecord {
 }
 
 /**
+ * Verifica si un HWID ya está vinculado a otra cuenta de Discord diferente (Solo 1 cuenta por PC).
+ */
+export async function checkHwidBinding(
+  hwid: string,
+  discordId: string
+): Promise<{ bound: boolean; linkedUser?: string; linkedDiscordId?: string }> {
+  if (
+    !hwid ||
+    hwid === 'HWID-UNKNOWN' ||
+    hwid === 'HWID-UNAVAILABLE' ||
+    hwid === 'HWID-NON-WINDOWS' ||
+    hwid === 'HWID-LOCAL-DEV-NODE'
+  ) {
+    return { bound: false };
+  }
+
+  const { data, error } = await supabase
+    .from('app_users')
+    .select('discord_id, discord_username')
+    .eq('hwid', hwid)
+    .neq('discord_id', discordId)
+    .limit(1);
+
+  if (error) {
+    console.warn('[Supabase] Error al comprobar vinculación de HWID:', error);
+    return { bound: false };
+  }
+
+  if (data && data.length > 0) {
+    return {
+      bound: true,
+      linkedUser: data[0].discord_username,
+      linkedDiscordId: data[0].discord_id,
+    };
+  }
+
+  return { bound: false };
+}
+
+/**
+ * Desvincula el HWID de un usuario para permitirle cambiar de equipo o liberar su PC (Solo Admin).
+ */
+export async function resetUserHwid(discordId: string): Promise<AppUserRecord> {
+  const { data, error } = await supabase
+    .from('app_users')
+    .update({ hwid: null })
+    .eq('discord_id', discordId)
+    .select();
+
+  if (error) {
+    console.error('[Supabase] Error al desvincular HWID:', error);
+    throw error;
+  }
+  if (!data || data.length === 0) {
+    throw new Error(`No se encontró el registro para el usuario con ID ${discordId}`);
+  }
+  return data[0] as AppUserRecord;
+}
+
+/**
  * Registra o actualiza el perfil del usuario de Discord en Supabase con telemetría de hardware e IP.
  */
 export async function upsertAppUser(user: AppUserRecord): Promise<AppUserRecord> {
+  // Comprobación de seguridad: Solo 1 cuenta de Discord por PC (HWID único)
+  if (user.hwid) {
+    const binding = await checkHwidBinding(user.hwid, user.discord_id);
+    if (binding.bound) {
+      throw new Error(
+        `Este equipo ya está vinculado a la cuenta de Discord "${binding.linkedUser}". Por seguridad, solo se permite 1 cuenta por PC.`
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from('app_users')
     .upsert(
@@ -60,6 +131,11 @@ export async function upsertAppUser(user: AppUserRecord): Promise<AppUserRecord>
 
   if (error) {
     console.error('[Supabase] Error al sincronizar usuario:', error);
+    if (error.code === '23505' && String(error.message || '').includes('hwid')) {
+      throw new Error(
+        'Este equipo ya está vinculado a otra cuenta de Discord. Por seguridad, solo se permite 1 cuenta por PC.'
+      );
+    }
     throw error;
   }
   return data as AppUserRecord;
@@ -107,6 +183,7 @@ export async function updateUserPermissions(
     can_use_tweaks?: boolean;
     can_use_sanciones?: boolean;
     can_use_citizens?: boolean;
+    can_use_tickets?: boolean;
     is_admin?: boolean;
   }
 ): Promise<AppUserRecord> {

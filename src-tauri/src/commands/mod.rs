@@ -11,3 +11,5 @@ pub mod oauth;
 pub mod hotkey;
 pub mod selector;
 pub mod citizens;
+pub mod discord_reader;
+pub mod disk;

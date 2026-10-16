@@ -20,6 +20,8 @@ use commands::oauth::*;
 use commands::hotkey::*;
 use commands::selector::*;
 use commands::citizens::*;
+use commands::discord_reader::*;
+use commands::disk::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -129,6 +131,15 @@ pub fn run() {
             restore_vanilla_citizen,
             download_and_apply_citizen,
             delete_local_citizen,
+            // Discord Zero-Token Ticket Reader & Hotkey
+            capture_active_discord_ticket,
+            get_ticket_hotkey,
+            set_ticket_hotkey,
+            // Disk Space & Junk Cleaner
+            get_disk_drives,
+            scan_disk_junk,
+            clean_disk_junk,
+            get_disk_consumption_breakdown,
         ])
         .run(tauri::generate_context!())
         .expect("error while running g0d tweaks application");

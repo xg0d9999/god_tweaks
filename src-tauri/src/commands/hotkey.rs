@@ -1,23 +1,26 @@
 use std::sync::Mutex;
 use std::thread;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Emitter};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HotkeyConfig {
     pub hotkey: String,
+    pub ticket_hotkey: Option<String>,
 }
 
 impl Default for HotkeyConfig {
     fn default() -> Self {
         Self {
             hotkey: "Win+J".to_string(),
+            ticket_hotkey: Some("Win+Y".to_string()),
         }
     }
 }
 
-// Global state holding current hotkey and thread ID for wake-up
+// Global state holding current hotkeys and thread ID for wake-up
 static CURRENT_HOTKEY: Mutex<Option<String>> = Mutex::new(None);
+static CURRENT_TICKET_HOTKEY: Mutex<Option<String>> = Mutex::new(None);
 static HOTKEY_THREAD_ID: Mutex<Option<u32>> = Mutex::new(None);
 
 #[cfg(windows)]
@@ -34,6 +37,7 @@ mod win_hotkey {
     };
 
     const HOTKEY_ID: i32 = 9999;
+    const HOTKEY_TICKET_ID: i32 = 9998;
     pub const WM_RELOAD_HOTKEY: u32 = WM_USER + 101;
 
     fn parse_hotkey(str_val: &str) -> (HOT_KEY_MODIFIERS, u32) {
@@ -80,10 +84,12 @@ mod win_hotkey {
         (modifiers, vk_code)
     }
 
-    pub fn start_hotkey_listener(app_handle: AppHandle, initial_hotkey: String) {
+    pub fn start_hotkey_listener(app_handle: AppHandle, initial_hotkey: String, initial_ticket_hotkey: String) {
         {
             let mut cur = CURRENT_HOTKEY.lock().unwrap();
             *cur = Some(initial_hotkey);
+            let mut cur_ticket = CURRENT_TICKET_HOTKEY.lock().unwrap();
+            *cur_ticket = Some(initial_ticket_hotkey);
         }
 
         thread::spawn(move || unsafe {
@@ -93,47 +99,91 @@ mod win_hotkey {
                 *tid = Some(thread_id);
             }
 
-            // Register initial hotkey
+            // Register initial toggle hotkey (Win+J)
             let initial = CURRENT_HOTKEY.lock().unwrap().clone().unwrap_or_else(|| "Win+J".to_string());
             let (mut mods, mut vk) = parse_hotkey(&initial);
             let _ = RegisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_ID, mods, vk);
 
-            let mut msg = MSG::default();
-            while GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0).as_bool() {
-                if msg.message == WM_HOTKEY && msg.wParam.0 as i32 == HOTKEY_ID {
-                    // Toggle window minimize / restore
-                    if let Some(window) = app_handle.get_webview_window("main") {
-                        let is_minimized = window.is_minimized().unwrap_or(false);
-                        let is_visible = window.is_visible().unwrap_or(false);
-                        let is_focused = window.is_focused().unwrap_or(false);
+            // Register initial ticket audit hotkey (Win+Y)
+            let initial_ticket = CURRENT_TICKET_HOTKEY.lock().unwrap().clone().unwrap_or_else(|| "Win+Y".to_string());
+            let (mut ticket_mods, mut ticket_vk) = parse_hotkey(&initial_ticket);
+            let _ = RegisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_TICKET_ID, ticket_mods, ticket_vk);
 
-                        if is_visible && !is_minimized && is_focused {
-                            let _ = window.minimize();
-                        } else {
-                            let _ = window.unminimize();
-                            let _ = window.show();
-                            let _ = window.set_focus();
+            let mut msg = MSG::default();
+            loop {
+                let ret = GetMessageW(&mut msg, HWND(std::ptr::null_mut()), 0, 0);
+                if ret.0 <= 0 {
+                    // Si hubo un error o señal espuria, re-registrar atajos y continuar
+                    thread::sleep(std::time::Duration::from_millis(150));
+                    let _ = RegisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_ID, mods, vk);
+                    let _ = RegisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_TICKET_ID, ticket_mods, ticket_vk);
+                    continue;
+                }
+
+                if msg.message == WM_HOTKEY {
+                    let hotkey_id = msg.wParam.0 as i32;
+
+                    if hotkey_id == HOTKEY_ID {
+                        // Toggle window minimize / restore
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let is_minimized = window.is_minimized().unwrap_or(false);
+                            let is_visible = window.is_visible().unwrap_or(false);
+                            let is_focused = window.is_focused().unwrap_or(false);
+
+                            if is_visible && !is_minimized && is_focused {
+                                let _ = window.minimize();
+                            } else {
+                                let _ = window.unminimize();
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
                         }
+                    } else if hotkey_id == HOTKEY_TICKET_ID {
+                        // Capturar ticket de Discord activo en un hilo separado para NO bloquear el listener
+                        let app_handle_clone = app_handle.clone();
+                        thread::spawn(move || {
+                            let captured_res = crate::commands::discord_reader::capture_active_discord_ticket();
+                            match captured_res {
+                                Ok(ticket) => {
+                                    let _ = app_handle_clone.emit("discord-ticket-captured", ticket);
+                                }
+                                Err(err_msg) => {
+                                    let _ = app_handle_clone.emit("discord-ticket-capture-failed", err_msg);
+                                }
+                            }
+                        });
                     }
                 } else if msg.message == WM_RELOAD_HOTKEY {
-                    // Unregister and re-register with updated config
+                    // Unregister both and re-register with updated config
                     let _ = UnregisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_ID);
+                    let _ = UnregisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_TICKET_ID);
+
                     let new_hotkey = CURRENT_HOTKEY.lock().unwrap().clone().unwrap_or_else(|| "Win+J".to_string());
                     let (new_mods, new_vk) = parse_hotkey(&new_hotkey);
                     mods = new_mods;
                     vk = new_vk;
                     let _ = RegisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_ID, mods, vk);
+
+                    let new_ticket_hotkey = CURRENT_TICKET_HOTKEY.lock().unwrap().clone().unwrap_or_else(|| "Win+Y".to_string());
+                    let (new_t_mods, new_t_vk) = parse_hotkey(&new_ticket_hotkey);
+                    ticket_mods = new_t_mods;
+                    ticket_vk = new_t_vk;
+                    let _ = RegisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_TICKET_ID, ticket_mods, ticket_vk);
                 }
             }
-
-            let _ = UnregisterHotKey(HWND(std::ptr::null_mut()), HOTKEY_ID);
         });
     }
 
-    pub fn reload_hotkey(new_hotkey: String) {
+    pub fn reload_hotkey(new_hotkey: Option<String>, new_ticket_hotkey: Option<String>) {
         {
-            let mut cur = CURRENT_HOTKEY.lock().unwrap();
-            *cur = Some(new_hotkey);
+            if let Some(h) = new_hotkey {
+                let mut cur = CURRENT_HOTKEY.lock().unwrap();
+                *cur = Some(h);
+            }
+            if let Some(th) = new_ticket_hotkey {
+                let mut cur_ticket = CURRENT_TICKET_HOTKEY.lock().unwrap();
+                *cur_ticket = Some(th);
+            }
         }
         if let Some(tid) = *HOTKEY_THREAD_ID.lock().unwrap() {
             unsafe {
@@ -157,9 +207,28 @@ pub fn set_toggle_hotkey(hotkey: String) -> Result<String, String> {
     }
 
     #[cfg(windows)]
-    win_hotkey::reload_hotkey(clean.clone());
+    win_hotkey::reload_hotkey(Some(clean.clone()), None);
 
-    Ok(format!("Atajo actualizado a: {clean}"))
+    Ok(format!("Atajo de ventana actualizado a: {clean}"))
+}
+
+#[tauri::command]
+pub fn get_ticket_hotkey() -> Result<String, String> {
+    let cur = CURRENT_TICKET_HOTKEY.lock().unwrap();
+    Ok(cur.clone().unwrap_or_else(|| "Win+Y".to_string()))
+}
+
+#[tauri::command]
+pub fn set_ticket_hotkey(hotkey: String) -> Result<String, String> {
+    let clean = hotkey.trim().to_string();
+    if clean.is_empty() {
+        return Err("El atajo de ticket no puede estar vacío.".to_string());
+    }
+
+    #[cfg(windows)]
+    win_hotkey::reload_hotkey(None, Some(clean.clone()));
+
+    Ok(format!("Atajo de tickets actualizado a: {clean}"))
 }
 
 #[tauri::command]
@@ -186,8 +255,9 @@ pub fn toggle_main_window(app_handle: AppHandle) -> Result<bool, String> {
 pub fn init_hotkey_service(app_handle: AppHandle) {
     #[cfg(windows)]
     {
-        // Try reading saved hotkey or default to Win+J
         let saved_hotkey = "Win+J".to_string();
-        win_hotkey::start_hotkey_listener(app_handle, saved_hotkey);
+        let saved_ticket_hotkey = "Win+Y".to_string();
+        win_hotkey::start_hotkey_listener(app_handle, saved_hotkey, saved_ticket_hotkey);
     }
 }
+

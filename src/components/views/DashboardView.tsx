@@ -29,7 +29,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToPresets,
 }) => {
   const { userRecord } = useAuth();
-  const tweaksBlocked = userRecord?.can_use_tweaks === false;
+  const tweaksBlocked = userRecord?.can_use_tweaks !== true;
 
   const cpuVal = metrics ? Math.round(metrics.cpu_usage) : 0;
   const ramPercent = metrics ? Math.round(metrics.ram_usage_percent) : 0;

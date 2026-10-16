@@ -11,6 +11,7 @@ import { HispanSancionesView } from "./components/views/HispanSancionesView";
 import { BackupView } from "./components/views/BackupView";
 import { BenchmarkView } from "./components/views/BenchmarkView";
 import { AdminPanelView } from "./components/views/AdminPanelView";
+import { TicketCounterView } from "./components/views/TicketCounterView";
 import { PermissionBlockedView } from "./components/views/PermissionBlockedView";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { OptimizationModal, ModalStep } from "./components/ui/OptimizationModal";
@@ -24,7 +25,6 @@ import { LoginView } from "./components/auth/LoginView";
 import { safeInvoke } from "./utils/safeInvoke";
 import {
   TabType,
-  AppMode,
   PresetType,
   TargetGameId,
   ActivePlanData,
@@ -48,11 +48,11 @@ interface HispanConfigData {
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading, user, userRecord, hardware } = useAuth();
-  const canUseTweaks = userRecord?.can_use_tweaks !== false;
-  const canUseSanciones = userRecord?.can_use_sanciones !== false;
+  const canUseTweaks = userRecord?.can_use_tweaks === true;
+  const canUseSanciones = userRecord?.can_use_sanciones === true;
   const canUseCitizens = userRecord?.can_use_citizens === true;
+  const canUseTickets = userRecord?.can_use_tickets === true;
   const isAdmin = userRecord?.is_admin === true;
-  const [appMode, setAppMode] = useState<AppMode>("optimizer");
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [gamingStatus, setGamingStatus] = useState<GamingStatus>({
@@ -1303,16 +1303,6 @@ const AppContent: React.FC = () => {
     setIsModalOpen(true);
   }, [canUseTweaks, showToast, addLog, fetchStatuses, fetchMetrics, fetchBackups]);
 
-  // Toggle Mode Handler
-  const handleToggleAppMode = (mode: AppMode) => {
-    setAppMode(mode);
-    if (mode === "hispan") {
-      setActiveTab("hispan");
-    } else {
-      setActiveTab("dashboard");
-    }
-  };
-
   const appliedCount = [
     gamingStatus.hpet_disabled,
     gamingStatus.ultimate_power_active,
@@ -1331,8 +1321,6 @@ const AppContent: React.FC = () => {
     return (
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#07080A] text-white select-none">
         <TitleBar
-          appMode={appMode}
-          onToggleAppMode={handleToggleAppMode}
           onCheckUpdates={() => handleCheckForUpdates(true)}
           isCheckingUpdate={isCheckingUpdate}
         />
@@ -1351,8 +1339,6 @@ const AppContent: React.FC = () => {
     return (
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#07080A]">
         <TitleBar
-          appMode={appMode}
-          onToggleAppMode={handleToggleAppMode}
           onCheckUpdates={() => handleCheckForUpdates(true)}
           isCheckingUpdate={isCheckingUpdate}
           currentHotkey={currentHotkey}
@@ -1372,10 +1358,8 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[#08090A] text-[#EDEDED] overflow-hidden select-none">
-      {/* Custom Window TitleBar with Mode Switcher & Update Check */}
+      {/* Custom Window TitleBar with Update Check & Global Hotkey */}
       <TitleBar
-        appMode={appMode}
-        onToggleAppMode={handleToggleAppMode}
         onCheckUpdates={() => handleCheckForUpdates(true)}
         isCheckingUpdate={isCheckingUpdate}
         currentHotkey={currentHotkey}
@@ -1407,12 +1391,7 @@ const AppContent: React.FC = () => {
           activeTab={activeTab}
           onTabChange={(tab) => {
             if (tab === activeTab) return;
-            if (tab === "admin") {
-              setActiveTab("admin");
-            } else {
-              setAppMode("optimizer");
-              setActiveTab(tab);
-            }
+            setActiveTab(tab);
           }}
           appliedCount={appliedCount}
           isCollapsed={isSidebarCollapsed}
@@ -1534,10 +1513,7 @@ const AppContent: React.FC = () => {
               (!canUseSanciones ? (
                 <PermissionBlockedView
                   moduleName="HispanLife Sanciones"
-                  onBackToDashboard={() => {
-                    setAppMode("optimizer");
-                    setActiveTab("dashboard");
-                  }}
+                  onBackToDashboard={() => setActiveTab("dashboard")}
                 />
               ) : (
                 <HispanSancionesView
@@ -1567,6 +1543,18 @@ const AppContent: React.FC = () => {
                   onBackToDashboard={() => setActiveTab("dashboard")}
                 />
               ))}
+
+            {activeTab === "tickets" && (
+              !canUseTickets ? (
+                <PermissionBlockedView
+                  moduleName="Conteo de Tickets HispanLifeRP"
+                  reason="Tu cuenta no tiene habilitado el módulo de gestión y conteo de tickets. Contacta con un Administrador."
+                  onBackToDashboard={() => setActiveTab("dashboard")}
+                />
+              ) : (
+                <TicketCounterView />
+              )
+            )}
           </motion.div>
         </main>
       </div>

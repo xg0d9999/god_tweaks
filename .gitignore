@@ -34,3 +34,8 @@ Thumbs.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+# Logs & PID files
+*.log
+*.pid
+*.rar

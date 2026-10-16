@@ -48,7 +48,7 @@ export const Footer: React.FC = () => {
             <a href="#planes" className="hover:text-white transition-colors">Planes</a>
             <a href="#hispanlife" className="hover:text-white transition-colors">HispanLife</a>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
-            <a href="/panel" className="hover:text-brand-gold transition-colors inline-flex items-center gap-1 text-zinc-300">
+            <a href="https://hispansanciones.vercel.app" className="hover:text-brand-gold transition-colors inline-flex items-center gap-1 text-zinc-300">
               <Lock className="w-3 h-3 text-brand-gold" />
               <span>Panel de Staff</span>
             </a>

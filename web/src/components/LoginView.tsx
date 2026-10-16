@@ -5,10 +5,9 @@ import { StaffAccount } from '../types';
 
 interface LoginViewProps {
   onLoginSuccess: (staff: StaffAccount) => void;
-  onNavigateToHome?: () => void;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onNavigateToHome }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -37,15 +36,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onNavigate
     }
   };
 
-  const handleBack = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onNavigateToHome) {
-      onNavigateToHome();
-    } else {
-      window.location.href = '/';
-    }
-  };
-
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[#07080A] relative overflow-hidden select-none">
       {/* Background neon glows */}
@@ -56,12 +46,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onNavigate
         {/* Back to Home Button */}
         <div className="mb-4 flex items-center justify-start">
           <a
-            href="/"
-            onClick={handleBack}
+            href="https://godsuite.vercel.app"
             className="inline-flex items-center gap-1.5 text-xs text-[#8B949E] hover:text-white px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 transition-all"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Volver a la Web Principal</span>
+            <span>Volver a la Web Principal (godsuite.vercel.app)</span>
           </a>
         </div>
 

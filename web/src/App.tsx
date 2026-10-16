@@ -12,12 +12,15 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'staff' | 'logs'>('users');
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Path-based routing: '/' is Landing, '/panel' is Staff Panel
+  // Default to 'panel' on hispansanciones domain or /panel path
   const [route, setRoute] = useState<'landing' | 'panel'>(() => {
     if (typeof window !== 'undefined') {
+      if (window.location.hostname.includes('hispansanciones') || window.location.pathname.startsWith('/panel')) {
+        return 'panel';
+      }
       return window.location.pathname.startsWith('/panel') ? 'panel' : 'landing';
     }
-    return 'landing';
+    return 'panel';
   });
 
   useEffect(() => {
@@ -84,12 +87,7 @@ export const App: React.FC = () => {
 
   // Not logged in -> Show Panel Login View
   if (!currentStaff) {
-    return (
-      <LoginView
-        onLoginSuccess={handleLoginSuccess}
-        onNavigateToHome={() => navigateTo('landing')}
-      />
-    );
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
   // Logged in -> Show Staff Management Panel
@@ -107,7 +105,6 @@ export const App: React.FC = () => {
         currentStaff={currentStaff}
         onLogout={handleLogout}
         onStaffUpdated={handleStaffUpdated}
-        onNavigateToHome={() => navigateTo('landing')}
       />
 
       {/* Main Content Area */}
@@ -120,14 +117,16 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="w-full border-t border-white/[0.06] py-4 text-center text-xs text-[#8B949E]">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>HispanLife Sanciones & Suite — Panel Oficial de Staff (/panel)</span>
+          <span>HispanLife Sanciones & Suite — Panel Oficial de Staff</span>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigateTo('landing')}
+            <a
+              href="https://godsuite.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-[#8B949E] hover:text-white transition-colors cursor-pointer text-[11px]"
             >
-              Ir a la Web Principal
-            </button>
+              Ir a la Web Principal (godsuite.vercel.app)
+            </a>
             <span className="text-white/20">•</span>
             <span className="font-mono text-[11px] text-[#8B949E]/70">
               Seguridad Win32 & RLS Activa

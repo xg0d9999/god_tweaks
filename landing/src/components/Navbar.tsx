@@ -60,7 +60,7 @@ export const Navbar: React.FC = () => {
           {/* Desktop Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
             <a
-              href="/panel"
+              href="https://hispansanciones.vercel.app"
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-white/10 transition-all hover:border-white/20"
               title="Acceso exclusivo para Staff y Moderación"
             >
@@ -80,7 +80,7 @@ export const Navbar: React.FC = () => {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
             <a
-              href="/panel"
+              href="https://hispansanciones.vercel.app"
               className="p-2 rounded-lg text-xs font-semibold text-zinc-300 bg-zinc-900 border border-white/10 flex items-center gap-1.5"
             >
               <Lock className="w-3.5 h-3.5 text-brand-gold" />
@@ -112,12 +112,12 @@ export const Navbar: React.FC = () => {
                 Descargar v1.12.2 (.exe)
               </a>
               <a
-                href="/panel"
+                href="https://hispansanciones.vercel.app"
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full text-center py-2.5 rounded-lg text-xs font-medium text-zinc-300 bg-zinc-900 border border-white/10 flex items-center justify-center gap-2"
               >
                 <Lock className="w-3.5 h-3.5 text-brand-gold" />
-                <span>Panel de Staff (/panel)</span>
+                <span>Panel de Staff (hispansanciones)</span>
               </a>
             </div>
           </div>

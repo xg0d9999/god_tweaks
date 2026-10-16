@@ -5,7 +5,6 @@ import {
   RefreshCw,
   ShieldAlert,
   CheckCircle2,
-  XCircle,
   Crown,
   Lock,
   ShieldCheck,
@@ -21,7 +20,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
   const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [pendingKeys, setPendingKeys] = useState<Record<string, boolean>>({});
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
   const isStaff = currentStaff.role === 'staff';
@@ -50,7 +49,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
     }, 3500);
   };
 
-  // Toggle single access permission
+  // Toggle single access permission with optimistic update & independent concurrency
   const handleToggleAccess = async (
     user: AppUser,
     field: 'can_use_sanciones' | 'can_use_tweaks' | 'can_use_citizens' | 'can_use_tickets'
@@ -66,13 +65,29 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
       return;
     }
 
-    const nextValue = !user[field];
-    setActionLoadingId(`${user.id}-${field}`);
+    const key = `${user.id}:${field}`;
+    if (pendingKeys[key]) return; // Evita clics duplicados sobre el mismo switch
+
+    const previousValue = user[field];
+    const nextValue = !previousValue;
+
+    // 1. ACTUALIZACIÓN OPTIMISTA INMEDIATA (0ms de retraso visual)
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, [field]: nextValue } : u))
+    );
+
+    // 2. Marcar solo esta clave única como pendiente (los demás sliders permanecen interactivos)
+    setPendingKeys((prev) => ({ ...prev, [key]: true }));
+
     try {
-      await updateAppUserAccess(user.id, field, nextValue, currentStaff);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, [field]: nextValue } : u))
+      await updateAppUserAccess(
+        user.id,
+        field,
+        nextValue,
+        currentStaff,
+        { username: user.discord_username, is_admin: user.is_admin }
       );
+
       const label =
         field === 'can_use_sanciones'
           ? 'Sanciones'
@@ -81,56 +96,21 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
           : field === 'can_use_tweaks'
           ? 'Optimizador'
           : 'Citizens';
+
       showNotification(`Permiso de ${label} ${nextValue ? 'activado' : 'desactivado'} para ${user.discord_username}`);
     } catch (err: unknown) {
+      // Revertir cambio optimista en caso de fallo de red
+      setUsers((prev) =>
+        prev.map((u) => (u.id === user.id ? { ...u, [field]: previousValue } : u))
+      );
       const msg = err instanceof Error ? err.message : 'Error al actualizar permiso.';
       showNotification(msg, true);
     } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  // 1-Click Master Access: Give or Revoke Access
-  const handleMasterAccess = async (user: AppUser, grant: boolean) => {
-    if (user.is_admin && !grant && !isOwner) {
-      showNotification('¡Acción denegada! Nadie puede revocarle accesos al Dueño.', true);
-      return;
-    }
-
-    setActionLoadingId(`${user.id}-all`);
-    try {
-      await updateAppUserAccess(user.id, 'all', grant, currentStaff);
-      setUsers((prev) =>
-        prev.map((u) => {
-          if (u.id !== user.id) return u;
-          if (isStaff) {
-            // El staff solo conmuta Sanciones y Tickets
-            return {
-              ...u,
-              can_use_sanciones: grant,
-              can_use_tickets: grant,
-            };
-          }
-          // El Dueño conmuta todos los módulos
-          return {
-            ...u,
-            can_use_sanciones: grant,
-            can_use_tweaks: grant,
-            can_use_citizens: grant,
-            can_use_tickets: grant,
-          };
-        })
-      );
-      showNotification(
-        grant
-          ? `Acceso ${isStaff ? 'a Sanciones y Tickets' : 'Total'} CONCEDIDO a ${user.discord_username}`
-          : `Acceso ${isStaff ? 'a Sanciones y Tickets' : 'Total'} BLOQUEADO para ${user.discord_username}`
-      );
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al cambiar accesos.';
-      showNotification(msg, true);
-    } finally {
-      setActionLoadingId(null);
+      setPendingKeys((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     }
   };
 
@@ -246,7 +226,6 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
               <tr className="border-b border-white/[0.08] bg-white/[0.02] text-[#8B949E] uppercase tracking-wider font-semibold">
                 <th className="py-3.5 px-4">Usuario Discord</th>
                 <th className="py-3.5 px-4">HWID / Hardware</th>
-                <th className="py-3.5 px-4 text-center">Acción Rápida</th>
                 <th className="py-3.5 px-4 text-center">
                   <div className="inline-flex items-center gap-1 text-emerald-400">
                     <span>Sanciones</span>
@@ -282,27 +261,24 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
             <tbody className="divide-y divide-white/[0.05]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#8B949E]">
+                  <td colSpan={6} className="py-12 text-center text-[#8B949E]">
                     <div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin mx-auto mb-2" />
                     Cargando usuarios de la base de datos...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#8B949E]">
+                  <td colSpan={6} className="py-12 text-center text-[#8B949E]">
                     No se encontraron usuarios registrados coincidentes.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => {
                   const isUserOwner = user.is_admin;
-                  const hasStaffAuthorizedAll = user.can_use_sanciones && user.can_use_tickets;
-                  const hasAll =
-                    user.can_use_sanciones &&
-                    user.can_use_tweaks &&
-                    user.can_use_citizens &&
-                    user.can_use_tickets;
-                  const isActionLoading = actionLoadingId?.startsWith(user.id);
+                  const isSancionesPending = pendingKeys[`${user.id}:can_use_sanciones`];
+                  const isTicketsPending = pendingKeys[`${user.id}:can_use_tickets`];
+                  const isTweaksPending = pendingKeys[`${user.id}:can_use_tweaks`];
+                  const isCitizensPending = pendingKeys[`${user.id}:can_use_citizens`];
 
                   return (
                     <tr
@@ -365,67 +341,17 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
                         </div>
                       </td>
 
-                      {/* 1-Click Master Access Button (Adaptado a permisos de Staff o Dueño) */}
-                      <td className="py-3.5 px-4 text-center">
-                        {isUserOwner ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold">
-                            <Lock className="w-3 h-3" /> Intocable
-                          </span>
-                        ) : isStaff ? (
-                          hasStaffAuthorizedAll ? (
-                            <button
-                              onClick={() => handleMasterAccess(user, false)}
-                              disabled={isActionLoading}
-                              className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-                              title="Bloquear Sanciones y Tickets"
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>Bloquear Sanc./Tick.</span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleMasterAccess(user, true)}
-                              disabled={isActionLoading}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-                              title="Permitir Sanciones y Tickets"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Permitir Sanc./Tick.</span>
-                            </button>
-                          )
-                        ) : hasAll ? (
-                          <button
-                            onClick={() => handleMasterAccess(user, false)}
-                            disabled={isActionLoading}
-                            className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-                            title="Bloquear todos los módulos de golpe"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Bloquear Todo</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleMasterAccess(user, true)}
-                            disabled={isActionLoading}
-                            className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 font-bold text-[11px] inline-flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
-                            title="Dar acceso a todos los módulos con un solo clic"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Dar Acceso Total</span>
-                          </button>
-                        )}
-                      </td>
-
                       {/* Switch Sanciones (PERMITIDO A STAFF Y DUEÑO) */}
                       <td className="py-3.5 px-4 text-center">
                         <button
+                          type="button"
                           onClick={() => handleToggleAccess(user, 'can_use_sanciones')}
-                          disabled={isActionLoading || (isUserOwner && user.can_use_sanciones)}
+                          disabled={isSancionesPending || (isUserOwner && user.can_use_sanciones)}
                           className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer disabled:cursor-not-allowed ${
                             user.can_use_sanciones
-                              ? 'bg-emerald-500'
+                              ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                               : 'bg-white/10 hover:bg-white/20'
-                          } ${isUserOwner ? 'opacity-80' : ''}`}
+                          } ${isUserOwner ? 'opacity-80' : ''} ${isSancionesPending ? 'opacity-60' : ''}`}
                           title={
                             isUserOwner
                               ? 'Protegido por el sistema'
@@ -435,7 +361,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
                           }
                         >
                           <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform ${
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-200 ${
                               user.can_use_sanciones ? 'translate-x-4' : 'translate-x-0'
                             }`}
                           />
@@ -445,13 +371,14 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
                       {/* Switch Tickets (PERMITIDO A STAFF Y DUEÑO) */}
                       <td className="py-3.5 px-4 text-center">
                         <button
+                          type="button"
                           onClick={() => handleToggleAccess(user, 'can_use_tickets')}
-                          disabled={isActionLoading || (isUserOwner && user.can_use_tickets)}
+                          disabled={isTicketsPending || (isUserOwner && user.can_use_tickets)}
                           className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer disabled:cursor-not-allowed ${
                             user.can_use_tickets
-                              ? 'bg-emerald-500'
+                              ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                               : 'bg-white/10 hover:bg-white/20'
-                          } ${isUserOwner ? 'opacity-80' : ''}`}
+                          } ${isUserOwner ? 'opacity-80' : ''} ${isTicketsPending ? 'opacity-60' : ''}`}
                           title={
                             isUserOwner
                               ? 'Protegido por el sistema'
@@ -461,7 +388,7 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
                           }
                         >
                           <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform ${
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-200 ${
                               user.can_use_tickets ? 'translate-x-4' : 'translate-x-0'
                             }`}
                           />
@@ -471,29 +398,30 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
                       {/* Switch Tweaks / Optimizador (BLOQUEADO PARA STAFF) */}
                       <td className="py-3.5 px-4 text-center">
                         <button
+                          type="button"
                           onClick={() => handleToggleAccess(user, 'can_use_tweaks')}
-                          disabled={isStaff || isActionLoading || (isUserOwner && user.can_use_tweaks)}
+                          disabled={isStaff || isTweaksPending || (isUserOwner && user.can_use_tweaks)}
                           className={`w-9 h-5 rounded-full transition-colors relative ${
                             isStaff
-                              ? 'opacity-40 cursor-not-allowed'
+                              ? 'opacity-30 cursor-not-allowed'
                               : 'cursor-pointer'
                           } ${
                             user.can_use_tweaks
-                              ? 'bg-emerald-500'
+                              ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                               : 'bg-white/10 hover:bg-white/20'
-                          } ${isUserOwner ? 'opacity-80' : ''}`}
+                          } ${isUserOwner ? 'opacity-80' : ''} ${isTweaksPending ? 'opacity-60' : ''}`}
                           title={
                             isStaff
                               ? 'Acceso bloqueado: Solo el Dueño puede modificar el Optimizador'
                               : isUserOwner
                               ? 'Protegido por el sistema'
                               : user.can_use_tweaks
-                              ? 'Optimizador habilitado'
-                              : 'Optimizador bloqueado'
+                              ? 'Optimizador habilitado (Click para bloquear)'
+                              : 'Optimizador bloqueado (Click para habilitar)'
                           }
                         >
                           <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform ${
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-200 ${
                               user.can_use_tweaks ? 'translate-x-4' : 'translate-x-0'
                             }`}
                           />
@@ -503,29 +431,30 @@ export const UsersManagementTab: React.FC<UsersManagementTabProps> = ({ currentS
                       {/* Switch Citizens (BLOQUEADO PARA STAFF) */}
                       <td className="py-3.5 px-4 text-center">
                         <button
+                          type="button"
                           onClick={() => handleToggleAccess(user, 'can_use_citizens')}
-                          disabled={isStaff || isActionLoading || (isUserOwner && user.can_use_citizens)}
+                          disabled={isStaff || isCitizensPending || (isUserOwner && user.can_use_citizens)}
                           className={`w-9 h-5 rounded-full transition-colors relative ${
                             isStaff
-                              ? 'opacity-40 cursor-not-allowed'
+                              ? 'opacity-30 cursor-not-allowed'
                               : 'cursor-pointer'
                           } ${
                             user.can_use_citizens
-                              ? 'bg-emerald-500'
+                              ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                               : 'bg-white/10 hover:bg-white/20'
-                          } ${isUserOwner ? 'opacity-80' : ''}`}
+                          } ${isUserOwner ? 'opacity-80' : ''} ${isCitizensPending ? 'opacity-60' : ''}`}
                           title={
                             isStaff
                               ? 'Acceso bloqueado: Solo el Dueño puede modificar Citizens'
                               : isUserOwner
                               ? 'Protegido por el sistema'
                               : user.can_use_citizens
-                              ? 'Citizens habilitado'
-                              : 'Citizens bloqueado'
+                              ? 'Citizens habilitado (Click para bloquear)'
+                              : 'Citizens bloqueado (Click para habilitar)'
                           }
                         >
                           <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform ${
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-md transition-transform duration-200 ${
                               user.can_use_citizens ? 'translate-x-4' : 'translate-x-0'
                             }`}
                           />

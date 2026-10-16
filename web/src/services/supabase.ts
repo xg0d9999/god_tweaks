@@ -240,18 +240,26 @@ export async function updateAppUserAccess(
   targetUserId: string,
   field: 'can_use_sanciones' | 'can_use_tweaks' | 'can_use_citizens' | 'can_use_tickets' | 'all',
   value: boolean,
-  operator: StaffAccount
+  operator: StaffAccount,
+  cachedUser?: { username: string; is_admin: boolean }
 ): Promise<void> {
-  const { data: targetUser } = await supabase
-    .from('app_users')
-    .select('*')
-    .eq('id', targetUserId)
-    .single();
+  let targetUsername = cachedUser?.username || '';
+  let isAdmin = cachedUser?.is_admin || false;
 
-  if (!targetUser) throw new Error('Usuario no encontrado.');
+  if (!cachedUser) {
+    const { data: targetUser } = await supabase
+      .from('app_users')
+      .select('discord_username, is_admin')
+      .eq('id', targetUserId)
+      .single();
+
+    if (!targetUser) throw new Error('Usuario no encontrado.');
+    targetUsername = targetUser.discord_username;
+    isAdmin = targetUser.is_admin;
+  }
 
   // REGLA DE SEGURIDAD: Nadie puede revocarle permisos al Dueño
-  if (targetUser.is_admin && !value && operator.role !== 'owner') {
+  if (isAdmin && !value && operator.role !== 'owner') {
     throw new Error('¡Protección de Seguridad! Nadie puede revocarle permisos al Dueño / Administrador Principal.');
   }
 
@@ -300,12 +308,12 @@ export async function updateAppUserAccess(
       ? 'OPTIMIZADOR (TWEAKS)'
       : 'CITIZENS';
 
-  await logStaffAction(
+  logStaffAction(
     value ? 'grant_access' : 'revoke_access',
     operator.username,
-    targetUser.discord_username,
+    targetUsername,
     `Permiso ${moduleLabel} modificado a [${value ? 'HABILITADO' : 'BLOQUEADO'}]`
-  );
+  ).catch((e) => console.error('Error logging staff action:', e));
 }
 
 // Obtener registros de auditoría (filtrados para Staff: solo Sanciones y Conteo de Tickets)

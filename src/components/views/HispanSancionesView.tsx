@@ -67,6 +67,9 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
     setInputChannel(discordChannel);
   }, [discordGuild, discordChannel]);
 
+  // Modo de Baneo: Online (sqlban) vs Offline (sqlbanoffline)
+  const [isOfflineBan, setIsOfflineBan] = useState<boolean>(false);
+
   // FiveM Live Running Detection
   const [isFivemRunning, setIsFivemRunning] = useState<boolean>(false);
 
@@ -197,8 +200,9 @@ Pruebas: ${proofs.trim() || "-"}`;
     const cleanId = playerId.trim() || "ID";
     const days = result.perma ? -1 : result.ban_days;
     const cleanAtt = staffAtt.trim() || "Staff";
-    return `sqlban ${cleanId} ${days} ${result.motivoWithoutTag} att:${cleanAtt}`;
-  }, [playerId, result, staffAtt]);
+    const cmd = isOfflineBan ? "sqlbanoffline" : "sqlban";
+    return `${cmd} ${cleanId} ${days} ${result.motivoWithoutTag} att:${cleanAtt}`;
+  }, [playerId, result, staffAtt, isOfflineBan]);
 
   const validateAction = (type: "plantilla" | "jail" | "ban" | "jail_ig" | "ban_ig"): boolean => {
     if (selectedCount === 0) {
@@ -247,7 +251,7 @@ Pruebas: ${proofs.trim() || "-"}`;
       return;
     }
     if (type === "ban") {
-      onCopyClipboard(banCommand, "Comando sqlban copiado al portapapeles.");
+      onCopyClipboard(banCommand, `Comando ${isOfflineBan ? "sqlbanoffline" : "sqlban"} copiado al portapapeles.`);
       return;
     }
     if (type === "plantilla") {
@@ -568,6 +572,40 @@ Pruebas: ${proofs.trim() || "-"}`;
               </ActionButton>
             </div>
 
+            {/* Selector de Modo de Baneo: Online (sqlban) vs Offline (sqlbanoffline) */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs">
+              <span className="text-[#828792] flex items-center gap-1.5 font-medium">
+                <Terminal className="w-3.5 h-3.5 text-white/50" />
+                <span>Modo de Baneo:</span>
+              </span>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/40 border border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setIsOfflineBan(false)}
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition-all cursor-pointer ${
+                    !isOfflineBan
+                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
+                      : "text-[#828792] hover:text-white"
+                  }`}
+                  title="Jugador conectado en el servidor (sqlban)"
+                >
+                  sqlban (Online)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOfflineBan(true)}
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition-all cursor-pointer ${
+                    isOfflineBan
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                      : "text-[#828792] hover:text-white"
+                  }`}
+                  title="Jugador desconectado del servidor (sqlbanoffline)"
+                >
+                  sqlbanoffline (Offline)
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <ActionButton
                 variant="secondary"
@@ -595,9 +633,9 @@ Pruebas: ${proofs.trim() || "-"}`;
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando sqlban (F8)"}
+                title={!isFivemRunning ? "FiveM no está abierto" : `Copiar comando ${isOfflineBan ? "sqlbanoffline" : "sqlban"} (F8)`}
               >
-                sqlban
+                {isOfflineBan ? "sqlbanoffline" : "sqlban"}
               </ActionButton>
             </div>
 
@@ -628,9 +666,9 @@ Pruebas: ${proofs.trim() || "-"}`;
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Ban en FiveM por consola F8"}
+                title={!isFivemRunning ? "FiveM no está abierto" : `Ejecutar ${isOfflineBan ? "Baneo Offline (sqlbanoffline)" : "Baneo (sqlban)"} en FiveM por consola F8`}
               >
-                Baneo IG (F8)
+                {isOfflineBan ? "Baneo Offline (F8)" : "Baneo IG (F8)"}
               </ActionButton>
             </div>
 
@@ -706,13 +744,49 @@ Pruebas: ${proofs.trim() || "-"}`;
                     <Terminal className="w-5 h-5 text-emerald-400" />
                     <div>
                       <h3 className="text-sm font-semibold text-white">
-                        Ejecutar {pendingActionType === "jail_ig" ? "Jail" : "Baneo"} en FiveM (F8)
+                        Ejecutar {pendingActionType === "jail_ig" ? "Jail" : isOfflineBan ? "Baneo Offline (sqlbanoffline)" : "Baneo (sqlban)"} en FiveM (F8)
                       </h3>
                       <p className="text-[11px] text-[#828792]">
                         Se enfocará FiveM, se abrirá la consola F8 y se ejecutará el comando.
                       </p>
                     </div>
                   </div>
+
+                  {/* Selector rápido de comando: Online (sqlban) vs Offline (sqlbanoffline) */}
+                  {pendingActionType === "ban_ig" && (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-white">Tipo de Comando de Baneo</span>
+                        <span className="text-[10px] text-[#828792]">
+                          {isOfflineBan ? "Jugador desconectado del servidor" : "Jugador conectado actualmente"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/50 border border-white/[0.08]">
+                        <button
+                          type="button"
+                          onClick={() => setIsOfflineBan(false)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                            !isOfflineBan
+                              ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
+                              : "text-[#828792] hover:text-white"
+                          }`}
+                        >
+                          sqlban (Online)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsOfflineBan(true)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                            isOfflineBan
+                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                              : "text-[#828792] hover:text-white"
+                          }`}
+                        >
+                          sqlbanoffline (Offline)
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Comando IG Preview */}
                   <div className="px-3 py-2 rounded-xl bg-black/60 border border-emerald-500/30 flex items-center gap-2 font-mono text-xs">

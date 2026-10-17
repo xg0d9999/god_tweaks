@@ -98,6 +98,7 @@
   - **Enrutamiento Oficial a Discord**: Envío de plantilla formateada al canal oficial `#registro-sanciones` de HispanLife RP (Servidor `667478197927018530` / Canal `668062839990386701`), corrigiendo el desvío accidental hacia el bot personal.
   - **Auto-migración y Configuración**: Migración automática de IDs heredados del bot hacia HispanLife RP oficial, con modal integrado para personalizar o restablecer el canal de Discord mediante enlace directo o IDs.
   - **Doble Confirmación con Vista Previa de Destino**: Modal con previsualización del comando IG, jugador, pruebas y confirmación visual explícita del canal Discord de destino antes de ejecutar.
+  - **Baneo Online (`sqlban`) vs Baneo Offline (`sqlbanoffline`)**: Selector ágil disponible tanto en la tarjeta de acciones como dentro del modal de confirmación antes de pulsar "⚡ FiveM + Enviar a Discord" o copiar el comando. Permite alternar dinámicamente entre sanciones a jugadores conectados (`sqlban`) y jugadores desconectados del servidor (`sqlbanoffline`), actualizando en tiempo real la consola F8 y el portapapeles.
 - **Ubicación**: `src/components/views/HispanSancionesView.tsx`, `src-tauri/src/commands/hispan.rs`, `src/data/hispanInfractions.ts`.
 
 ---

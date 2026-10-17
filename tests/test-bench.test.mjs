@@ -123,6 +123,60 @@ test('g0d suite Test Bench - HispanLife Sanciones Payload Formatter', async (t) 
     assert.equal(parsed.guild, HISPAN_OFFICIAL_GUILD);
     assert.equal(parsed.channel, HISPAN_OFFICIAL_CHANNEL);
   });
+
+  await t.test('Verificar formato de comandos sqlban (Online) y sqlbanoffline (Offline) con perma (-1) y días temporales', () => {
+    const formatBanCommand = ({ playerId, banDays, perma, motivoWithoutTag, staffAtt, isOffline }) => {
+      const cleanId = (playerId || 'ID').trim();
+      const days = perma ? -1 : banDays;
+      const cleanAtt = (staffAtt || 'Staff').trim();
+      const cmd = isOffline ? 'sqlbanoffline' : 'sqlban';
+      return `${cmd} ${cleanId} ${days} ${motivoWithoutTag} att:${cleanAtt}`;
+    };
+
+    // Caso 1: Baneo Online temporal (3 días)
+    const cmdOnlineTemp = formatBanCommand({
+      playerId: '412',
+      banDays: 3,
+      perma: false,
+      motivoWithoutTag: '1.2 No valorar vida (NVL)',
+      staffAtt: 'Admin_Isma',
+      isOffline: false,
+    });
+    assert.equal(cmdOnlineTemp, 'sqlban 412 3 1.2 No valorar vida (NVL) att:Admin_Isma');
+
+    // Caso 2: Baneo Online permanente (-1)
+    const cmdOnlinePerma = formatBanCommand({
+      playerId: '99',
+      banDays: 0,
+      perma: true,
+      motivoWithoutTag: 'Uso de Cheats / Software de terceros',
+      staffAtt: 'Admin_Isma',
+      isOffline: false,
+    });
+    assert.equal(cmdOnlinePerma, 'sqlban 99 -1 Uso de Cheats / Software de terceros att:Admin_Isma');
+
+    // Caso 3: Baneo Offline temporal (7 días)
+    const cmdOfflineTemp = formatBanCommand({
+      playerId: '883',
+      banDays: 7,
+      perma: false,
+      motivoWithoutTag: 'Evasión de rol y desconexión intencional',
+      staffAtt: 'Admin_Isma',
+      isOffline: true,
+    });
+    assert.equal(cmdOfflineTemp, 'sqlbanoffline 883 7 Evasión de rol y desconexión intencional att:Admin_Isma');
+
+    // Caso 4: Baneo Offline permanente (-1)
+    const cmdOfflinePerma = formatBanCommand({
+      playerId: '1042',
+      banDays: 0,
+      perma: true,
+      motivoWithoutTag: 'Duplicación masiva de dinero y armas',
+      staffAtt: 'Admin_Isma',
+      isOffline: true,
+    });
+    assert.equal(cmdOfflinePerma, 'sqlbanoffline 1042 -1 Duplicación masiva de dinero y armas att:Admin_Isma');
+  });
 });
 
 test('g0d suite Test Bench - Control de Permisos y Citizens Manager', async (t) => {

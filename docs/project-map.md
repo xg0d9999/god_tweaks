@@ -18,7 +18,7 @@
 - `DiskCleanerView.tsx`: Analizador de consumo de disco, unidades de almacenamiento y limpieza inteligente de gigabytes de basura.
 - `BackupView.tsx`: Gestión de Puntos de Restauración (VSS) y respaldos `.reg` del registro.
 - `BenchmarkView.tsx`: Banco de pruebas comparativo pre/post optimización con exportación a PDF.
-- `HispanSancionesView.tsx`: Sistema de moderación y auditoría de sanciones para FiveM.
+- `HispanSancionesView.tsx`: Sistema de moderación y auditoría de sanciones para FiveM (comandos `jail`, `sqlban` y `sqlbanoffline`, canal oficial `#registro-sanciones` y ejecución por F8).
 - `TicketCounterView.tsx`: Gestor y conteo manual de tickets para HispanLifeRP, con botones +/- por staff, Drag and Drop para cambios de rango, orden alfabético estricto y salida formateada para Discord.
 - `AdminPanelView.tsx`: Panel administrativo de usuarios, HWIDs y permisos manuales.
 - `PermissionBlockedView.tsx`: Vista de acceso denegado para roles no autorizados.

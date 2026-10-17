@@ -1228,7 +1228,7 @@ dependencies = [
 
 [[package]]
 name = "god_tweaks"
-version = "1.12.3"
+version = "1.12.5"
 dependencies = [
  "serde",
  "serde_json",

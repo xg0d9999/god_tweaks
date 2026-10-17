@@ -16,7 +16,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onOpenHotkeySettings,
 }) => {
   const { user } = useAuth();
-  const [appVersion, setAppVersion] = React.useState("1.12.4");
+  const [appVersion, setAppVersion] = React.useState("1.12.5");
 
   React.useEffect(() => {
     const loadVersion = async () => {

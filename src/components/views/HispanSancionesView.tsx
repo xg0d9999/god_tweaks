@@ -184,11 +184,11 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
 
   // Generate Texts
   const formattedReportTemplate = useMemo(() => {
-    return `Nombre de Steam: ${steamName.trim() || "-"}
-Motivo: ${result.motivoWithTag || "-"}
-Duración: ${result.duracion}
-Tipo de sanción: ${result.tipo_full}
-Pruebas: ${proofs.trim() || "-"}`;
+    return `>>> **Nombre de Steam:** ${steamName.trim() || "-"}
+**Motivo:** ${result.motivoWithTag || "-"}
+**Duración:** ${result.duracion}
+**Tipo de sanción:** ${result.tipo_full}
+**Pruebas:** ${proofs.trim() || "-"}`;
   }, [steamName, result, proofs]);
 
   const jailCommand = useMemo(() => {

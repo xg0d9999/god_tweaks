@@ -95,12 +95,12 @@
     2. `2-iniciar-bot-24-7.bat` (`daemon.js` + `bot.js`): Lanza un demonio supervisor oculto en segundo plano (`WindowStyle Hidden`) con auto-reinicio ante caídas que mantiene el bot activo 24/7 aunque se cierre la ventana del `.bat`. Incluye `3-detener-bot-24-7.bat` para apagado manual.
 - **Ubicación**: `discord-bot/bot.js`, `discord-bot/setup-tickets.js`, `discord-bot/daemon.js`, `discord-bot/1-crear-canal-y-permisos.bat`, `discord-bot/2-iniciar-bot-24-7.bat`.
 
-### 15. HispanLife RP · Sistema de Sanciones y Publicación Oficial en #registro-sanciones
-- **Descripción**: Módulo de moderación para staff de FiveM con 64 infracciones del reglamento de HispanLife RP (Reconocida / Sin reconocer), cálculo de Jail y Ban con precedencia y CK, y envío directo de comandos a FiveM (`jail`, `sqlban`) por consola F8:
-  - **Enrutamiento Oficial a Discord**: Envío de plantilla formateada al canal oficial `#registro-sanciones` de HispanLife RP (Servidor `667478197927018530` / Canal `668062839990386701`), corrigiendo el desvío accidental hacia el bot personal.
-  - **Auto-migración y Configuración**: Migración automática de IDs heredados del bot hacia HispanLife RP oficial, con modal integrado para personalizar o restablecer el canal de Discord mediante enlace directo o IDs.
-  - **Doble Confirmación con Vista Previa de Destino**: Modal con previsualización del comando IG, jugador, pruebas y confirmación visual explícita del canal Discord de destino antes de ejecutar.
-  - **Baneo Online (`sqlban`) vs Baneo Offline (`sqlbanoffline`)**: Selector ágil disponible tanto en la tarjeta de acciones como dentro del modal de confirmación antes de pulsar "⚡ FiveM + Enviar a Discord" o copiar el comando. Permite alternar dinámicamente entre sanciones a jugadores conectados (`sqlban`) y jugadores desconectados del servidor (`sqlbanoffline`), actualizando en tiempo real la consola F8 y el portapapeles.
+### 15. HispanLife RP · Sistema de Sanciones y Ejecución IG Unificada (F8)
+- **Descripción**: Módulo de moderación para staff de FiveM con 64 infracciones del reglamento de HispanLife RP (Reconocida / Sin reconocer), cálculo de Jail y Ban con precedencia y CK, y ejecución directa de comandos a FiveM (`jail`, `sqlban`, `sqlbanoffline`) por consola F8:
+  - **Botones Unificados IG (F8)**: Sustitución de los botones redundantes no-IG por dos acciones directas con estética de alta gama: **`Jail IG (F8)`** (verde esmeralda) y **`Baneo IG (F8)`** (rojo carmesí).
+  - **Selector de Baneo en Popup**: El selector de `sqlban (Online)` vs `sqlbanoffline (Offline)` reside exclusivamente dentro del modal de confirmación, manteniendo limpia la vista principal y permitiendo alternar el comando con vista previa y botón de copia rápida en un clic.
+  - **Control de Envío a Discord en Popup**: Tanto para Jail como para Baneo, el modal permite al staff elegir en el momento de la ejecución si desea aplicar la sanción de forma pura en FiveM (`Solo FiveM (F8)`) o aplicar en FiveM y publicar simultáneamente la sanción oficial en Discord (`⚡ FiveM + Enviar a Discord`).
+  - **Canal Oficial Fijo & Barra Inferior Minimalista**: Canal `#registro-sanciones` (`667478197927018530` / `668062839990386701`) protegido e inmutable (sin botones superfluos de reconfiguración), y supresión del botón de atajo redundante de la vista (centralizado en el TitleBar superior), dejando la barra inferior despejada con `Limpiar todo` y `Siempre visible`.
 - **Ubicación**: `src/components/views/HispanSancionesView.tsx`, `src-tauri/src/commands/hispan.rs`, `src/data/hispanInfractions.ts`.
 
 ### 16. Actualización Automática In-Place 100% Silenciosa (Silent Update sin ventanas externas)

@@ -10,8 +10,6 @@ import {
   AlertCircle,
   Info,
   X,
-  Keyboard,
-  RotateCcw,
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { ActionButton } from "../ui/ActionButton";
@@ -30,8 +28,8 @@ interface HispanSancionesViewProps {
   alwaysOnTop: boolean;
   staffAtt: string;
   onUpdateStaffAtt: (att: string) => void;
-  discordGuild: string;
-  discordChannel: string;
+  discordGuild?: string;
+  discordChannel?: string;
   onUpdateDiscordConfig?: (guild: string, channel: string) => void;
   showToast: (message: string, type: "success" | "error" | "info") => void;
   currentHotkey?: string;
@@ -46,26 +44,12 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
   alwaysOnTop,
   staffAtt,
   onUpdateStaffAtt,
-  discordGuild,
-  discordChannel,
-  onUpdateDiscordConfig,
+  discordGuild = "667478197927018530",
+  discordChannel = "668062839990386701",
   showToast,
-  currentHotkey,
-  onOpenHotkeySettings,
 }) => {
   const [search, setSearch] = useState("");
   const [selections, setSelections] = useState<Record<number, "sin_reconocer" | "reconocida">>({});
-
-  // Discord Channel Configuration Modal State
-  const [isDiscordModalOpen, setIsDiscordModalOpen] = useState(false);
-  const [inputGuild, setInputGuild] = useState(discordGuild);
-  const [inputChannel, setInputChannel] = useState(discordChannel);
-  const [inputUrl, setInputUrl] = useState("");
-
-  useEffect(() => {
-    setInputGuild(discordGuild);
-    setInputChannel(discordChannel);
-  }, [discordGuild, discordChannel]);
 
   // Modo de Baneo: Online (sqlban) vs Offline (sqlbanoffline)
   const [isOfflineBan, setIsOfflineBan] = useState<boolean>(false);
@@ -100,7 +84,7 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
 
   // Double Confirmation Modal state
   const [confirmStep, setConfirmStep] = useState<null | "first" | "second">(null);
-  const [pendingActionType, setPendingActionType] = useState<"plantilla" | "jail" | "ban" | "jail_ig" | "ban_ig" | null>(null);
+  const [pendingActionType, setPendingActionType] = useState<"plantilla" | "jail_ig" | "ban_ig" | null>(null);
 
   // Filtered Infractions
   const filteredInfractions = useMemo(() => {
@@ -144,44 +128,6 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
     showToast("Formulario e infracciones restablecidos.", "info");
   };
 
-  const handleSaveDiscordConfig = () => {
-    let targetGuild = inputGuild.trim();
-    let targetChannel = inputChannel.trim();
-
-    if (inputUrl.trim()) {
-      const match = inputUrl.match(/channels\/(\d+)\/(\d+)/);
-      if (match) {
-        targetGuild = match[1];
-        targetChannel = match[2];
-      }
-    }
-
-    if (!targetGuild || !targetChannel) {
-      showToast("Introduce el Servidor (Guild ID) y el Canal ID.", "error");
-      return;
-    }
-
-    if (onUpdateDiscordConfig) {
-      onUpdateDiscordConfig(targetGuild, targetChannel);
-    }
-    showToast("Canal de registro de sanciones actualizado.", "success");
-    setIsDiscordModalOpen(false);
-    setInputUrl("");
-  };
-
-  const handleResetHispanOfficial = () => {
-    const OFFICIAL_GUILD = "667478197927018530";
-    const OFFICIAL_CHANNEL = "668062839990386701";
-    setInputGuild(OFFICIAL_GUILD);
-    setInputChannel(OFFICIAL_CHANNEL);
-    setInputUrl("");
-    if (onUpdateDiscordConfig) {
-      onUpdateDiscordConfig(OFFICIAL_GUILD, OFFICIAL_CHANNEL);
-    }
-    showToast("Restablecido al canal oficial #registro-sanciones de HispanLife RP.", "success");
-    setIsDiscordModalOpen(false);
-  };
-
   // Generate Texts
   const formattedReportTemplate = useMemo(() => {
     return `>>> **Nombre de Steam:** ${steamName.trim() || "-"}
@@ -204,7 +150,7 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
     return `${cmd} ${cleanId} ${days} ${result.motivoWithoutTag} att:${cleanAtt}`;
   }, [playerId, result, staffAtt, isOfflineBan]);
 
-  const validateAction = (type: "plantilla" | "jail" | "ban" | "jail_ig" | "ban_ig"): boolean => {
+  const validateAction = (type: "plantilla" | "jail_ig" | "ban_ig"): boolean => {
     if (selectedCount === 0) {
       showToast("Selecciona al menos una infracción.", "error");
       return false;
@@ -215,45 +161,37 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
       return false;
     }
 
-    if ((type === "jail" || type === "jail_ig") && !playerId.trim()) {
+    if (type === "jail_ig" && !playerId.trim()) {
       showToast("Falta la ID del jugador.", "error");
       return false;
     }
 
-    if ((type === "jail" || type === "jail_ig") && result.jail_minutes <= 0) {
+    if (type === "jail_ig" && result.jail_minutes <= 0) {
       showToast("La sanción no incluye Jail.", "error");
       return false;
     }
 
-    if ((type === "ban" || type === "ban_ig") && !playerId.trim()) {
+    if (type === "ban_ig" && !playerId.trim()) {
       showToast("Falta la ID del jugador.", "error");
       return false;
     }
 
-    if ((type === "ban" || type === "ban_ig") && !result.perma && result.ban_days <= 0) {
+    if (type === "ban_ig" && !result.perma && result.ban_days <= 0) {
       showToast("La sanción calculada no es Baneo.", "error");
       return false;
     }
 
-    if ((type === "jail" || type === "ban" || type === "jail_ig" || type === "ban_ig") && !isFivemRunning) {
-      showToast("FiveM no está abierto. Debes tener FiveM en ejecución para ejecutar o copiar sanciones.", "error");
+    if ((type === "jail_ig" || type === "ban_ig") && !isFivemRunning) {
+      showToast("FiveM no está abierto. Debes tener FiveM en ejecución para aplicar sanciones IG.", "error");
       return false;
     }
 
     return true;
   };
 
-  const handleTriggerAction = (type: "plantilla" | "jail" | "ban" | "jail_ig" | "ban_ig") => {
+  const handleTriggerAction = (type: "plantilla" | "jail_ig" | "ban_ig") => {
     if (!validateAction(type)) return;
 
-    if (type === "jail") {
-      onCopyClipboard(jailCommand, "Comando jail copiado al portapapeles.");
-      return;
-    }
-    if (type === "ban") {
-      onCopyClipboard(banCommand, `Comando ${isOfflineBan ? "sqlbanoffline" : "sqlban"} copiado al portapapeles.`);
-      return;
-    }
     if (type === "plantilla") {
       onCopyClipboard(formattedReportTemplate, "Plantilla de reporte copiada al portapapeles.");
       return;
@@ -279,7 +217,11 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
     // 2. SEGUNDO: Enviar reporte al canal de Discord
     if (sendToDiscord) {
       setTimeout(async () => {
-        await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
+        await onSendDiscordReport(
+          discordGuild || "667478197927018530",
+          discordChannel || "668062839990386701",
+          formattedReportTemplate
+        );
       }, 700);
     }
   };
@@ -563,7 +505,11 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
                 size="md"
                 onClick={async () => {
                   if (!validateAction("plantilla")) return;
-                  await onSendDiscordReport(discordGuild, discordChannel, formattedReportTemplate);
+                  await onSendDiscordReport(
+                    discordGuild || "667478197927018530",
+                    discordChannel || "668062839990386701",
+                    formattedReportTemplate
+                  );
                 }}
                 icon={<Send className="w-3.5 h-3.5 text-sky-400" />}
                 title="Pega la plantilla en Discord"
@@ -572,73 +518,7 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
               </ActionButton>
             </div>
 
-            {/* Selector de Modo de Baneo: Online (sqlban) vs Offline (sqlbanoffline) */}
-            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs">
-              <span className="text-[#828792] flex items-center gap-1.5 font-medium">
-                <Terminal className="w-3.5 h-3.5 text-white/50" />
-                <span>Modo de Baneo:</span>
-              </span>
-              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/40 border border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setIsOfflineBan(false)}
-                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition-all cursor-pointer ${
-                    !isOfflineBan
-                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
-                      : "text-[#828792] hover:text-white"
-                  }`}
-                  title="Jugador conectado en el servidor (sqlban)"
-                >
-                  sqlban (Online)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOfflineBan(true)}
-                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-medium transition-all cursor-pointer ${
-                    isOfflineBan
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-                      : "text-[#828792] hover:text-white"
-                  }`}
-                  title="Jugador desconectado del servidor (sqlbanoffline)"
-                >
-                  sqlbanoffline (Offline)
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <ActionButton
-                variant="secondary"
-                size="sm"
-                onClick={() => handleTriggerAction("jail")}
-                icon={<Terminal className="w-3.5 h-3.5 text-white/70" />}
-                className={`transition-all ${
-                  isFivemRunning
-                    ? "cursor-pointer"
-                    : "opacity-40 cursor-not-allowed hover:bg-transparent"
-                }`}
-                disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : "Copiar comando jail (F8)"}
-              >
-                jail
-              </ActionButton>
-              <ActionButton
-                variant="secondary"
-                size="sm"
-                onClick={() => handleTriggerAction("ban")}
-                icon={<Terminal className="w-3.5 h-3.5 text-white/70" />}
-                className={`transition-all ${
-                  isFivemRunning
-                    ? "cursor-pointer"
-                    : "opacity-40 cursor-not-allowed hover:bg-transparent"
-                }`}
-                disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : `Copiar comando ${isOfflineBan ? "sqlbanoffline" : "sqlban"} (F8)`}
-              >
-                {isOfflineBan ? "sqlbanoffline" : "sqlban"}
-              </ActionButton>
-            </div>
-
+            {/* Sanciones Directas IG (F8) */}
             <div className="grid grid-cols-2 gap-2">
               <ActionButton
                 variant="secondary"
@@ -666,9 +546,9 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
                     : "opacity-40 cursor-not-allowed hover:bg-transparent"
                 }`}
                 disabled={!isFivemRunning}
-                title={!isFivemRunning ? "FiveM no está abierto" : `Ejecutar ${isOfflineBan ? "Baneo Offline (sqlbanoffline)" : "Baneo (sqlban)"} en FiveM por consola F8`}
+                title={!isFivemRunning ? "FiveM no está abierto" : "Ejecutar Baneo en FiveM por consola F8"}
               >
-                {isOfflineBan ? "Baneo Offline (F8)" : "Baneo IG (F8)"}
+                Baneo IG (F8)
               </ActionButton>
             </div>
 
@@ -688,38 +568,12 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
                 <span>Limpiar todo</span>
               </button>
 
-              <div className="flex items-center gap-2 text-xs text-[#9CA3AF]">
-                <button
-                  onClick={() => setIsDiscordModalOpen(true)}
-                  title="Configurar servidor y canal de Discord para las sanciones"
-                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-sky-300 hover:text-white border border-white/[0.08] cursor-pointer transition-colors"
-                >
-                  <Send className="w-3 h-3 text-sky-400" />
-                  <span>
-                    {discordGuild === "667478197927018530" && discordChannel === "668062839990386701"
-                      ? "#registro-sanciones"
-                      : "Canal Discord"}
-                  </span>
-                </button>
-
-                {onOpenHotkeySettings && (
-                  <button
-                    onClick={onOpenHotkeySettings}
-                    title="Configurar atajo de teclado para abrir y minimizar la app"
-                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-amber-300 hover:text-white border border-white/[0.08] cursor-pointer transition-colors"
-                  >
-                    <Keyboard className="w-3 h-3 text-amber-400" />
-                    <span>Atajo: {currentHotkey || "Win+J"}</span>
-                  </button>
-                )}
-
-                <div className="flex items-center gap-1.5">
-                  <span>Siempre visible</span>
-                  <ToggleSwitch
-                    checked={alwaysOnTop}
-                    onChange={onToggleAlwaysOnTop}
-                  />
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-[#9CA3AF]">
+                <span>Siempre visible</span>
+                <ToggleSwitch
+                  checked={alwaysOnTop}
+                  onChange={onToggleAlwaysOnTop}
+                />
               </div>
             </div>
           </div>
@@ -728,7 +582,7 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
 
       {/* Confirmation Modal (Double Confirmation) */}
       <AnimatePresence>
-        {confirmStep && (
+        {confirmStep && pendingActionType && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl select-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -738,242 +592,162 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
             >
               <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/[0.2] to-transparent pointer-events-none" />
 
-              {confirmStep && (
-                <div className="space-y-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <Terminal className="w-5 h-5 text-emerald-400" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-white">
-                        Ejecutar {pendingActionType === "jail_ig" ? "Jail" : isOfflineBan ? "Baneo Offline (sqlbanoffline)" : "Baneo (sqlban)"} en FiveM (F8)
-                      </h3>
-                      <p className="text-[11px] text-[#828792]">
-                        Se enfocará FiveM, se abrirá la consola F8 y se ejecutará el comando.
-                      </p>
+              <div className="space-y-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`p-2 rounded-xl ${
+                      pendingActionType === "jail_ig"
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                        : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                    }`}
+                  >
+                    <Terminal className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      {pendingActionType === "jail_ig"
+                        ? "Ejecutar Jail en FiveM (F8)"
+                        : `Ejecutar ${isOfflineBan ? "Baneo Offline (sqlbanoffline)" : "Baneo Online (sqlban)"} en FiveM (F8)`}
+                    </h3>
+                    <p className="text-[11px] text-[#828792]">
+                      Se enfocará FiveM, se abrirá la consola F8 y se aplicará la sanción automáticamente.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Selector rápido de comando: Online (sqlban) vs Offline (sqlbanoffline) */}
+                {pendingActionType === "ban_ig" && (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-white">Modo de Baneo</span>
+                      <span className="text-[10px] text-[#828792]">
+                        {isOfflineBan
+                          ? "Jugador desconectado del servidor (sqlbanoffline)"
+                          : "Jugador conectado actualmente (sqlban)"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/50 border border-white/[0.08]">
+                      <button
+                        type="button"
+                        onClick={() => setIsOfflineBan(false)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                          !isOfflineBan
+                            ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
+                            : "text-[#828792] hover:text-white"
+                        }`}
+                        title="Jugador conectado en el servidor (sqlban)"
+                      >
+                        sqlban (Online)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsOfflineBan(true)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                          isOfflineBan
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                            : "text-[#828792] hover:text-white"
+                        }`}
+                        title="Jugador desconectado del servidor (sqlbanoffline)"
+                      >
+                        sqlbanoffline (Offline)
+                      </button>
                     </div>
                   </div>
+                )}
 
-                  {/* Selector rápido de comando: Online (sqlban) vs Offline (sqlbanoffline) */}
-                  {pendingActionType === "ban_ig" && (
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-white">Tipo de Comando de Baneo</span>
-                        <span className="text-[10px] text-[#828792]">
-                          {isOfflineBan ? "Jugador desconectado del servidor" : "Jugador conectado actualmente"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/50 border border-white/[0.08]">
-                        <button
-                          type="button"
-                          onClick={() => setIsOfflineBan(false)}
-                          className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
-                            !isOfflineBan
-                              ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
-                              : "text-[#828792] hover:text-white"
-                          }`}
-                        >
-                          sqlban (Online)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIsOfflineBan(true)}
-                          className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
-                            isOfflineBan
-                              ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
-                              : "text-[#828792] hover:text-white"
-                          }`}
-                        >
-                          sqlbanoffline (Offline)
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Comando IG Preview */}
-                  <div className="px-3 py-2 rounded-xl bg-black/60 border border-emerald-500/30 flex items-center gap-2 font-mono text-xs">
-                    <span className="text-emerald-400 font-bold">$</span>
-                    <span className="text-emerald-300 font-medium tracking-wide">
+                {/* Comando IG Preview con botón de copiar */}
+                <div
+                  className={`px-3 py-2 rounded-xl bg-black/60 border flex items-center justify-between gap-2 font-mono text-xs ${
+                    pendingActionType === "jail_ig" ? "border-emerald-500/30" : "border-rose-500/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 overflow-x-auto min-w-0">
+                    <span
+                      className={`font-bold ${
+                        pendingActionType === "jail_ig" ? "text-emerald-400" : "text-rose-400"
+                      }`}
+                    >
+                      $
+                    </span>
+                    <span
+                      className={`font-medium tracking-wide truncate ${
+                        pendingActionType === "jail_ig" ? "text-emerald-300" : "text-rose-300"
+                      }`}
+                    >
                       {pendingActionType === "jail_ig" ? jailCommand : banCommand}
                     </span>
                   </div>
-
-                  <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs space-y-1.5 font-mono">
-                    <div className="flex justify-between text-[#828792]">
-                      <span>ID Objetivo:</span>
-                      <strong className="text-white font-bold">{playerId || "-"}</strong>
-                    </div>
-                    <div className="flex justify-between text-[#828792]">
-                      <span>Steam:</span>
-                      <strong className="text-white">{steamName || "-"}</strong>
-                    </div>
-                    <div className="flex justify-between text-[#828792]">
-                      <span>Sanción:</span>
-                      <strong className={getResultTypeColor(result.tipo_full)}>{result.tipo_full} ({result.duracion})</strong>
-                    </div>
-                    <div className="flex justify-between text-[#828792]">
-                      <span>ATT:</span>
-                      <strong className="text-white">{staffAtt || "Staff"}</strong>
-                    </div>
-                    <div className="flex justify-between text-[#828792]">
-                      <span>Canal Discord:</span>
-                      <strong className="text-sky-300 font-sans flex items-center gap-1">
-                        <Send className="w-3 h-3 text-sky-400" />
-                        {discordGuild === "667478197927018530" && discordChannel === "668062839990386701"
-                          ? "#registro-sanciones (HispanLife RP)"
-                          : `#canal (${discordChannel.slice(-6)})`}
-                      </strong>
-                    </div>
-                    <div className="pt-1 border-t border-white/[0.06] text-[#828792]">
-                      <span>Motivo:</span>
-                      <p className="text-white font-sans mt-0.5 leading-relaxed">{result.motivoWithTag}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
-                    <ActionButton variant="ghost" size="sm" onClick={() => setConfirmStep(null)}>
-                      Cancelar
-                    </ActionButton>
-                    <ActionButton
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => executeFinalAction(false)}
-                      title="Ejecuta únicamente en FiveM sin enviar a Discord"
-                    >
-                      Solo FiveM (F8)
-                    </ActionButton>
-                    <ActionButton
-                      variant="primary"
-                      size="sm"
-                      onClick={() => executeFinalAction(true)}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                      title="Ejecuta en FiveM por F8 y publica el reporte en Discord"
-                    >
-                      ⚡ FiveM + Enviar a Discord
-                    </ActionButton>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCopyClipboard(
+                        pendingActionType === "jail_ig" ? jailCommand : banCommand,
+                        "Comando copiado al portapapeles."
+                      )
+                    }
+                    className="p-1 rounded text-white/50 hover:text-white flex-shrink-0 cursor-pointer transition-colors"
+                    title="Copiar comando al portapapeles"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
-      {/* Modal: Configuración de Canal de Discord */}
-      <AnimatePresence>
-        {isDiscordModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl select-none">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-md overflow-hidden rounded-2xl bg-[#0D0F12] border border-white/[0.1] shadow-2xl p-5 space-y-4"
-            >
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-                <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-sky-400" />
-                  <h3 className="text-sm font-semibold text-white">
-                    Canal de Registro de Sanciones (Discord)
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setIsDiscordModalOpen(false)}
-                  className="p-1 rounded-lg text-[#828792] hover:text-white cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <p className="text-[#828792] leading-relaxed">
-                  Configura a qué servidor y canal de Discord debe saltar la app para pegar el reporte oficial de sanción.
-                </p>
-
-                {/* Banner Canal Actual */}
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
-                  <span className="text-[10px] text-[#717680] uppercase tracking-wider font-semibold block">
-                    Canal Actual Configurado
-                  </span>
-                  <div className="flex items-center justify-between font-mono text-[11px]">
-                    <span className="text-white font-medium">
-                      {discordGuild === "667478197927018530" && discordChannel === "668062839990386701"
-                        ? "HispanLife RP · #registro-sanciones"
-                        : "Canal Personalizado"}
-                    </span>
-                    <span className="text-emerald-400 font-bold">Activo</span>
+                {/* Resumen de la sanción */}
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs space-y-1.5 font-mono">
+                  <div className="flex justify-between text-[#828792]">
+                    <span>ID Objetivo:</span>
+                    <strong className="text-white font-bold">{playerId || "-"}</strong>
+                  </div>
+                  <div className="flex justify-between text-[#828792]">
+                    <span>Steam:</span>
+                    <strong className="text-white">{steamName || "-"}</strong>
+                  </div>
+                  <div className="flex justify-between text-[#828792]">
+                    <span>Sanción:</span>
+                    <strong className={getResultTypeColor(result.tipo_full)}>
+                      {result.tipo_full} ({result.duracion})
+                    </strong>
+                  </div>
+                  <div className="flex justify-between text-[#828792]">
+                    <span>ATT:</span>
+                    <strong className="text-white">{staffAtt || "Staff"}</strong>
+                  </div>
+                  <div className="flex justify-between text-[#828792]">
+                    <span>Canal Discord:</span>
+                    <strong className="text-sky-300 font-sans flex items-center gap-1">
+                      <Send className="w-3 h-3 text-sky-400" />
+                      #registro-sanciones (HispanLife RP)
+                    </strong>
+                  </div>
+                  <div className="pt-1 border-t border-white/[0.06] text-[#828792]">
+                    <span>Motivo:</span>
+                    <p className="text-white font-sans mt-0.5 leading-relaxed">{result.motivoWithTag}</p>
                   </div>
                 </div>
 
-                {/* Pegar enlace rápido */}
-                <div>
-                  <label className="block text-[11px] text-[#828792] mb-1">
-                    Pegar enlace directo de canal de Discord (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://discord.com/channels/667478197927018530/668062839990386701"
-                    value={inputUrl}
-                    onChange={(e) => {
-                      setInputUrl(e.target.value);
-                      const match = e.target.value.match(/channels\/(\d+)\/(\d+)/);
-                      if (match) {
-                        setInputGuild(match[1]);
-                        setInputChannel(match[2]);
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/[0.08] focus:border-sky-500/50 text-white placeholder-[#717680] font-mono text-xs outline-none"
-                  />
+                {/* Botones de acción del popup */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
+                  <ActionButton variant="ghost" size="sm" onClick={() => setConfirmStep(null)}>
+                    Cancelar
+                  </ActionButton>
+                  <ActionButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => executeFinalAction(false)}
+                    title="Ejecuta únicamente en FiveM sin enviar a Discord"
+                  >
+                    Solo FiveM (F8)
+                  </ActionButton>
+                  <ActionButton
+                    variant="primary"
+                    size="sm"
+                    onClick={() => executeFinalAction(true)}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                    title="Ejecuta en FiveM por F8 y publica el reporte en Discord"
+                  >
+                    ⚡ FiveM + Enviar a Discord
+                  </ActionButton>
                 </div>
-
-                {/* Inputs manuales */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[11px] text-[#828792] mb-1">
-                      Servidor (Guild ID)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="667478197927018530"
-                      value={inputGuild}
-                      onChange={(e) => setInputGuild(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/[0.08] focus:border-sky-500/50 text-white placeholder-[#717680] font-mono text-xs outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-[#828792] mb-1">
-                      Canal (Channel ID)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="668062839990386701"
-                      value={inputChannel}
-                      onChange={(e) => setInputChannel(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/[0.08] focus:border-sky-500/50 text-white placeholder-[#717680] font-mono text-xs outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Botón Restablecer Oficial */}
-                <button
-                  type="button"
-                  onClick={handleResetHispanOfficial}
-                  className="w-full py-1.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-[11px] text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Restablecer Oficial HispanLife (#registro-sanciones)</span>
-                </button>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
-                <ActionButton variant="ghost" size="sm" onClick={() => setIsDiscordModalOpen(false)}>
-                  Cancelar
-                </ActionButton>
-                <ActionButton
-                  variant="primary"
-                  size="sm"
-                  onClick={handleSaveDiscordConfig}
-                  className="bg-sky-500 hover:bg-sky-400 text-black font-semibold"
-                >
-                  Guardar Canal
-                </ActionButton>
               </div>
             </motion.div>
           </div>

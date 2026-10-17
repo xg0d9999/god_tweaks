@@ -28,7 +28,7 @@ export function isNewerSemver(remote: string, current: string): boolean {
 
 // Safe wrapper to check for updates in both Tauri desktop runtime and browser preview
 export async function checkForAppUpdate(): Promise<UpdateInfo> {
-  let currentVersion = "1.12.6";
+  let currentVersion = "1.12.7";
 
   if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
     try {

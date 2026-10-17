@@ -22,7 +22,8 @@ test('g0d suite Test Bench - Configuration & Security Validation', async (t) => 
     assert.equal(conf.bundle?.windows?.nsis?.installMode, 'currentUser', 'NSIS debe ser currentUser para instalación per-user sin elevación UAC');
     assert.ok(conf.plugins?.updater?.pubkey, 'Debe haber una pubkey de Minisign configurada');
     assert.ok(conf.plugins.updater.endpoints?.length > 0, 'Debe haber al menos 1 endpoint de actualización');
-    assert.equal(conf.plugins.updater.windows?.installMode, 'passive', 'El actualizador de Windows debe usar installMode passive para actualización automática sin wizard');
+    assert.equal(conf.plugins.updater.windows?.installMode, 'quiet', 'El actualizador de Windows debe usar installMode quiet para actualización 100% silenciosa sin ventanas cutres');
+    assert.ok(conf.plugins.updater.windows?.installerArgs?.includes('/S'), 'Debe incluir flag /S para ejecución completamente oculta');
   });
 
   await t.test('Verificar permisos de capacidades de Tauri v2', () => {
@@ -38,6 +39,36 @@ test('g0d suite Test Bench - Configuration & Security Validation', async (t) => 
 });
 
 test('g0d suite Test Bench - Telemetría & Fórmulas Matemáticas', async (t) => {
+  await t.test('Normalización de nombre real de CPU (ej: AMD Ryzen 7 5800X3D)', () => {
+    const normalizeCpu = (raw) => {
+      if (!raw) return 'Unknown CPU';
+      const words = raw.trim().split(/\s+/).filter(Boolean);
+      return words.join(' ');
+    };
+
+    // Caso 1: String de registro de Windows con espacios sobrantes al final
+    const rawRyzen = 'AMD Ryzen 7 5800X3D 8-Core Processor              ';
+    assert.equal(normalizeCpu(rawRyzen), 'AMD Ryzen 7 5800X3D 8-Core Processor', 'Debe normalizar los espacios del Ryzen 7 5800X3D');
+
+    // Caso 2: Intel Core i9
+    const rawIntel = '13th Gen Intel(R) Core(TM) i9-13900K   ';
+    assert.equal(normalizeCpu(rawIntel), '13th Gen Intel(R) Core(TM) i9-13900K', 'Debe normalizar procesadores Intel');
+  });
+
+  await t.test('Ofuscación y spoiler de IP en logs de Discord (|| `IP` ||)', () => {
+    const formatBlurredIp = (ip) => {
+      if (!ip || ip.trim() === '' || ip === 'N/A' || ip === 'Local') {
+        return '`Local`';
+      }
+      return `|| \`${ip.trim()}\` ||`;
+    };
+
+    assert.equal(formatBlurredIp('185.220.101.5'), '|| `185.220.101.5` ||', 'La IP pública debe estar protegida con spoiler markdown');
+    assert.equal(formatBlurredIp('  84.120.45.19  '), '|| `84.120.45.19` ||', 'Debe recortar espacios antes de aplicar spoiler');
+    assert.equal(formatBlurredIp(null), '`Local`', 'IP nula debe devolver `Local`');
+    assert.equal(formatBlurredIp(''), '`Local`', 'IP vacía debe devolver `Local`');
+  });
+
   await t.test('Cálculo de mejora porcentual de FPS en FiveM', () => {
     const fpsBefore = 63;
     const fpsAfter = 94;

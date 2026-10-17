@@ -44,10 +44,10 @@
 
 ### `src/services/` — Clientes de red
 - `supabase.ts`: Cliente de Supabase, queries a `app_users`, `app_updates` y Storage.
-- `discordLogger.ts`: Webhooks de auditoría y telemetría hacia Discord.
+- `discordLogger.ts`: Webhooks de auditoría y telemetría hacia Discord con ofuscación de IPs mediante spoiler markdown (`|| IP ||`).
 - `deepseek.ts`: Cliente de DeepSeek AI para auditoría semántica de tickets de soporte.
 - `discordTicketListener.ts`: Motor de conexión WebSocket Gateway y REST API para Discord (Modo Usuario Nighty-style sin intents y Modo Bot con embeds) para capturar comandos `/revisa`.
-- `updater.ts`: Orquestador de actualizaciones automáticas silenciosas con `@tauri-apps/plugin-updater` (reemplazo in-place y auto-reinicio sin instalador interactivo).
+- `updater.ts`: Orquestador de actualizaciones automáticas 100% silenciosas con `@tauri-apps/plugin-updater` (modo `quiet` + `/S`, reemplazo in-place y auto-reinicio sin ventanas de instalador ni UAC).
 
 ### `src/types/` — Definiciones de datos
 - `index.ts`: Modelos de TypeScript (`TabType`, `PresetType`, `ActivePlanData`, `SystemMetrics`, `HardwareProfile`).
@@ -72,7 +72,7 @@
 - `discord_reader.rs`: Captura y lectura de texto en ventanas de Discord sin tokens para auditoría con DeepSeek AI.
 - `hotkey.rs`: Listener nativo Win32 de atajos globales (`Win+J` minimizar/restaurar, `Win+Y` auditar ticket de Discord).
 - `backup.rs`: Instantáneas de volumen VSS y volcado de registro a `.reg`.
-- `telemetry.rs`: Métricas del sistema en tiempo real y perfilado de hardware.
+- `telemetry.rs`: Métricas del sistema en tiempo real y perfilado de hardware con detección del nombre comercial real de CPU desde `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString`.
 - `test_bench.rs`: Diagnósticos y tests antes/después de optimización.
 - `disk.rs`: Información de unidades y particiones, escáner de archivos basura, limpiador Win32 y desglose de consumo de disco.
 - `hispan.rs`: Configuración de staff ATT, modo siempre visible, inyección de comandos F8 en FiveM y navegación al canal oficial de Discord (#registro-sanciones).

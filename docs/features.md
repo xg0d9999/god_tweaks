@@ -3,7 +3,8 @@
 ## 1. Features Existentes
 
 ### 1. Telemetría de Hardware en Tiempo Real
-- **Descripción**: Monitorización en vivo de uso de CPU, RAM, modelo de hardware y sistema operativo.
+- **Descripción**: Monitorización en vivo de uso de CPU, RAM, modelo de hardware y sistema operativo:
+  - **Identificación Real de CPU**: Lectura directa desde el Registro de Windows (`HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString`), garantizando que procesadores como AMD Ryzen 7 5800X3D o Intel Core i9 muestren su denominación comercial exacta y limpia, en lugar de identificadores genéricos.
 - **Ubicación**: `src/components/views/DashboardView.tsx`, `src-tauri/src/commands/telemetry.rs`.
 
 ### 2. Planes de Optimización (Presets 1-Click)
@@ -30,10 +31,11 @@
 - **Descripción**: Login con Discord OAuth, perfiles HWID, control en tiempo real de permisos (`can_use_tweaks`, `can_use_citizens`, `can_use_sanciones`, `can_use_tickets`, `is_admin`) vía Supabase Realtime y webhooks de auditoría a Discord.
   - **1 Cuenta de Discord por PC**: Cada instalación / PC (identificado por MachineGuid HWID único en Supabase) solo admite una única cuenta de Discord. Cualquier intento de inicio de sesión con una cuenta secundaria desde el mismo equipo es bloqueado con advertencia explícita.
   - **Bloqueo Total por Defecto para Futuros Nuevos Usuarios (Opt-in Estricto con Ticket Privado)**: A partir de ahora, todas las opciones (`can_use_tweaks`, `can_use_sanciones`, `can_use_citizens`, `can_use_tickets`) tienen `DEFAULT false` en la base de datos Supabase. Los nuevos usuarios que se registren iniciarán con todas las opciones bloqueadas, y la vista de bloqueo les instruye abrir un **ticket privado en Discord** para solicitar activación. Los usuarios ya registrados previamente conservan sus permisos activos intactos sin ninguna interrupción.
+  - **IPs Ocultas con Spoilers en Discord (`|| IP ||`)**: En los logs de auditoría enviados al webhook de Discord, las direcciones IP se formatean automáticamente con markdown spoiler `|| IP ||`, apareciendo desenfocadas (blurred) por defecto para proteger la privacidad del usuario ante capturas o retransmisiones.
 - **Ubicación**: `src/context/AuthContext.tsx`, `src/services/supabase.ts`, `src/services/discordLogger.ts`, `src/components/views/PermissionBlockedView.tsx`.
 ### 8. Panel de Administración
 - **Descripción**: Gestión centralizada de usuarios registrados, asignación de permisos a dedo (toggles en tiempo real para Optimizaciones, Sanciones, Citizens y Conteos de Tickets) y monitoreo de hardware conectado:
-  - **Aislamiento de IPs en "Ver Detalles Hardware"**: Las direcciones IP ya no se muestran en la lista general de usuarios, garantizando máxima privacidad durante retransmisiones o revisiones en directo. Para consultar la IP de un usuario, el administrador pulsa en su botón **"Ver Detalles Hardware"**, donde se despliega la telemetría completa (Dirección IP con botón de copiado rápido, CPU, GPU, RAM y Sistema Operativo).
+  - **Aislamiento de IPs en "Ver Detalles Hardware"**: Las direcciones IP ya no se muestran en la lista general de usuarios, garantizando máxima privacidad durante retransmisiones o revisiones en directo. Para consultar la IP de un usuario, el administrador pulsa en su botón **"Ver Detalles Hardware"**, donde se despliega la telemetría completa (Dirección IP desenfocada visualmente con botón de copiado rápido, CPU, GPU, RAM y Sistema Operativo).
   - **Desvinculación de HWID**: Botón para liberar el hardware vinculado a un usuario en caso de formateo o cambio de equipo.
 - **Ubicación**: `src/components/views/AdminPanelView.tsx`.
 
@@ -101,10 +103,10 @@
   - **Baneo Online (`sqlban`) vs Baneo Offline (`sqlbanoffline`)**: Selector ágil disponible tanto en la tarjeta de acciones como dentro del modal de confirmación antes de pulsar "⚡ FiveM + Enviar a Discord" o copiar el comando. Permite alternar dinámicamente entre sanciones a jugadores conectados (`sqlban`) y jugadores desconectados del servidor (`sqlbanoffline`), actualizando en tiempo real la consola F8 y el portapapeles.
 - **Ubicación**: `src/components/views/HispanSancionesView.tsx`, `src-tauri/src/commands/hispan.rs`, `src/data/hispanInfractions.ts`.
 
-### 16. Actualización Automática In-Place (Sin instalador manual ni descargas externas)
+### 16. Actualización Automática In-Place 100% Silenciosa (Silent Update sin ventanas externas)
 - **Descripción**: Sistema de auto-actualización silenciosa nativa en Windows integrada en la aplicación:
   - **Actualización 1-Click sin Asistente**: Al pulsar "Actualizar Ahora", la app descarga e instala la nueva versión en segundo plano con barra de progreso interactiva en la interfaz, sin abrir el navegador web ni descargar archivos `.exe` sueltos en Descargas.
-  - **Modo Pasivo / Silencioso de NSIS**: Configuración de `installMode: "passive"` en el plugin updater y `installMode: "currentUser"` en NSIS, garantizando que los archivos se reemplacen automáticamente sin desplegar el asistente de instalación clásico (sin ventanas de "Siguiente", "Aceptar" ni "Finalizar").
+  - **Ejecución 100% Silent de NSIS**: Configuración de `installMode: "quiet"` e `installerArgs: ["/S"]` en el plugin updater y `installMode: "currentUser"` en NSIS, suprimiendo por completo cualquier ventana o barra de progreso externa de Windows; el reemplazo se realiza de forma totalmente invisible en segundo plano.
   - **Reinicio Automático Transparente**: Tras completar la descarga y verificación criptográfica Minisign, la aplicación se reinicia automáticamente en la nueva versión.
 - **Ubicación**: `src/services/updater.ts`, `src/components/ui/UpdateModal.tsx`, `src-tauri/tauri.conf.json`, `src-tauri/capabilities/default.json`.
 

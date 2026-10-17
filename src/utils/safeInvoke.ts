@@ -13,8 +13,8 @@ export async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>)
             ram_total_mb: 32768,
             ram_used_mb: 11450 + Math.floor(Math.random() * 500),
             ram_usage_percent: 34.9,
-            cpu_brand: "AMD Ryzen 9 7950X 16-Core Processor",
-            cpu_cores: 32,
+            cpu_brand: "AMD Ryzen 7 5800X3D 8-Core Processor",
+            cpu_cores: 16,
             os_name: "Windows 11 Pro",
             os_version: "23H2 (Build 22631.4317)",
             is_admin: true,
@@ -22,8 +22,8 @@ export async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>)
         } else if (cmd === "get_hardware_profile") {
           resolve({
             hwid: "HWID-SIMULATED-DEV",
-            cpu: "AMD Ryzen 9 7950X 16-Core Processor",
-            cpu_cores: 32,
+            cpu: "AMD Ryzen 7 5800X3D 8-Core Processor",
+            cpu_cores: 16,
             ram_mb: 32768,
             gpu: "NVIDIA GeForce RTX 4080",
             os: "Windows 11 Pro",

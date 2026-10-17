@@ -21,6 +21,38 @@ pub struct SystemMetrics {
     pub is_admin: bool,
 }
 
+pub fn get_real_cpu_name(sys: &System) -> String {
+    #[cfg(windows)]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+        if let Ok(key) = hklm.open_subkey("HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0") {
+            if let Ok(raw_name) = key.get_value::<String, _>("ProcessorNameString") {
+                let trimmed = raw_name.trim();
+                if !trimmed.is_empty() {
+                    let words: Vec<&str> = trimmed.split_whitespace().collect();
+                    return words.join(" ");
+                }
+            }
+        }
+    }
+
+    if let Some(first_cpu) = sys.cpus().first() {
+        let brand = first_cpu.brand().trim();
+        if !brand.is_empty() {
+            let words: Vec<&str> = brand.split_whitespace().collect();
+            return words.join(" ");
+        }
+        let name = first_cpu.name().trim();
+        if !name.is_empty() {
+            return name.to_string();
+        }
+    }
+
+    "Unknown CPU".to_string()
+}
+
 #[tauri::command]
 pub fn get_system_metrics(state: State<'_, TelemetryState>) -> Result<SystemMetrics, String> {
     let mut sys = state.sys.lock().map_err(|e| e.to_string())?;
@@ -38,11 +70,7 @@ pub fn get_system_metrics(state: State<'_, TelemetryState>) -> Result<SystemMetr
         0.0
     };
 
-    let cpu_brand = sys
-        .cpus()
-        .first()
-        .map(|c| c.name().trim().to_string())
-        .unwrap_or_else(|| "Unknown CPU".to_string());
+    let cpu_brand = get_real_cpu_name(&sys);
     let cpu_cores = sys.cpus().len();
     let os_name = sysinfo::System::name().unwrap_or_else(|| "Windows 11/10".to_string());
     let os_version = sysinfo::System::os_version().unwrap_or_else(|| "Pro".to_string());
@@ -86,11 +114,7 @@ pub fn get_hardware_profile(state: State<'_, TelemetryState>) -> Result<Hardware
     sys.refresh_memory();
 
     let ram_mb = sys.total_memory() / 1024 / 1024;
-    let cpu = sys
-        .cpus()
-        .first()
-        .map(|c| c.name().trim().to_string())
-        .unwrap_or_else(|| "Unknown CPU".to_string());
+    let cpu = get_real_cpu_name(&sys);
     let cpu_cores = sys.cpus().len();
     let os = format!(
         "{} {}",

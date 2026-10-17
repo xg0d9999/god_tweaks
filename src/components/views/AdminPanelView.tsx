@@ -684,7 +684,12 @@ export const AdminPanelView: React.FC = () => {
                             Dirección IP
                           </span>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-white font-mono font-medium">{u.ip_address || '127.0.0.1'}</span>
+                            <span
+                              className="text-white font-mono font-medium filter blur-sm hover:blur-none transition-all cursor-pointer select-all"
+                              title="Pasa el ratón o haz clic para ver la IP completa"
+                            >
+                              {u.ip_address || '127.0.0.1'}
+                            </span>
                             <button
                               onClick={() => handleCopy(u.ip_address || '127.0.0.1', `ip_${u.discord_id}`)}
                               className="text-[#717680] hover:text-white cursor-pointer"

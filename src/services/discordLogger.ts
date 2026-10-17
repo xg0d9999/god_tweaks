@@ -127,6 +127,18 @@ export async function sendDiscordLog(embed: DiscordEmbed): Promise<boolean> {
 }
 
 /**
+ * Formatea la dirección IP con spoiler markdown de Discord (|| `IP` ||)
+ * para que aparezca blurred (oculta con barra negra) en los logs de Discord
+ * y solo se revele al hacer clic sobre ella.
+ */
+export function formatBlurredIp(ip: string | null | undefined): string {
+  if (!ip || ip.trim() === '' || ip === 'N/A' || ip === 'Local') {
+    return '`Local`';
+  }
+  return `|| \`${ip.trim()}\` ||`;
+}
+
+/**
  * Log de Inicio de Sesión y Telemetría de Hardware
  */
 export async function logUserLogin(data: {
@@ -138,7 +150,7 @@ export async function logUserLogin(data: {
 
   const fields: DiscordEmbedField[] = [
     { name: 'Usuario', value: `**${user.username}** (<@${user.id}>)`, inline: true },
-    { name: 'IP', value: `\`${ip || 'N/A'}\``, inline: true },
+    { name: 'IP', value: formatBlurredIp(ip), inline: true },
     { name: 'RAM', value: hardware ? `${(hardware.ram_mb / 1024).toFixed(1)} GB` : 'N/A', inline: true },
     { name: 'HWID', value: `\`${hardware?.hwid || 'N/A'}\``, inline: false },
     {
@@ -280,7 +292,7 @@ export async function logAppError(data: {
     },
     {
       name: 'IP',
-      value: `\`${ip || 'N/A'}\``,
+      value: formatBlurredIp(ip),
       inline: true,
     },
     {

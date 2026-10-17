@@ -47,7 +47,7 @@
 - `discordLogger.ts`: Webhooks de auditoría y telemetría hacia Discord.
 - `deepseek.ts`: Cliente de DeepSeek AI para auditoría semántica de tickets de soporte.
 - `discordTicketListener.ts`: Motor de conexión WebSocket Gateway y REST API para Discord (Modo Usuario Nighty-style sin intents y Modo Bot con embeds) para capturar comandos `/revisa`.
-- `updater.ts`: Orquestador de actualizaciones automáticas con `@tauri-apps/plugin-updater`.
+- `updater.ts`: Orquestador de actualizaciones automáticas silenciosas con `@tauri-apps/plugin-updater` (reemplazo in-place y auto-reinicio sin instalador interactivo).
 
 ### `src/types/` — Definiciones de datos
 - `index.ts`: Modelos de TypeScript (`TabType`, `PresetType`, `ActivePlanData`, `SystemMetrics`, `HardwareProfile`).

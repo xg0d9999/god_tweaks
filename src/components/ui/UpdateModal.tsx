@@ -32,7 +32,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   if (!isOpen || !updateInfo) return null;
 
   const handleStartUpdate = async () => {
-    if (!updateInfo.updateObj && !updateInfo.downloadUrl) return;
+    if (!updateInfo.updateObj) return;
 
     setIsUpdating(true);
     try {
@@ -40,8 +40,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         updateInfo.updateObj,
         (downloaded, total) => {
           setDownloadProgress({ downloaded, total });
-        },
-        updateInfo.downloadUrl
+        }
       );
     } catch (err) {
       console.error("Update install failed:", err);

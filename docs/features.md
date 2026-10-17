@@ -101,6 +101,13 @@
   - **Baneo Online (`sqlban`) vs Baneo Offline (`sqlbanoffline`)**: Selector ágil disponible tanto en la tarjeta de acciones como dentro del modal de confirmación antes de pulsar "⚡ FiveM + Enviar a Discord" o copiar el comando. Permite alternar dinámicamente entre sanciones a jugadores conectados (`sqlban`) y jugadores desconectados del servidor (`sqlbanoffline`), actualizando en tiempo real la consola F8 y el portapapeles.
 - **Ubicación**: `src/components/views/HispanSancionesView.tsx`, `src-tauri/src/commands/hispan.rs`, `src/data/hispanInfractions.ts`.
 
+### 16. Actualización Automática In-Place (Sin instalador manual ni descargas externas)
+- **Descripción**: Sistema de auto-actualización silenciosa nativa en Windows integrada en la aplicación:
+  - **Actualización 1-Click sin Asistente**: Al pulsar "Actualizar Ahora", la app descarga e instala la nueva versión en segundo plano con barra de progreso interactiva en la interfaz, sin abrir el navegador web ni descargar archivos `.exe` sueltos en Descargas.
+  - **Modo Pasivo / Silencioso de NSIS**: Configuración de `installMode: "passive"` en el plugin updater y `installMode: "currentUser"` en NSIS, garantizando que los archivos se reemplacen automáticamente sin desplegar el asistente de instalación clásico (sin ventanas de "Siguiente", "Aceptar" ni "Finalizar").
+  - **Reinicio Automático Transparente**: Tras completar la descarga y verificación criptográfica Minisign, la aplicación se reinicia automáticamente en la nueva versión.
+- **Ubicación**: `src/services/updater.ts`, `src/components/ui/UpdateModal.tsx`, `src-tauri/tauri.conf.json`, `src-tauri/capabilities/default.json`.
+
 ---
 
 ## 2. Features Pendientes

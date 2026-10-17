@@ -19,8 +19,10 @@ test('g0d suite Test Bench - Configuration & Security Validation', async (t) => 
     const conf = JSON.parse(fs.readFileSync(confPath, 'utf8'));
 
     assert.equal(conf.bundle?.createUpdaterArtifacts, true, 'createUpdaterArtifacts debe ser true');
+    assert.equal(conf.bundle?.windows?.nsis?.installMode, 'currentUser', 'NSIS debe ser currentUser para instalación per-user sin elevación UAC');
     assert.ok(conf.plugins?.updater?.pubkey, 'Debe haber una pubkey de Minisign configurada');
     assert.ok(conf.plugins.updater.endpoints?.length > 0, 'Debe haber al menos 1 endpoint de actualización');
+    assert.equal(conf.plugins.updater.windows?.installMode, 'passive', 'El actualizador de Windows debe usar installMode passive para actualización automática sin wizard');
   });
 
   await t.test('Verificar permisos de capacidades de Tauri v2', () => {
@@ -30,6 +32,7 @@ test('g0d suite Test Bench - Configuration & Security Validation', async (t) => 
 
     assert.ok(cap.permissions.includes('updater:default'), 'Debe incluir permiso updater:default');
     assert.ok(cap.permissions.includes('process:default'), 'Debe incluir permiso process:default');
+    assert.ok(cap.permissions.includes('process:allow-restart'), 'Debe incluir permiso process:allow-restart');
     assert.ok(cap.permissions.includes('core:default'), 'Debe incluir permiso core:default');
   });
 });

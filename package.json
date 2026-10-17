@@ -1,7 +1,7 @@
 {
   "name": "g0d-tweaks",
   "private": true,
-  "version": "1.12.2",
+  "version": "1.12.3",
   "type": "module",
   "scripts": {
     "dev": "vite",

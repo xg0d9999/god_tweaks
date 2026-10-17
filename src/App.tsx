@@ -87,8 +87,8 @@ const AppContent: React.FC = () => {
 
   // HispanLife Moderation state
   const [staffAtt, setStaffAtt] = useState("Staff");
-  const [discordGuild, setDiscordGuild] = useState("1543324125685358713");
-  const [discordChannel, setDiscordChannel] = useState("1543324127283253270");
+  const [discordGuild, setDiscordGuild] = useState("667478197927018530");
+  const [discordChannel, setDiscordChannel] = useState("668062839990386701");
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -207,8 +207,14 @@ const AppContent: React.FC = () => {
       }).catch(() => {});
       if (hispan) {
         if (hispan.staff_att) setStaffAtt(hispan.staff_att);
-        if (hispan.discord_guild) setDiscordGuild(hispan.discord_guild);
-        if (hispan.discord_channel) setDiscordChannel(hispan.discord_channel);
+        const guild = (!hispan.discord_guild || hispan.discord_guild === "1543324125685358713")
+          ? "667478197927018530"
+          : hispan.discord_guild;
+        const channel = (!hispan.discord_channel || hispan.discord_channel === "1543324127283253270")
+          ? "668062839990386701"
+          : hispan.discord_channel;
+        setDiscordGuild(guild);
+        setDiscordChannel(channel);
         setAlwaysOnTop(hispan.always_on_top);
       }
     } catch (e) {

@@ -46,8 +46,8 @@ export async function safeInvoke<T>(cmd: string, args?: Record<string, unknown>)
         } else if (cmd === "get_hispan_config") {
           resolve({
             staff_att: "Admin_Isma",
-            discord_guild: "1543324125685358713",
-            discord_channel: "1543324127283253270",
+            discord_guild: "667478197927018530",
+            discord_channel: "668062839990386701",
             always_on_top: true,
           } as unknown as T);
         } else if (cmd === "list_restore_points") {

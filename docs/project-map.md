@@ -75,6 +75,7 @@
 - `telemetry.rs`: Métricas del sistema en tiempo real y perfilado de hardware.
 - `test_bench.rs`: Diagnósticos y tests antes/después de optimización.
 - `disk.rs`: Información de unidades y particiones, escáner de archivos basura, limpiador Win32 y desglose de consumo de disco.
+- `hispan.rs`: Configuración de staff ATT, modo siempre visible, inyección de comandos F8 en FiveM y navegación al canal oficial de Discord (#registro-sanciones).
 
 ### `src-tauri/src/utils/` — Auxiliares de bajo nivel
 - `registry.rs`: Lectura y escritura segura de claves DWORD y SZ en el Registro de Windows.

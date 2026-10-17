@@ -93,6 +93,13 @@
     2. `2-iniciar-bot-24-7.bat` (`daemon.js` + `bot.js`): Lanza un demonio supervisor oculto en segundo plano (`WindowStyle Hidden`) con auto-reinicio ante caídas que mantiene el bot activo 24/7 aunque se cierre la ventana del `.bat`. Incluye `3-detener-bot-24-7.bat` para apagado manual.
 - **Ubicación**: `discord-bot/bot.js`, `discord-bot/setup-tickets.js`, `discord-bot/daemon.js`, `discord-bot/1-crear-canal-y-permisos.bat`, `discord-bot/2-iniciar-bot-24-7.bat`.
 
+### 15. HispanLife RP · Sistema de Sanciones y Publicación Oficial en #registro-sanciones
+- **Descripción**: Módulo de moderación para staff de FiveM con 64 infracciones del reglamento de HispanLife RP (Reconocida / Sin reconocer), cálculo de Jail y Ban con precedencia y CK, y envío directo de comandos a FiveM (`jail`, `sqlban`) por consola F8:
+  - **Enrutamiento Oficial a Discord**: Envío de plantilla formateada al canal oficial `#registro-sanciones` de HispanLife RP (Servidor `667478197927018530` / Canal `668062839990386701`), corrigiendo el desvío accidental hacia el bot personal.
+  - **Auto-migración y Configuración**: Migración automática de IDs heredados del bot hacia HispanLife RP oficial, con modal integrado para personalizar o restablecer el canal de Discord mediante enlace directo o IDs.
+  - **Doble Confirmación con Vista Previa de Destino**: Modal con previsualización del comando IG, jugador, pruebas y confirmación visual explícita del canal Discord de destino antes de ejecutar.
+- **Ubicación**: `src/components/views/HispanSancionesView.tsx`, `src-tauri/src/commands/hispan.rs`, `src/data/hispanInfractions.ts`.
+
 ---
 
 ## 2. Features Pendientes

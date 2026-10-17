@@ -15,8 +15,8 @@ impl Default for HispanConfig {
     fn default() -> Self {
         Self {
             staff_att: "".to_string(),
-            discord_guild: "1543324125685358713".to_string(),
-            discord_channel: "1543324127283253270".to_string(),
+            discord_guild: "667478197927018530".to_string(),
+            discord_channel: "668062839990386701".to_string(),
             always_on_top: true,
         }
     }
@@ -33,7 +33,20 @@ fn get_config_path() -> PathBuf {
 pub fn get_hispan_config() -> Result<HispanConfig, String> {
     let path = get_config_path();
     if let Ok(content) = fs::read_to_string(&path) {
-        if let Ok(cfg) = serde_json::from_str::<HispanConfig>(&content) {
+        if let Ok(mut cfg) = serde_json::from_str::<HispanConfig>(&content) {
+            // Auto-migración si contenía el servidor del bot personal en lugar del canal oficial de HispanLife
+            let mut changed = false;
+            if cfg.discord_guild == "1543324125685358713" || cfg.discord_guild.trim().is_empty() {
+                cfg.discord_guild = "667478197927018530".to_string();
+                changed = true;
+            }
+            if cfg.discord_channel == "1543324127283253270" || cfg.discord_channel.trim().is_empty() {
+                cfg.discord_channel = "668062839990386701".to_string();
+                changed = true;
+            }
+            if changed {
+                let _ = save_hispan_config(cfg.clone());
+            }
             return Ok(cfg);
         }
     }

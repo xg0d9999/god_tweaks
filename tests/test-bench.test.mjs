@@ -82,6 +82,47 @@ test('g0d suite Test Bench - HispanLife Sanciones Payload Formatter', async (t) 
     assert.equal(payload.embeds[0].fields[0].value, 'Admin_Isma');
     assert.equal(payload.embeds[0].color, 0xe11d48);
   });
+
+  await t.test('Verificar servidor y canal oficial de HispanLife RP (#registro-sanciones) y auto-migración', () => {
+    const HISPAN_OFFICIAL_GUILD = '667478197927018530';
+    const HISPAN_OFFICIAL_CHANNEL = '668062839990386701';
+
+    const BOT_LEGACY_GUILD = '1543324125685358713';
+    const BOT_LEGACY_CHANNEL = '1543324127283253270';
+
+    const migrateDiscordConfig = (cfg) => {
+      let guild = cfg.discord_guild;
+      let channel = cfg.discord_channel;
+      if (!guild || guild === BOT_LEGACY_GUILD) {
+        guild = HISPAN_OFFICIAL_GUILD;
+      }
+      if (!channel || channel === BOT_LEGACY_CHANNEL) {
+        channel = HISPAN_OFFICIAL_CHANNEL;
+      }
+      return { ...cfg, discord_guild: guild, discord_channel: channel };
+    };
+
+    // Caso 1: Configuración heredada con IDs del bot personal -> Migra automáticamente al canal oficial
+    const legacyConfig = {
+      staff_att: 'Staff',
+      discord_guild: BOT_LEGACY_GUILD,
+      discord_channel: BOT_LEGACY_CHANNEL,
+    };
+    const migrated = migrateDiscordConfig(legacyConfig);
+    assert.equal(migrated.discord_guild, HISPAN_OFFICIAL_GUILD, 'Debe migrar al servidor oficial de HispanLife RP');
+    assert.equal(migrated.discord_channel, HISPAN_OFFICIAL_CHANNEL, 'Debe migrar al canal oficial #registro-sanciones');
+
+    // Caso 2: Extracción de IDs desde URL directa de Discord
+    const parseDiscordUrl = (url) => {
+      const match = url.match(/channels\/(\d+)\/(\d+)/);
+      if (match) return { guild: match[1], channel: match[2] };
+      return null;
+    };
+    const parsed = parseDiscordUrl('https://discord.com/channels/667478197927018530/668062839990386701');
+    assert.ok(parsed, 'Debe parsear URL de Discord');
+    assert.equal(parsed.guild, HISPAN_OFFICIAL_GUILD);
+    assert.equal(parsed.channel, HISPAN_OFFICIAL_CHANNEL);
+  });
 });
 
 test('g0d suite Test Bench - Control de Permisos y Citizens Manager', async (t) => {

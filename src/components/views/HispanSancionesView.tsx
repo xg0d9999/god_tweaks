@@ -11,6 +11,7 @@ import {
   Info,
   X,
   Keyboard,
+  RotateCcw,
 } from "lucide-react";
 import { GlassCard } from "../ui/GlassCard";
 import { ActionButton } from "../ui/ActionButton";
@@ -47,12 +48,24 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
   onUpdateStaffAtt,
   discordGuild,
   discordChannel,
+  onUpdateDiscordConfig,
   showToast,
   currentHotkey,
   onOpenHotkeySettings,
 }) => {
   const [search, setSearch] = useState("");
   const [selections, setSelections] = useState<Record<number, "sin_reconocer" | "reconocida">>({});
+
+  // Discord Channel Configuration Modal State
+  const [isDiscordModalOpen, setIsDiscordModalOpen] = useState(false);
+  const [inputGuild, setInputGuild] = useState(discordGuild);
+  const [inputChannel, setInputChannel] = useState(discordChannel);
+  const [inputUrl, setInputUrl] = useState("");
+
+  useEffect(() => {
+    setInputGuild(discordGuild);
+    setInputChannel(discordChannel);
+  }, [discordGuild, discordChannel]);
 
   // FiveM Live Running Detection
   const [isFivemRunning, setIsFivemRunning] = useState<boolean>(false);
@@ -126,6 +139,44 @@ export const HispanSancionesView: React.FC<HispanSancionesViewProps> = ({
     setProofs("");
     setExtraNote("");
     showToast("Formulario e infracciones restablecidos.", "info");
+  };
+
+  const handleSaveDiscordConfig = () => {
+    let targetGuild = inputGuild.trim();
+    let targetChannel = inputChannel.trim();
+
+    if (inputUrl.trim()) {
+      const match = inputUrl.match(/channels\/(\d+)\/(\d+)/);
+      if (match) {
+        targetGuild = match[1];
+        targetChannel = match[2];
+      }
+    }
+
+    if (!targetGuild || !targetChannel) {
+      showToast("Introduce el Servidor (Guild ID) y el Canal ID.", "error");
+      return;
+    }
+
+    if (onUpdateDiscordConfig) {
+      onUpdateDiscordConfig(targetGuild, targetChannel);
+    }
+    showToast("Canal de registro de sanciones actualizado.", "success");
+    setIsDiscordModalOpen(false);
+    setInputUrl("");
+  };
+
+  const handleResetHispanOfficial = () => {
+    const OFFICIAL_GUILD = "667478197927018530";
+    const OFFICIAL_CHANNEL = "668062839990386701";
+    setInputGuild(OFFICIAL_GUILD);
+    setInputChannel(OFFICIAL_CHANNEL);
+    setInputUrl("");
+    if (onUpdateDiscordConfig) {
+      onUpdateDiscordConfig(OFFICIAL_GUILD, OFFICIAL_CHANNEL);
+    }
+    showToast("Restablecido al canal oficial #registro-sanciones de HispanLife RP.", "success");
+    setIsDiscordModalOpen(false);
   };
 
   // Generate Texts
@@ -599,7 +650,20 @@ Pruebas: ${proofs.trim() || "-"}`;
                 <span>Limpiar todo</span>
               </button>
 
-              <div className="flex items-center gap-3 text-xs text-[#9CA3AF]">
+              <div className="flex items-center gap-2 text-xs text-[#9CA3AF]">
+                <button
+                  onClick={() => setIsDiscordModalOpen(true)}
+                  title="Configurar servidor y canal de Discord para las sanciones"
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-[11px] text-sky-300 hover:text-white border border-white/[0.08] cursor-pointer transition-colors"
+                >
+                  <Send className="w-3 h-3 text-sky-400" />
+                  <span>
+                    {discordGuild === "667478197927018530" && discordChannel === "668062839990386701"
+                      ? "#registro-sanciones"
+                      : "Canal Discord"}
+                  </span>
+                </button>
+
                 {onOpenHotkeySettings && (
                   <button
                     onClick={onOpenHotkeySettings}
@@ -675,6 +739,15 @@ Pruebas: ${proofs.trim() || "-"}`;
                       <span>ATT:</span>
                       <strong className="text-white">{staffAtt || "Staff"}</strong>
                     </div>
+                    <div className="flex justify-between text-[#828792]">
+                      <span>Canal Discord:</span>
+                      <strong className="text-sky-300 font-sans flex items-center gap-1">
+                        <Send className="w-3 h-3 text-sky-400" />
+                        {discordGuild === "667478197927018530" && discordChannel === "668062839990386701"
+                          ? "#registro-sanciones (HispanLife RP)"
+                          : `#canal (${discordChannel.slice(-6)})`}
+                      </strong>
+                    </div>
                     <div className="pt-1 border-t border-white/[0.06] text-[#828792]">
                       <span>Motivo:</span>
                       <p className="text-white font-sans mt-0.5 leading-relaxed">{result.motivoWithTag}</p>
@@ -705,6 +778,129 @@ Pruebas: ${proofs.trim() || "-"}`;
                   </div>
                 </div>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal: Configuración de Canal de Discord */}
+      <AnimatePresence>
+        {isDiscordModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl select-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md overflow-hidden rounded-2xl bg-[#0D0F12] border border-white/[0.1] shadow-2xl p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+                <div className="flex items-center gap-2">
+                  <Send className="w-4 h-4 text-sky-400" />
+                  <h3 className="text-sm font-semibold text-white">
+                    Canal de Registro de Sanciones (Discord)
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsDiscordModalOpen(false)}
+                  className="p-1 rounded-lg text-[#828792] hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <p className="text-[#828792] leading-relaxed">
+                  Configura a qué servidor y canal de Discord debe saltar la app para pegar el reporte oficial de sanción.
+                </p>
+
+                {/* Banner Canal Actual */}
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-1">
+                  <span className="text-[10px] text-[#717680] uppercase tracking-wider font-semibold block">
+                    Canal Actual Configurado
+                  </span>
+                  <div className="flex items-center justify-between font-mono text-[11px]">
+                    <span className="text-white font-medium">
+                      {discordGuild === "667478197927018530" && discordChannel === "668062839990386701"
+                        ? "HispanLife RP · #registro-sanciones"
+                        : "Canal Personalizado"}
+                    </span>
+                    <span className="text-emerald-400 font-bold">Activo</span>
+                  </div>
+                </div>
+
+                {/* Pegar enlace rápido */}
+                <div>
+                  <label className="block text-[11px] text-[#828792] mb-1">
+                    Pegar enlace directo de canal de Discord (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="https://discord.com/channels/667478197927018530/668062839990386701"
+                    value={inputUrl}
+                    onChange={(e) => {
+                      setInputUrl(e.target.value);
+                      const match = e.target.value.match(/channels\/(\d+)\/(\d+)/);
+                      if (match) {
+                        setInputGuild(match[1]);
+                        setInputChannel(match[2]);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/[0.08] focus:border-sky-500/50 text-white placeholder-[#717680] font-mono text-xs outline-none"
+                  />
+                </div>
+
+                {/* Inputs manuales */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] text-[#828792] mb-1">
+                      Servidor (Guild ID)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="667478197927018530"
+                      value={inputGuild}
+                      onChange={(e) => setInputGuild(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/[0.08] focus:border-sky-500/50 text-white placeholder-[#717680] font-mono text-xs outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] text-[#828792] mb-1">
+                      Canal (Channel ID)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="668062839990386701"
+                      value={inputChannel}
+                      onChange={(e) => setInputChannel(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/[0.08] focus:border-sky-500/50 text-white placeholder-[#717680] font-mono text-xs outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Botón Restablecer Oficial */}
+                <button
+                  type="button"
+                  onClick={handleResetHispanOfficial}
+                  className="w-full py-1.5 px-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-[11px] text-amber-300 hover:text-amber-200 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Restablecer Oficial HispanLife (#registro-sanciones)</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <ActionButton variant="ghost" size="sm" onClick={() => setIsDiscordModalOpen(false)}>
+                  Cancelar
+                </ActionButton>
+                <ActionButton
+                  variant="primary"
+                  size="sm"
+                  onClick={handleSaveDiscordConfig}
+                  className="bg-sky-500 hover:bg-sky-400 text-black font-semibold"
+                >
+                  Guardar Canal
+                </ActionButton>
+              </div>
             </motion.div>
           </div>
         )}

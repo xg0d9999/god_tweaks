@@ -267,6 +267,39 @@ export interface ManualTicketSession {
   created_at: string;
 }
 
+export interface SyncedRosterConfig {
+  id: string;
+  ranks: StaffRankItem[];
+  members: StaffMemberItem[];
+  updated_at?: string;
+  updated_by?: string;
+}
+
+export interface ActiveTicketSessionRecord {
+  id: string;
+  is_active: boolean;
+  operator_id?: string | null;
+  operator_name?: string | null;
+  operator_avatar?: string | null;
+  session_code?: string | null;
+  session_date?: string | null;
+  started_at?: string | null;
+  last_heartbeat?: string | null;
+  current_tickets_count?: number;
+}
+
+export interface SyncedCountSessionRecord {
+  id: string;
+  session_code: string;
+  session_date: string;
+  operator_name: string;
+  operator_id?: string | null;
+  total_tickets: number;
+  active_staffs: number;
+  counts_snapshot: StaffMemberItem[];
+  created_at: string;
+}
+
 export type TicketActivityType =
   | 'add_staff'
   | 'remove_staff'

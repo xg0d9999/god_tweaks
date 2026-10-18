@@ -12,6 +12,7 @@ interface ActionButtonProps {
   className?: string;
   size?: "sm" | "md" | "lg";
   title?: string;
+  type?: "button" | "submit" | "reset";
 }
 
 export const ActionButton: React.FC<ActionButtonProps> = ({
@@ -24,6 +25,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   className = "",
   size = "md",
   title,
+  type = "button",
 }) => {
   const sizeClasses = {
     sm: "px-3 py-1.5 text-xs rounded-lg gap-1.5 font-medium",
@@ -46,6 +48,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
 
   return (
     <motion.button
+      type={type}
       whileTap={{ scale: disabled || loading ? 1 : 0.98 }}
       whileHover={
         disabled || loading

@@ -27,6 +27,7 @@ import {
   ScrollText,
   ArrowRightLeft,
   User,
+  Play,
 } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { ActionButton } from '../ui/ActionButton';
@@ -38,6 +39,7 @@ import {
   ManualTicketSession,
   TicketActivityLog,
   TicketActivityType,
+  ActiveTicketSessionRecord,
 } from '../../types';
 import {
   DEFAULT_STAFF_RANKS,
@@ -48,6 +50,18 @@ import {
   getAutoDetectedShift,
   formatShiftLabel,
 } from '../../utils/ticketTemplateFormatter';
+import {
+  fetchSyncedRoster,
+  saveSyncedRoster,
+  fetchActiveTicketSession,
+  startActiveTicketSession,
+  heartbeatActiveTicketSession,
+  releaseActiveTicketSession,
+  finishAndArchiveTicketSession,
+  fetchSyncedCountSessions,
+  subscribeTicketLiveSync,
+  SESSION_HEARTBEAT_INTERVAL_MS,
+} from '../../services/ticketSessionService';
 
 const STORAGE_STAFF_KEY = 'g0d_suite_manual_staff_roster';
 const STORAGE_RANKS_KEY = 'g0d_suite_manual_ranks';
@@ -140,6 +154,11 @@ export const TicketCounterView: React.FC = () => {
   const [pointerPos, setPointerPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const pointerStartRef = useRef<{ x: number; y: number; member: StaffMemberItem } | null>(null);
 
+  // 11. Sesión Activa de Conteo en Tiempo Real (Supabase Realtime)
+  const [activeSession, setActiveSession] = useState<ActiveTicketSessionRecord | null>(null);
+  const [isStartingSession, setIsStartingSession] = useState(false);
+  const [isFinishingSession, setIsFinishingSession] = useState(false);
+
   // Persistencia automática en localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_STAFF_KEY, JSON.stringify(members));
@@ -164,6 +183,106 @@ export const TicketCounterView: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_ACTIVITY_LOGS_KEY, JSON.stringify(activityLogs));
   }, [activityLogs]);
+
+  // Carga inicial y Suscripción en Tiempo Real con Supabase
+  useEffect(() => {
+    let isMounted = true;
+
+    // A. Cargar lista sincronizada de rangos y miembros desde Supabase
+    fetchSyncedRoster().then((remoteRoster) => {
+      if (!isMounted) return;
+      if (remoteRoster && remoteRoster.ranks && remoteRoster.ranks.length > 0) {
+        setRanks(remoteRoster.ranks);
+        if (remoteRoster.members && remoteRoster.members.length > 0) {
+          setMembers((prevLocal) => {
+            const countMap = new Map(prevLocal.map((m) => [m.id, m.count]));
+            return remoteRoster.members.map((m) => ({
+              ...m,
+              count: countMap.get(m.id) ?? m.count ?? 0,
+            }));
+          });
+        }
+      } else {
+        // Inicializar en la base de datos si está vacía
+        saveSyncedRoster(DEFAULT_STAFF_RANKS, DEFAULT_STAFF_MEMBERS, 'Inicialización').catch(() => {});
+      }
+    });
+
+    // B. Cargar sesión de conteo activa
+    fetchActiveTicketSession().then((session) => {
+      if (isMounted && session) {
+        setActiveSession(session);
+      }
+    });
+
+    // C. Cargar historial remoto
+    fetchSyncedCountSessions().then((history) => {
+      if (!isMounted || !history || history.length === 0) return;
+      setSessionHistory((prev) => {
+        const remoteIds = new Set(history.map((h) => h.id));
+        const filtered = prev.filter((p) => !remoteIds.has(p.id));
+        const mapped: ManualTicketSession[] = history.map((h) => ({
+          id: h.id,
+          date: h.session_date,
+          code: h.session_code,
+          total_tickets: h.total_tickets,
+          staff_members: h.counts_snapshot || [],
+          created_at: new Date(h.created_at).toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        }));
+        return [...mapped, ...filtered].slice(0, 50);
+      });
+    });
+
+    // D. Suscribirse a eventos de Supabase Realtime
+    const unsubscribe = subscribeTicketLiveSync({
+      onRosterChange: (newRoster) => {
+        if (!isMounted) return;
+        if (newRoster.ranks && newRoster.ranks.length > 0) {
+          setRanks(newRoster.ranks);
+        }
+        if (newRoster.members && newRoster.members.length > 0) {
+          setMembers((prevLocal) => {
+            const countMap = new Map(prevLocal.map((m) => [m.id, m.count]));
+            return newRoster.members.map((m) => ({
+              ...m,
+              count: countMap.get(m.id) ?? m.count ?? 0,
+            }));
+          });
+        }
+        setToastMessage({
+          title: 'Rangos Sincronizados',
+          message: `Configuración actualizada por ${newRoster.updated_by || 'Staff'}.`,
+        });
+      },
+      onActiveSessionChange: (session) => {
+        if (!isMounted) return;
+        setActiveSession(session);
+      },
+      onNewHistorySession: (historyRow) => {
+        if (!isMounted) return;
+        const mapped: ManualTicketSession = {
+          id: historyRow.id,
+          date: historyRow.session_date,
+          code: historyRow.session_code,
+          total_tickets: historyRow.total_tickets,
+          staff_members: historyRow.counts_snapshot || [],
+          created_at: new Date(historyRow.created_at).toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        };
+        setSessionHistory((prev) => [mapped, ...prev.filter((p) => p.id !== mapped.id)]);
+      },
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   // Función para registrar eventos de auditoría (local + Discord webhook)
   const recordActivity = (
@@ -260,7 +379,9 @@ export const TicketCounterView: React.FC = () => {
       const updated = prev.map((m) =>
         m.id === memberId ? { ...m, rank_id: targetRankId } : m
       );
-      return sortStaffAlphabetically(updated);
+      const sorted = sortStaffAlphabetically(updated);
+      saveSyncedRoster(ranks, sorted, user?.username || 'Staff').catch(() => {});
+      return sorted;
     });
 
     // Desplegar automáticamente la categoría de destino si estuviera colapsada para ver al miembro
@@ -288,7 +409,11 @@ export const TicketCounterView: React.FC = () => {
     const member = members.find((m) => m.id === memberId);
     const rank = ranks.find((r) => r.id === member?.rank_id);
     if (confirm(`¿Estás seguro de que deseas eliminar a ${name} de la lista de staffs?`)) {
-      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      setMembers((prev) => {
+        const filtered = prev.filter((m) => m.id !== memberId);
+        saveSyncedRoster(ranks, filtered, user?.username || 'Staff').catch(() => {});
+        return filtered;
+      });
       recordActivity(
         'remove_staff',
         'Staff Eliminado',
@@ -318,7 +443,9 @@ export const TicketCounterView: React.FC = () => {
       count: 0,
     };
 
-    setMembers((prev) => sortStaffAlphabetically([...prev, newMember]));
+    const updated = sortStaffAlphabetically([...members, newMember]);
+    setMembers(updated);
+    saveSyncedRoster(ranks, updated, user?.username || 'Staff').catch(() => {});
     setNewStaffName('');
     setIsAddStaffOpen(false);
 
@@ -470,17 +597,33 @@ export const TicketCounterView: React.FC = () => {
   };
 
   // Reiniciar conteo a 0
-  const handleResetCounts = (saveHistory: boolean) => {
+  const handleResetCounts = async (saveHistory: boolean) => {
     if (saveHistory && totalTicketsCount > 0) {
+      if (isMySession) {
+        finishAndArchiveTicketSession({
+          sessionCode,
+          sessionDate,
+          operatorName: user?.username || 'Staff',
+          operatorId: user?.id,
+          totalTickets: totalTicketsCount,
+          activeStaffs: activeStaffCount,
+          countsSnapshot: members,
+        }).catch(() => {});
+      }
       const finishedSession: ManualTicketSession = {
         id: `session-${Date.now()}`,
         date: sessionDate,
         code: sessionCode,
         total_tickets: totalTicketsCount,
         staff_members: [...members],
-        created_at: new Date().toLocaleTimeString(),
+        created_at: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
       };
       setSessionHistory((prev) => [finishedSession, ...prev.slice(0, 30)]);
+    }
+
+    if (isMySession) {
+      releaseActiveTicketSession().catch(() => {});
+      setActiveSession((prev) => (prev ? { ...prev, is_active: false } : null));
     }
 
     const previousCount = totalTicketsCount;
@@ -513,14 +656,15 @@ export const TicketCounterView: React.FC = () => {
     ) {
       setMembers(DEFAULT_STAFF_MEMBERS);
       setRanks(DEFAULT_STAFF_RANKS);
+      saveSyncedRoster(DEFAULT_STAFF_RANKS, DEFAULT_STAFF_MEMBERS, user?.username || 'Staff').catch(() => {});
       recordActivity(
         'restore_roster',
         'Roster Restaurado',
         'Se ha restablecido la lista oficial de 49 staffs y los 12 rangos por defecto.'
       );
       setToastMessage({
-        title: 'Lista restaurada',
-        message: 'Roster oficial restablecido con éxito.',
+        title: 'Lista restaurada en la nube',
+        message: 'Roster oficial restablecido y sincronizado con éxito.',
       });
     }
   };
@@ -533,6 +677,149 @@ export const TicketCounterView: React.FC = () => {
   const activeStaffCount = useMemo(() => {
     return members.filter((m) => m.count > 0).length;
   }, [members]);
+
+  // Detección de sesión activa
+  const isMySession = useMemo(() => {
+    if (!activeSession?.is_active) return false;
+    const myId = user?.id;
+    const myName = user?.username;
+    if (myId && activeSession.operator_id && activeSession.operator_id === myId) return true;
+    if (myName && activeSession.operator_name && activeSession.operator_name.toLowerCase() === myName.toLowerCase()) return true;
+    return false;
+  }, [activeSession, user]);
+
+  // Heartbeat periódico (cada 15s) cuando el usuario tiene la sesión activa
+  useEffect(() => {
+    if (!isMySession) return;
+    const interval = setInterval(() => {
+      heartbeatActiveTicketSession(totalTicketsCount).catch(() => {});
+    }, SESSION_HEARTBEAT_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [isMySession, totalTicketsCount]);
+
+  // Acciones de Sesión de Conteo
+  const handleStartCountSession = async () => {
+    if (activeSession?.is_active && !isMySession) {
+      setToastMessage({
+        title: 'Sesión en Curso',
+        message: `${activeSession.operator_name || 'Otro staff'} está realizando el conteo oficial actualmente.`,
+      });
+      return;
+    }
+
+    setIsStartingSession(true);
+    try {
+      const res = await startActiveTicketSession({
+        operatorId: user?.id,
+        operatorName: user?.username || 'Staff',
+        operatorAvatar: user?.avatar_url,
+        sessionCode,
+        sessionDate,
+        initialCount: totalTicketsCount,
+      });
+
+      if (res.success) {
+        setActiveSession({
+          id: 'current',
+          is_active: true,
+          operator_id: user?.id || null,
+          operator_name: user?.username || 'Staff',
+          operator_avatar: user?.avatar_url || null,
+          session_code: sessionCode,
+          session_date: sessionDate,
+          started_at: new Date().toISOString(),
+          last_heartbeat: new Date().toISOString(),
+          current_tickets_count: totalTicketsCount,
+        });
+
+        playChime();
+        recordActivity(
+          'change_shift',
+          'Sesión de Conteo Iniciada',
+          `${user?.username || 'Staff'} ha iniciado sesión de conteo para el turno ${sessionCode}.`,
+          `Tickets actuales: ${totalTicketsCount}`
+        );
+
+        setToastMessage({
+          title: 'Sesión Iniciada',
+          message: `Eres el operador activo del turno ${sessionCode}. Todos los usuarios verán tu sesión en curso.`,
+        });
+      } else {
+        setToastMessage({
+          title: 'Error al iniciar sesión',
+          message: res.error || 'No se pudo contactar con Supabase.',
+        });
+      }
+    } finally {
+      setIsStartingSession(false);
+    }
+  };
+
+  const handleFinishCountSession = async () => {
+    setIsFinishingSession(true);
+    try {
+      const opName = user?.username || activeSession?.operator_name || 'Staff';
+      const res = await finishAndArchiveTicketSession({
+        sessionCode,
+        sessionDate,
+        operatorName: opName,
+        operatorId: user?.id,
+        totalTickets: totalTicketsCount,
+        activeStaffs: activeStaffCount,
+        countsSnapshot: members,
+      });
+
+      if (res.success) {
+        const finishedSession: ManualTicketSession = {
+          id: `session-${Date.now()}`,
+          date: sessionDate,
+          code: sessionCode,
+          total_tickets: totalTicketsCount,
+          staff_members: [...members],
+          created_at: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+        };
+        setSessionHistory((prev) => [finishedSession, ...prev.slice(0, 49)]);
+
+        setMembers((prev) => prev.map((m) => ({ ...m, count: 0 })));
+        setSessionCode(getAutoDetectedShift());
+        setSessionDate(new Date().toLocaleDateString('es-ES'));
+
+        setActiveSession((prev) => (prev ? { ...prev, is_active: false } : null));
+
+        playChime();
+        recordActivity(
+          'reset_counts',
+          'Sesión Finalizada y Archivada',
+          `Sesión de ${opName} completada con ${totalTicketsCount} tickets para el turno ${sessionCode}.`,
+          `Historial archivado en Supabase`
+        );
+
+        setToastMessage({
+          title: 'Sesión Archivada con Éxito',
+          message: 'El conteo se ha guardado en la nube y los contadores se han puesto a 0.',
+        });
+      } else {
+        setToastMessage({
+          title: 'Error al archivar sesión',
+          message: res.error || 'No se pudo guardar la sesión en la nube.',
+        });
+      }
+    } finally {
+      setIsFinishingSession(false);
+    }
+  };
+
+  const handleReleaseCountSession = async () => {
+    const res = await releaseActiveTicketSession();
+    if (res.success) {
+      setActiveSession((prev) => (prev ? { ...prev, is_active: false } : null));
+      setToastMessage({
+        title: 'Sesión Liberada',
+        message: 'La sesión de conteo está ahora disponible para cualquier staff.',
+      });
+    }
+  };
 
   // Generación en tiempo real del resumen de Discord
   const discordSummaryOutput = useMemo(() => {
@@ -723,10 +1010,10 @@ export const TicketCounterView: React.FC = () => {
         CABECERA PRINCIPAL: ESTADÍSTICAS Y ACCIONES RÁPIDAS
         ========================================================================
       */}
-      <GlassCard className="p-4 sm:p-5 relative overflow-hidden border border-white/10 bg-gradient-to-r from-emerald-950/25 via-black/40 to-cyan-950/20 shadow-2xl">
+      <GlassCard className="p-4 sm:p-5 relative overflow-hidden border border-white/[0.08] shadow-xl">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.25)] flex-shrink-0">
+            <div className="p-2.5 rounded-2xl bg-white/[0.04] text-white/80 border border-white/[0.08] flex-shrink-0">
               <Ticket className="w-6 h-6" />
             </div>
             <div>
@@ -742,10 +1029,10 @@ export const TicketCounterView: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => setIsAddStaffOpen(true)}
-              className="border border-white/10 text-white/90 hover:bg-white/[0.08]"
+              className="border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08]"
               title="Añadir nuevo miembro al equipo"
             >
-              <UserPlus className="w-4 h-4 mr-1.5 text-cyan-400" />
+              <UserPlus className="w-4 h-4 mr-1.5 text-white/70" />
               <span>Añadir Staff</span>
             </ActionButton>
 
@@ -753,10 +1040,10 @@ export const TicketCounterView: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => setIsActivityLogsModalOpen(true)}
-              className="border border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+              className="border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08]"
               title="Ver registro de auditoría e interacciones importantes"
             >
-              <ScrollText className="w-4 h-4 mr-1.5 text-purple-400" />
+              <ScrollText className="w-4 h-4 mr-1.5 text-white/70" />
               <span>Logs ({activityLogs.length})</span>
             </ActionButton>
 
@@ -764,10 +1051,10 @@ export const TicketCounterView: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => setIsHistoryModalOpen(true)}
-              className="border border-white/10 text-white/80 hover:bg-white/[0.08]"
+              className="border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08]"
               title="Ver conteos archivados"
             >
-              <History className="w-4 h-4 mr-1.5 text-amber-400" />
+              <History className="w-4 h-4 mr-1.5 text-white/70" />
               <span>Historial ({sessionHistory.length})</span>
             </ActionButton>
 
@@ -775,19 +1062,157 @@ export const TicketCounterView: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => setIsConfirmResetOpen(true)}
-              className="border border-rose-500/30 text-rose-300 hover:bg-rose-500/10"
+              className="border border-white/[0.08] text-white/80 hover:text-rose-300 hover:bg-white/[0.08]"
               title="Poner todos los contadores a 0 para el siguiente conteo"
             >
-              <RotateCcw className="w-4 h-4 mr-1.5 text-rose-400" />
+              <RotateCcw className="w-4 h-4 mr-1.5 text-white/70" />
               <span>Reiniciar a 0</span>
             </ActionButton>
+
+            {/* Botón rápido de sesión según el estado actual */}
+            {isMySession ? (
+              <ActionButton
+                variant="primary"
+                size="sm"
+                onClick={handleFinishCountSession}
+                disabled={isFinishingSession}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-lg shadow-emerald-600/30 text-xs"
+                title="Finalizar el conteo oficial, archivar en Supabase y reiniciar a 0"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                <span>Finalizar Conteo</span>
+              </ActionButton>
+            ) : !activeSession?.is_active ? (
+              <ActionButton
+                variant="primary"
+                size="sm"
+                onClick={handleStartCountSession}
+                disabled={isStartingSession}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs"
+                title="Iniciar tu turno de conteo oficial sincronizado"
+              >
+                <Play className="w-4 h-4 mr-1.5 text-emerald-400" />
+                <span>Iniciar Conteo</span>
+              </ActionButton>
+            ) : null}
           </div>
+        </div>
+
+        {/* ========================================================================
+            BANNER DE ESTADO DE SESIÓN DE CONTEO EN TIEMPO REAL
+            ======================================================================== */}
+        <div className="mt-4 pt-4 border-t border-white/[0.08]">
+          {activeSession?.is_active && !isMySession ? (
+            <div className="p-3.5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-lg shadow-amber-950/20">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center flex-shrink-0">
+                  <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-amber-400 opacity-60"></span>
+                  <div className="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]"></div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                      ● SESIÓN EN CURSO
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 font-bold border border-amber-500/30">
+                      Turno {activeSession?.session_code || sessionCode}
+                    </span>
+                    <span className="text-[10px] text-white/50">
+                      Fecha: {activeSession?.session_date || sessionDate}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/90 mt-0.5">
+                    <strong className="text-white font-bold">{activeSession?.operator_name || 'Staff'}</strong> está realizando el conteo oficial de tickets ({activeSession?.current_tickets_count || 0} tickets anotados hasta ahora).
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-amber-300/90 bg-amber-500/15 px-3 py-1.5 rounded-xl border border-amber-500/30">
+                  En progreso por {activeSession?.operator_name || 'Staff'}
+                </span>
+              </div>
+            </div>
+          ) : isMySession ? (
+            <div className="p-3.5 rounded-2xl bg-emerald-500/[0.08] border border-emerald-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-lg shadow-emerald-950/20">
+              <div className="flex items-center gap-3">
+                <div className="relative flex items-center justify-center flex-shrink-0">
+                  <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-emerald-400 opacity-60"></span>
+                  <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                      ● TU SESIÓN DE CONTEO ACTIVA
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 font-bold border border-emerald-500/30">
+                      Turno {activeSession?.session_code || sessionCode}
+                    </span>
+                    <span className="text-[10px] text-emerald-400/80 font-mono">
+                      ● Sincronizando en vivo
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/90 mt-0.5">
+                    Eres el operador actual del conteo. Total acumulado: <strong className="text-emerald-300 font-bold">{totalTicketsCount} tickets</strong> en {activeStaffCount} staffs activos.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+                <ActionButton
+                  variant="primary"
+                  size="sm"
+                  onClick={handleFinishCountSession}
+                  disabled={isFinishingSession}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  <span>Finalizar y Archivar</span>
+                </ActionButton>
+                <ActionButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleReleaseCountSession}
+                  className="border-white/10 text-white/70 hover:text-white hover:bg-white/[0.08] text-xs"
+                >
+                  <span>Liberar Sesión</span>
+                </ActionButton>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-white/30 flex-shrink-0"></div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white/70 uppercase tracking-wider">
+                      Sesión de Conteo
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-white/50 border border-white/[0.06]">
+                      Disponible
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    Ningún staff está realizando un conteo activo en este momento.
+                  </p>
+                </div>
+              </div>
+              <ActionButton
+                variant="primary"
+                size="sm"
+                onClick={handleStartCountSession}
+                disabled={isStartingSession}
+                className="bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-xs w-full sm:w-auto justify-center"
+              >
+                <Play className="w-3.5 h-3.5 mr-1.5 text-white" />
+                <span>Iniciar Sesión de Conteo</span>
+              </ActionButton>
+            </div>
+          )}
         </div>
 
         {/* Barra de Datos de Sesión: Fecha, Código y Métricas Globales */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/[0.08]">
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/[0.04] text-white/70 border border-white/[0.06]">
               <Calendar className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex-1">
@@ -796,16 +1221,16 @@ export const TicketCounterView: React.FC = () => {
                 type="text"
                 value={sessionDate}
                 onChange={(e) => setSessionDate(e.target.value)}
-                className="bg-transparent text-xs font-bold text-white w-full outline-none border-b border-transparent focus:border-emerald-500/50"
+                className="bg-transparent text-xs font-bold text-white w-full outline-none border-b border-transparent focus:border-white/30"
                 placeholder="dd/mm/aaaa"
               />
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col justify-between">
+          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                <Clock className="w-3.5 h-3.5 text-white/60" />
                 <span className="text-[10px] text-[#8B949E] uppercase tracking-wider font-semibold">
                   Turno Conteo
                 </span>
@@ -814,7 +1239,7 @@ export const TicketCounterView: React.FC = () => {
                 type="text"
                 value={sessionCode}
                 onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
-                className="bg-transparent text-[11px] font-bold text-cyan-300 w-24 text-right outline-none border-b border-transparent focus:border-cyan-500/50"
+                className="bg-transparent text-[11px] font-bold text-white/90 w-24 text-right outline-none border-b border-transparent focus:border-white/30"
                 placeholder="MAÑANA"
                 title="Turno reflejado en la cabecera Discord (*MAÑANA, *TARDE, *NOCHE)"
               />
@@ -826,25 +1251,16 @@ export const TicketCounterView: React.FC = () => {
                     key: 'MAÑANA',
                     label: 'Mañana',
                     icon: Sun,
-                    color: 'hover:text-amber-300',
-                    active:
-                      'bg-amber-500/20 text-amber-200 border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.25)]',
                   },
                   {
                     key: 'TARDE',
                     label: 'Tarde',
                     icon: Sunset,
-                    color: 'hover:text-orange-300',
-                    active:
-                      'bg-orange-500/20 text-orange-200 border-orange-400/50 shadow-[0_0_10px_rgba(249,115,22,0.25)]',
                   },
                   {
                     key: 'NOCHE',
                     label: 'Noche',
                     icon: Moon,
-                    color: 'hover:text-indigo-300',
-                    active:
-                      'bg-indigo-500/20 text-indigo-200 border-indigo-400/50 shadow-[0_0_10px_rgba(99,102,241,0.25)]',
                   },
                 ] as const
               ).map((shift) => {
@@ -866,8 +1282,8 @@ export const TicketCounterView: React.FC = () => {
                     }}
                     className={`flex-1 py-1 px-1 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1 border ${
                       isActive
-                        ? shift.active
-                        : `bg-white/[0.04] text-[#8B949E] ${shift.color} hover:bg-white/[0.08] border-white/5`
+                        ? 'bg-white/15 text-white border-white/20 shadow-sm'
+                        : 'bg-white/[0.03] text-[#8B949E] hover:text-white hover:bg-white/[0.06] border-white/[0.04]'
                     }`}
                     title={`Seleccionar turno de ${shift.label.toLowerCase()}`}
                   >
@@ -879,18 +1295,18 @@ export const TicketCounterView: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/[0.04] text-white/70 border border-white/[0.06]">
               <Ticket className="w-4 h-4" />
             </div>
             <div>
               <span className="text-[10px] text-[#8B949E] uppercase tracking-wider block">Total Intervenciones</span>
-              <span className="text-sm font-black text-emerald-400">{totalTicketsCount} tickets</span>
+              <span className="text-sm font-black text-white">{totalTicketsCount} tickets</span>
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-white/[0.04] text-white/70 border border-white/[0.06]">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -924,7 +1340,7 @@ export const TicketCounterView: React.FC = () => {
                 placeholder="Buscar staff para sumar (ej. Delaisla, Drako, JOTA)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-emerald-500/50"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs text-white placeholder-white/40 focus:outline-none focus:border-white/30"
               />
               {searchQuery && (
                 <button
@@ -951,7 +1367,7 @@ export const TicketCounterView: React.FC = () => {
                 onClick={() => setSelectedFilterRank('soportes')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                   selectedFilterRank === 'soportes'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    ? 'bg-white/15 text-white border border-white/20'
                     : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
@@ -961,7 +1377,7 @@ export const TicketCounterView: React.FC = () => {
                 onClick={() => setSelectedFilterRank('staff_ig')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                   selectedFilterRank === 'staff_ig'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    ? 'bg-white/15 text-white border border-white/20'
                     : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
@@ -1254,15 +1670,15 @@ export const TicketCounterView: React.FC = () => {
             COLUMNA DERECHA: PREVIEW DE LA PLANTILLA DISCORD Y ACCIONES (4-5 COLS)
             ==================================================================== */}
         <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-4">
-          <GlassCard className="p-4 sm:p-5 border border-emerald-500/30 bg-gradient-to-b from-black/80 via-black/90 to-emerald-950/20 shadow-2xl relative">
+          <GlassCard className="p-4 sm:p-5 border border-white/[0.08] bg-[#0E1013]/60 shadow-xl relative">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
+                <Sparkles className="w-4 h-4 text-white/70" />
                 <h3 className="text-sm font-bold text-white tracking-wide">
                   Salida de Plantilla Discord
                 </h3>
               </div>
-              <span className="text-[10px] text-emerald-300 font-mono font-semibold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              <span className="text-[10px] text-white/70 font-mono font-semibold bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">
                 1-Click Copy
               </span>
             </div>

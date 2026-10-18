@@ -31,15 +31,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
   return (
     <div className="space-y-6">
       {/* HERO UNIFICADO: CENTRO DE OPTIMIZACIÓN ADAPTATIVO */}
-      <div className={`relative overflow-hidden rounded-2xl border transition-all duration-300 ${
-        activePlanTitle
-          ? "border-emerald-500/50 shadow-[0_0_40px_rgba(16,185,129,0.18)] bg-gradient-to-br from-[#0B1713] via-[#091114] to-[#07090C]"
-          : "border-white/[0.12] bg-gradient-to-br from-[#0F141C] via-[#0A0D12] to-[#07090C] shadow-[0_4px_30px_rgba(0,0,0,0.6)]"
-      } p-6`}>
-        {/* Ambient Glows */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0E1013]/60 shadow-[0_4px_30px_rgba(0,0,0,0.6)] p-6">
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <h2 className="text-2xl font-extrabold tracking-tight text-white">
@@ -52,7 +44,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
             {/* Hardware Pills */}
             <div className="flex flex-wrap items-center gap-2 pt-0.5 font-mono text-[11px]">
               <div className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/[0.08] text-[#D4DAE2] flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+                <Cpu className="w-3.5 h-3.5 text-white/70" />
                 <span>{hardware?.cpu || "CPU"}</span>
               </div>
 
@@ -62,7 +54,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               </div>
 
               <div className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/[0.08] text-[#D4DAE2] flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-purple-400" />
+                <HardDrive className="w-3.5 h-3.5 text-white/70" />
                 <span>{ramGb} GB RAM</span>
               </div>
             </div>
@@ -76,8 +68,8 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
               onClick={() => onOpenGameSelector ? onOpenGameSelector() : onSelectPreset("ultra")}
               className={`px-6 py-4 rounded-xl text-sm font-extrabold transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 ${
                 isGameActive
-                  ? "bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-400 text-black shadow-[0_0_35px_rgba(52,211,153,0.45)] hover:shadow-[0_0_45px_rgba(52,211,153,0.6)]"
-                  : "bg-white hover:bg-white/95 text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.45)]"
+                  ? "bg-white hover:bg-white/95 text-black shadow-lg"
+                  : "bg-white hover:bg-white/95 text-black shadow-lg"
               }`}
             >
               <Gamepad2 className="w-5 h-5 text-black" />
@@ -87,7 +79,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({
 
             {activePlanTitle ? (
               <div className="flex items-center justify-center gap-2.5 text-[11px] font-mono">
-                <div className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+                <div className="px-2.5 py-0.5 rounded-full bg-white/[0.04] border border-white/10 text-white font-medium flex items-center gap-1.5 shadow-sm">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Activo: {activePlanTitle}</span>
                 </div>

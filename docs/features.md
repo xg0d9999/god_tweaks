@@ -50,13 +50,16 @@
 ### 11. Gestor y Conteo Manual de Tickets HispanLifeRP con Generador de Plantilla Discord
 - **Descripción**: Sistema ergonómico de conteo manual y gestión de staffs para tickets de soporte de Discord:
   - **Suma y Resta Instantánea**: Botones `+` / `-` y edición numérica directa por usuario para registrar intervenciones ágilmente sin hojas de Excel.
-  - **Organización por 12 Rangos Oficiales**: Soporte Nivel 1 y 2, Moderador En Pruebas, Moderador, Super Moderador, Administrador En Pruebas, Administrador, Administrador +, Master Admin, SuperAdmin En Pruebas, SuperAdmin y Dirección.
+  - **Sincronización de Rangos y Miembros en Tiempo Real**: Persistencia en la nube mediante Supabase (`ticket_roster_config`) y `supabase_realtime`. Los cambios de rango, altas, bajas y reordenaciones se reflejan al instante en todos los clientes conectados.
+  - **Sistema de Sesiones de Conteo en Vivo**: Monitoreo de sesión activa con Supabase (`active_ticket_session` y `ticket_count_sessions`). Muestra un banner visual prominente indicando quién está contando tickets, en qué turno y cuántos tickets lleva registrados. Incluye detección de inactividad (+2 min sin heartbeat) y toma de relevo fluida.
+  - **Gestor Visual de Rangos**: Modal dedicado para añadir nuevos rangos, reordenar prioridades arriba/abajo, clasificar soportes o altos rangos (sin `@` en Discord), y restaurar el roster oficial por defecto.
+  - **Organización por Rangos Oficiales**: Soporte Nivel 1 y 2, Moderador En Pruebas, Moderador, Super Moderador, Administrador En Pruebas, Administrador, Administrador +, Master Admin, SuperAdmin En Pruebas, SuperAdmin y Dirección.
   - **Orden Estrictamente Alfabético**: Todos los miembros de cada categoría se ordenan automáticamente de la A a la Z.
-  - **Drag and Drop de Personal Suave (Spring Physics & Auto-Sort A-Z)**: Arrastre fluido de tarjetas de staff entre rangos para ascensos, descensos o traslados de categoría con animaciones Framer Motion (`layoutId` spring), banners visuales de recepción en rangos destino, auto-despliegue de categorías y reordenamiento automático estrictamente alfabético (A-Z) en tiempo real.
+  - **Drag and Drop de Personal Suave (Spring Physics & Auto-Sort A-Z)**: Arrastre fluido de tarjetas de staff entre rangos para ascensos, descensos o traslados de categoría con animaciones Framer Motion (`layoutId` spring), banners visuales de recepción en rangos destino, auto-despliegue de categorías y reordenamiento automático estrictamente alfabético (A-Z) en tiempo real con sincronización remota inmediata.
   - **Generador de Plantilla para Discord (1-Click Copy)**: Formateo automático de cabecera con fecha y turno dinámico (`__**RESUMEN CONTEO DE TICKETS HISPANLIFERP - xx/xx/xxxx - *TURNO**__` donde TURNO es MAÑANA, TARDE o NOCHE según la hora del sistema con selector visual de chips), omisión de miembros con 0 tickets, y reconocimientos finales para Top Soportes y Top Staff IG (con omisión de `@` para SuperAdmin hacia arriba).
   - **Registro y Auditoría de Interacciones (Logs en App & Discord)**: Registro detallado y automático de cada acción crítica (alta de staff, baja/expulsión, cambio de categoría por drag & drop, copiado de plantilla, cambio de turno y reseteo a 0). Cuenta con modal interactivo con buscador, filtrado por categorías, exportación de reportes y envío paralelo al webhook de auditoría de Discord.
-  - **Historial y Reinicio**: Poner a 0 con guardado automático de sesiones pasadas en historial.
-- **Ubicación**: `src/components/views/TicketCounterView.tsx`, `src/services/discordLogger.ts`, `src/utils/ticketTemplateFormatter.ts`, `src/types/index.ts`.
+  - **Historial y Reinicio en la Nube**: Finalizar y archivar sesiones directamente en Supabase y localmente con conteos previos preservados.
+- **Ubicación**: `src/components/views/TicketCounterView.tsx`, `src/services/ticketSessionService.ts`, `src/services/discordLogger.ts`, `src/utils/ticketTemplateFormatter.ts`, `src/types/index.ts`.
 
 ### 12. Limpieza & Analizador de Disco Duro en Modo Avanzado
 - **Descripción**: Módulo completo de diagnóstico de almacenamiento y eliminación de gigabytes de archivos basura en Windows:

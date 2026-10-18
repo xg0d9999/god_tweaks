@@ -19,7 +19,7 @@
 - `BackupView.tsx`: Gestión de Puntos de Restauración (VSS) y respaldos `.reg` del registro.
 - `BenchmarkView.tsx`: Banco de pruebas comparativo pre/post optimización con exportación a PDF.
 - `HispanSancionesView.tsx`: Sistema de moderación y auditoría de sanciones para FiveM (comandos `jail`, `sqlban` y `sqlbanoffline`, canal oficial `#registro-sanciones` y ejecución por F8).
-- `TicketCounterView.tsx`: Gestor y conteo manual de tickets para HispanLifeRP, con botones +/- por staff, Drag and Drop para cambios de rango, orden alfabético estricto y salida formateada para Discord.
+- `TicketCounterView.tsx`: Gestor y conteo manual de tickets para HispanLifeRP, con sincronización de rangos en la nube, sesiones de conteo en vivo con indicador de operador activo, botones +/- por staff, Drag and Drop para cambios de rango, orden alfabético estricto y salida formateada para Discord.
 - `AdminPanelView.tsx`: Panel administrativo de usuarios, HWIDs y permisos manuales.
 - `PermissionBlockedView.tsx`: Vista de acceso denegado para roles no autorizados.
 
@@ -44,6 +44,7 @@
 
 ### `src/services/` — Clientes de red
 - `supabase.ts`: Cliente de Supabase, queries a `app_users`, `app_updates` y Storage.
+- `ticketSessionService.ts`: Sincronización en la nube con Supabase (`ticket_roster_config`, `active_ticket_session`, `ticket_count_sessions`) y WebSocket Realtime para rangos, sesiones activas, heartbeats e histórico.
 - `discordLogger.ts`: Webhooks de auditoría y telemetría hacia Discord con ofuscación de IPs mediante spoiler markdown (`|| IP ||`).
 - `deepseek.ts`: Cliente de DeepSeek AI para auditoría semántica de tickets de soporte.
 - `discordTicketListener.ts`: Motor de conexión WebSocket Gateway y REST API para Discord (Modo Usuario Nighty-style sin intents y Modo Bot con embeds) para capturar comandos `/revisa`.
